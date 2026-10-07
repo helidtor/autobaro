@@ -1,0 +1,229 @@
+{
+  "tests": 29,
+  "build": "passed",
+  "productionRuns": [
+    {
+      "seed": 42,
+      "br": {
+        "resolved": true,
+        "time": 118.19999999999756,
+        "alive": 1,
+        "winner": "Thanh Tùng #34",
+        "invalid": 0,
+        "activePeak": 3,
+        "weaponUsers": 24
+      },
+      "continuation": {
+        "target": "U Minh Diêm La Vương",
+        "objective": "Đấu với Yêu Thần: U Minh Diêm La Vương",
+        "survivorAlive": false,
+        "bossAlive": true
+      },
+      "finite": true,
+      "errors": []
+    },
+    {
+      "seed": 2026,
+      "br": {
+        "resolved": true,
+        "time": 92.49999999999902,
+        "alive": 1,
+        "winner": "Thu Thảo #16",
+        "invalid": 0,
+        "activePeak": 3,
+        "weaponUsers": 22
+      },
+      "continuation": {
+        "target": "Viêm Đế Phượng Hoàng",
+        "objective": "Đấu với Yêu Thần: Viêm Đế Phượng Hoàng",
+        "survivorAlive": false,
+        "bossAlive": true
+      },
+      "finite": true,
+      "errors": []
+    },
+    {
+      "seed": 7,
+      "br": {
+        "resolved": true,
+        "time": 156.4999999999954,
+        "alive": 1,
+        "winner": "Hải Yến #77",
+        "invalid": 0,
+        "activePeak": 3,
+        "weaponUsers": 18
+      },
+      "continuation": {
+        "target": "Viêm Đế Phượng Hoàng",
+        "objective": "Đấu với Yêu Thần: Viêm Đế Phượng Hoàng",
+        "survivorAlive": false,
+        "bossAlive": true
+      },
+      "finite": true,
+      "errors": []
+    }
+  ],
+  "uiEvidence": {
+    "cameraBefore": {
+      "x": 2600,
+      "y": 2600
+    },
+    "drag": {
+      "x": 2440,
+      "y": 2520,
+      "selected": null
+    },
+    "keyboardCamera": 2540,
+    "inspectXP": true,
+    "restart": {
+      "fresh": true,
+      "alive": 100,
+      "monsters": 40,
+      "paused": false,
+      "selected": null,
+      "loot": 0
+    }
+  },
+  "errors": [],
+  "initialProfile": {
+    "alive": 16,
+    "invalid": 0,
+    "peakGroup": 3,
+    "medianMs": 1.6000000014901161,
+    "p95Ms": 4.299999998882413,
+    "maxMs": 20.300000000745058
+  },
+  "pairCombat": {
+    "accepted": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "members": 4,
+    "allTookDamage": true
+  },
+  "finalEndgameCheck": {
+    "seed": 2026,
+    "initial": "Viêm Đế Phượng Hoàng",
+    "afterResume": "Viêm Đế Phượng Hoàng",
+    "objective": "Đấu với Yêu Thần: Viêm Đế Phượng Hoàng",
+    "alive": true,
+    "errors": []
+  },
+  "profilingRuns": [
+    {
+      "seed": 42,
+      "br": {
+        "time": 118.19999999999756,
+        "resolved": true,
+        "winner": "Thanh Tùng #34",
+        "alive": 1,
+        "weaponUsers": 24,
+        "maxLevel": 5,
+        "invalid": 0,
+        "activePeak": 3,
+        "zoneHistory": [
+          {
+            "fraction": 0.5,
+            "alive": 20,
+            "time": 56.000000000000526
+          },
+          {
+            "fraction": 0.25,
+            "alive": 10,
+            "time": 71.30000000000022
+          },
+          {
+            "fraction": 0.1,
+            "alive": 5,
+            "time": 86.19999999999938
+          }
+        ],
+        "p95UpdateMs": 6
+      },
+      "continuation": {
+        "target": "U Minh Diêm La Vương",
+        "bossAlive": true,
+        "survivorAlive": false
+      },
+      "finite": true,
+      "errors": []
+    },
+    {
+      "seed": 2026,
+      "br": {
+        "time": 92.49999999999902,
+        "resolved": true,
+        "winner": "Thu Thảo #16",
+        "alive": 1,
+        "weaponUsers": 22,
+        "maxLevel": 6,
+        "invalid": 0,
+        "activePeak": 3,
+        "zoneHistory": [
+          {
+            "fraction": 0.5,
+            "alive": 20,
+            "time": 49.50000000000043
+          },
+          {
+            "fraction": 0.25,
+            "alive": 10,
+            "time": 59.90000000000058
+          },
+          {
+            "fraction": 0.1,
+            "alive": 5,
+            "time": 80.89999999999968
+          }
+        ],
+        "p95UpdateMs": 7.199999999254942
+      },
+      "continuation": {
+        "bossAlive": true,
+        "survivorAlive": false
+      },
+      "finite": true,
+      "errors": []
+    },
+    {
+      "seed": 7,
+      "br": {
+        "time": 156.4999999999954,
+        "resolved": true,
+        "winner": "Hải Yến #77",
+        "alive": 1,
+        "weaponUsers": 18,
+        "maxLevel": 6,
+        "invalid": 0,
+        "activePeak": 3,
+        "zoneHistory": [
+          {
+            "fraction": 0.5,
+            "alive": 20,
+            "time": 59.20000000000057
+          },
+          {
+            "fraction": 0.25,
+            "alive": 10,
+            "time": 88.89999999999922
+          },
+          {
+            "fraction": 0.1,
+            "alive": 5,
+            "time": 117.79999999999758
+          }
+        ],
+        "p95UpdateMs": 6.600000001490116
+      },
+      "continuation": {
+        "target": "Viêm Đế Phượng Hoàng",
+        "bossAlive": true,
+        "survivorAlive": false
+      },
+      "finite": true,
+      "errors": []
+    }
+  ]
+}

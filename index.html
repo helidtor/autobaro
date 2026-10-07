@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>The Crucible of Souls - RimWorld AI Sandbox Battle Royale</title>
+  <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+  <!-- Canvas Vẽ Thế Giới Game -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Top HUD: Thống kê trạng thái trận đấu -->
+  <div id="top-hud">
+    <div class="hud-stat-box">
+      <span class="icon">🚹</span>
+      <span>Bot Sống Sót:</span>
+      <span id="hud-pawns-count" class="value">100 / 100</span>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-stat-box">
+      <span class="icon">👹</span>
+      <span>Quái Vật:</span>
+      <span id="hud-monsters-count" class="value">40</span>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-stat-box">
+      <span class="icon">⏱️</span>
+      <span>Thời Gian:</span>
+      <span id="hud-match-time" class="value">00:00</span>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-stat-box">
+      <span class="icon">☣️</span>
+      <span>Vòng Bo:</span>
+      <span id="hud-zone-phase" class="value">Vùng an toàn 100%</span>
+    </div>
+  </div>
+
+  <!-- Combat Ticker: Nhật ký chiến trường kể chuyện tự phát RimWorld -->
+  <div id="combat-ticker-container">
+    <div class="ticker-header">📜 Nhật Ký Chiến Trường Tự Phát (RimWorld Log)</div>
+    <div id="combat-ticker-list"></div>
+  </div>
+
+  <!-- Thông báo trạng thái chọn vị trí Quyền Năng Chúa Tể -->
+  <div id="god-power-prompt" class="hidden"></div>
+
+  <!-- Director Bar: Quyền năng chúa tể, Tốc độ trận đấu, Chế độ chơi -->
+  <div id="director-bar">
+    <div class="director-group">
+      <button class="btn-ctrl btn-god" onclick="window.GameUI.DirectorControls.useGodPower('smite')" title="Giáng sét 250 sát thương chuẩn vào mục tiêu">⚡ Thiên Lôi</button>
+      <button class="btn-ctrl btn-god" onclick="window.GameUI.DirectorControls.useGodPower('firestorm')" title="Đốt cháy bụi rậm xua đuổi bot trốn núp">🔥 Hỏa Thần</button>
+      <button class="btn-ctrl btn-god" onclick="window.GameUI.DirectorControls.useGodPower('berserk')" title="Ép bot gần nhất vào trạng thái Cuồng Nộ đột phá">😈 Cuồng Nộ</button>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="director-group">
+      <button class="btn-ctrl btn-speed" data-speed="0">⏸️ Tạm Dừng</button>
+      <button class="btn-ctrl btn-speed active" data-speed="1">1x</button>
+      <button class="btn-ctrl btn-speed" data-speed="2">2x</button>
+      <button class="btn-ctrl btn-speed" data-speed="5">5x</button>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="director-group">
+      <button id="btn-new-match" class="btn-ctrl" onclick="window.GameManager.startNewMatch()">↻ Ván mới</button>
+      <button class="btn-ctrl" onclick="window.GameManager.showMapOverview()" title="M: bản đồ toàn cảnh">🗺 Bản đồ</button>
+      <button id="btn-toggle-mode" class="btn-ctrl">👁️ Chế độ: Đạo Diễn (Spectator)</button>
+    </div>
+  </div>
+
+  <!-- Player HUD: Hiển thị khi chuyển sang Chế độ Người Chơi (1v99) -->
+  <div id="player-hud" class="hidden">
+    <div class="player-bars-container">
+      <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700;">
+        <span>MÁU & THỂ LỰC (NGƯỜI CHƠI)</span>
+        <span id="player-level-badge">Lv 1</span>
+      </div>
+      <div class="bar-container" style="margin-bottom: 2px;">
+        <div id="player-hp-bar" class="bar-fill bar-hp" style="width: 100%;"></div>
+      </div>
+      <div class="bar-container" style="margin-bottom: 2px; height: 6px;">
+        <div id="player-stamina-bar" class="bar-fill bar-stamina" style="width: 100%;"></div>
+      </div>
+      <div class="bar-container" style="margin-bottom: 0; height: 5px;">
+        <div id="player-mana-bar" class="bar-fill bar-mana" style="width: 100%;"></div>
+      </div>
+    </div>
+    <div class="player-control-hint">WASD di chuyển · Chuột đánh · Space né · Shift đỡ · H bình máu</div>
+    <div class="player-action-slots" title="WASD: di chuyển • Chuột trái: đánh • Space: né • Shift: đỡ • H: bình máu">
+      <div class="action-slot" title="Kỹ năng nhánh 1"><span class="action-key">Q</span>⚔️</div>
+      <div class="action-slot" title="Kỹ năng nhánh 2"><span class="action-key">E</span>🛡️</div>
+      <div class="action-slot" title="Kỹ năng nhánh 3"><span class="action-key">R</span>⚡</div>
+      <div class="action-slot" title="Tuyệt kỹ nhánh 4"><span class="action-key">F</span>🔥</div>
+    </div>
+  </div>
+
+  <!-- Inspect Panel: Bảng soi chi tiết nhân vật & quái vật -->
+  <div id="inspect-panel" class="hidden"></div>
+
+  <!-- Post-Match Story Card Modal: Vinh danh kẻ sống sót cuối cùng -->
+  <div id="story-card-modal" class="hidden"></div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

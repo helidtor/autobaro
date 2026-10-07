@@ -1,0 +1,529 @@
+/* ==========================================================================
+   game.css - Phong Cách Đồ Họa RimWorld Cartoon Gọn Gàng & Dark Fantasy UI
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #1a1c23;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #ecf0f1;
+}
+
+#game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  z-index: 1;
+}
+
+/* ==========================================
+   TOP BAR - THÔNG TIN TRẬN ĐẤU & BO ĐỘC
+   ========================================== */
+#top-hud {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: rgba(26, 28, 35, 0.88);
+  border: 2px solid #34495e;
+  border-radius: 30px;
+  padding: 8px 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+
+.hud-stat-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hud-stat-box .icon {
+  font-size: 18px;
+}
+
+.hud-stat-box .value {
+  color: #f1c40f;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.hud-divider {
+  width: 1px;
+  height: 20px;
+  background-color: #4a627a;
+}
+
+/* ==========================================
+   COMBAT TICKER - NHẬT KÝ CHIẾN TRƯỜNG KỂ CHUYỆN
+   ========================================== */
+#combat-ticker-container {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 380px;
+  max-height: 220px;
+  background: rgba(20, 22, 28, 0.85);
+  border: 1.5px solid #2c3e50;
+  border-radius: 10px;
+  padding: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+
+.ticker-header {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #95a5a6;
+  margin-bottom: 8px;
+  letter-spacing: 0.8px;
+  border-bottom: 1px solid #2c3e50;
+  padding-bottom: 4px;
+}
+
+#combat-ticker-list {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.ticker-line {
+  color: #ecf0f1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================
+   DIRECTOR BAR - BẢNG ĐIỀU KHIỂN ĐẠO DIỄN & QUYỀN NĂNG
+   ========================================== */
+#director-bar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(26, 28, 35, 0.92);
+  border: 2px solid #34495e;
+  border-radius: 16px;
+  padding: 10px 18px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+
+.director-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-ctrl {
+  background: #2c3e50;
+  color: #ecf0f1;
+  border: 1px solid #4a627a;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-ctrl:hover {
+  background: #34495e;
+  border-color: #3498db;
+  transform: translateY(-2px);
+}
+
+.btn-ctrl.active {
+  background: #2980b9;
+  border-color: #5dade2;
+  box-shadow: 0 0 10px rgba(41, 128, 185, 0.6);
+}
+
+.btn-god {
+  background: #341f97;
+  border-color: #5f27cd;
+}
+
+.btn-god:hover {
+  background: #5f27cd;
+  box-shadow: 0 0 12px rgba(95, 39, 205, 0.7);
+}
+
+.btn-player-mode {
+  background: #27ae60 !important;
+  border-color: #2ecc71 !important;
+}
+
+#god-power-prompt {
+  position: absolute;
+  bottom: 85px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #e74c3c;
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  animation: pulse 1s infinite alternate;
+  z-index: 12;
+}
+
+@keyframes pulse {
+  from { transform: translateX(-50%) scale(0.96); opacity: 0.85; }
+  to { transform: translateX(-50%) scale(1.04); opacity: 1; }
+}
+
+/* ==========================================
+   INSPECT PANEL - BẢNG SOI CHI TIẾT BOT & QUÁI
+   ========================================== */
+#inspect-panel {
+  position: absolute;
+  top: 75px;
+  right: 20px;
+  width: 320px;
+  background: rgba(22, 24, 30, 0.94);
+  border: 2px solid #34495e;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  z-index: 15;
+  backdrop-filter: blur(8px);
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.inspect-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.inspect-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #f1c40f;
+}
+
+.inspect-close {
+  background: none;
+  border: none;
+  color: #95a5a6;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.inspect-close:hover {
+  color: #e74c3c;
+}
+
+.inspect-subtitle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #34495e;
+}
+
+.badge-class { background: #2980b9; }
+.badge-trait { background: #8e44ad; }
+.badge-level { background: #d35400; }
+.badge-tier { background: #c0392b; }
+
+.inspect-section {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid #2c3e50;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #bdc3c7;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.inspect-bar-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.bar-container {
+  width: 100%;
+  height: 8px;
+  background: #2c3e50;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.bar-fill {
+  height: 100%;
+  transition: width 0.2s ease;
+}
+
+.bar-hp { background: #2ecc71; }
+.bar-stamina { background: #f39c12; }
+.bar-mana { background: #3498db; }
+.bar-fear { background: #3498db; }
+.bar-conf { background: #f1c40f; }
+.bar-despair { background: #e74c3c; }
+
+.emotion-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.item-slot {
+  margin-bottom: 4px;
+}
+
+.inspect-skill-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid #9b59b6;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  border-radius: 0 4px 4px 0;
+}
+
+.skill-name {
+  font-weight: 700;
+  color: #ecf0f1;
+}
+
+.skill-tier {
+  font-size: 10px;
+  color: #f1c40f;
+  margin-left: 6px;
+}
+
+.skill-desc {
+  font-size: 11px;
+  color: #bdc3c7;
+  margin-top: 2px;
+}
+
+/* ==========================================
+   PLAYER HUD - GIAO DIỆN ĐIỀU KHIỂN (1v99)
+   ========================================== */
+#player-hud {
+  position: absolute;
+  bottom: 85px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.player-bars-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 280px;
+  background: rgba(20, 22, 28, 0.85);
+  border: 1.5px solid #34495e;
+  border-radius: 8px;
+  padding: 8px;
+  backdrop-filter: blur(6px);
+}
+
+.player-action-slots {
+  display: flex;
+  gap: 10px;
+}
+
+.action-slot {
+  width: 48px;
+  height: 48px;
+  background: #2c3e50;
+  border: 2px solid #4a627a;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  position: relative;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.action-key {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 10px;
+  color: #f1c40f;
+}
+
+/* ==========================================
+   POST-MATCH STORY CARD MODAL
+   ========================================== */
+#story-card-modal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 11, 15, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+
+.story-card-box {
+  width: 480px;
+  background: #1e232a;
+  border: 3px solid #f1c40f;
+  border-radius: 16px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 15px 45px rgba(241, 196, 15, 0.35);
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.story-card-title {
+  color: #f1c40f;
+  font-size: 24px;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.story-card-winner {
+  font-size: 28px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 6px;
+}
+
+.story-card-subtitle {
+  font-size: 14px;
+  color: #bdc3c7;
+  margin-bottom: 16px;
+}
+
+.story-card-god {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e67e22;
+  margin-bottom: 6px;
+}
+
+.story-card-weapon {
+  font-size: 14px;
+  color: #ecf0f1;
+  margin-bottom: 20px;
+}
+
+.story-card-honors {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #34495e;
+  border-radius: 10px;
+  padding: 14px;
+  text-align: left;
+  margin-bottom: 24px;
+  font-size: 13px;
+}
+
+.story-card-honors h3 {
+  font-size: 13px;
+  color: #95a5a6;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.honor-row {
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.btn-restart {
+  background: #f1c40f;
+  color: #1a1c23;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4);
+}
+
+.btn-restart:hover {
+  background: #f39c12;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(241, 196, 15, 0.6);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.bot-objective{color:#f5cf8b;font-weight:700;line-height:1.5}.bot-thought{color:#d1dde3;font-style:italic;line-height:1.5}.inspect-skill-item{border-left:3px solid #8bcce2;padding-left:10px}.skill-desc{line-height:1.6}#inspect-panel{max-height:calc(100vh - 160px);overflow-y:auto}.story-card-box p{color:#bdcbd3;line-height:1.6}
+
+.player-control-hint{font-size:11px;max-width:220px;color:#d8e7eb;line-height:1.6;margin:0 12px}.action-slot{font-size:13px}#director-bar{max-width:calc(100vw - 40px)}

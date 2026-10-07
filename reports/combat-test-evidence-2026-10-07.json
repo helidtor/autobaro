@@ -1,0 +1,86 @@
+{
+  "tests": 17,
+  "build": "passed",
+  "productionRuns": [
+    {
+      "seed": 42,
+      "br": {
+        "resolved": true,
+        "alive": 1,
+        "time": 255.59999999998976,
+        "winner": "Ngọc Mai #43",
+        "goal": "Đấu với Yêu Thần: U Minh Diêm La Vương",
+        "monsterCasts": 38,
+        "botCasts": 7,
+        "weaponUsers": 2,
+        "maxDrops": 1
+      },
+      "continuation": {
+        "target": "U Minh Diêm La Vương",
+        "modalClosed": true,
+        "alive": false,
+        "bossAlive": true,
+        "finite": true
+      },
+      "errors": []
+    },
+    {
+      "seed": 2026,
+      "br": {
+        "resolved": true,
+        "alive": 1,
+        "time": 294.49999999999847,
+        "winner": "Hồng Phúc #60",
+        "goal": "Đấu với Yêu Thần: Viêm Đế Phượng Hoàng",
+        "monsterCasts": 44,
+        "botCasts": 0,
+        "weaponUsers": 1,
+        "maxDrops": 1
+      },
+      "continuation": {
+        "target": "Viêm Đế Phượng Hoàng",
+        "modalClosed": true,
+        "alive": false,
+        "bossAlive": true,
+        "finite": true
+      },
+      "errors": []
+    },
+    {
+      "seed": 7,
+      "br": {
+        "resolved": true,
+        "alive": 1,
+        "time": 276.2999999999943,
+        "winner": "Quang Hải #14",
+        "goal": "Đấu với Yêu Thần: Viêm Đế Phượng Hoàng",
+        "monsterCasts": 45,
+        "botCasts": 3,
+        "weaponUsers": 1,
+        "maxDrops": 1
+      },
+      "continuation": {
+        "target": "Viêm Đế Phượng Hoàng",
+        "modalClosed": true,
+        "alive": false,
+        "bossAlive": true,
+        "finite": true
+      },
+      "errors": []
+    }
+  ],
+  "controls": {
+    "block": "block",
+    "dodge": "dodge",
+    "drink": "drink",
+    "overview": true
+  },
+  "inspection": {
+    "monsterSkills": true,
+    "monsterCooldown": true,
+    "validLabels": true,
+    "botIntent": true
+  },
+  "monsterInspection": "U Minh Diêm La Vương\n✕\nYêu Thần (World Boss) (Bậc 5)\nMáu: 2790 / 2790\nCHỈ SỐ THỰC CHIẾN\nTấn công: 58\nPhòng ngự: 70\nTốc độ chạy: 85\nPhẩm chất rơi đồ: god\nTỷ lệ rơi: 100% • 1 bình máu + 1 trang bị/vũ khí\nKỸ NĂNG QUÁI\nTrát Tử Hình\nHồi chiêu 2.0s • Cooldown 11s • Sát thương cơ bản 75\nCó lấy đà; có thể đỡ hoặc né.\nPhán Quyết Luân Hồi\nHồi chiêu 3.4s • Cooldown 13s • Sát thương cơ bản 75\nCó lấy đà; có thể đỡ hoặc né.\nTriệu Hồi Quỷ Binh\nHồi chiêu 4.8s • Cooldown 15s • Sát thương cơ bản 75\nCó lấy đà; có thể đỡ hoặc né.\nCầu Vồng Âm Ti\nHồi chiêu 6.2s • Cooldown 17s • Sát thương cơ bản 75\nCó lấy đà; có thể đỡ hoặc né.\nXích Trói Ngũ Mã\nHồi chiêu 7.6s • Cooldown 19s • Sát thương cơ bản 75\nCó lấy đà; có thể đỡ hoặc né.\nSổ Sinh Tử (Nội tại)\nKhi bị đánh: dựng thế phòng thủ chính diện 0.6s, hồi chiêu 12s.\nSẵn sàng\nThân Xác Linh Hồn (Nội tại)\nKhi bị đánh: dựng thế phòng thủ chính diện 0.6s, hồi chiêu 12s.\nSẵn sàng\nTrừ Hết Giáp Địch (Nội tại)\nKhi bị đánh: dựng thế phòng thủ chính diện 0.6s, hồi chiêu 12s.\nSẵn sàng\nĐoạt Hồn Tăng Máu (Nội tại)\nKhi bị đánh: dựng thế phòng thủ chính diện 0.6s, hồi chiêu 12s.\nSẵn sàng\nÁm Khí Tử Vong (Nội tại)\nKhi bị đánh: dựng thế phòng thủ chính diện 0.6s, hồi chiêu 12s.\nSẵn sàng",
+  "botInspection": "Người Chơi (Player)\n✕\nVô Định Hình (Chưa có vũ khí)\nHèn Nhát\nLv 1 (Kills: 0)\nMáu: 160 / 160\nThể Lực: 100 / 100\nMana: 100 / 100\nSUY NGHĨ & MỤC TIÊU HIỆN TẠI\nKhám phá vùng ngoại ô\n\nTìm quái yếu để luyện cấp, chưa có vũ khí.\n\nBình máu: 0 • Sẵn sàng\nTRẠNG THÁI CẢM XÚC\nSợ hãi (Fear):\n0%\nTự tin (Confidence):\n20%\nTuyệt vọng (Despair):\n0%\nTRANG BỊ (PAPERDOLL)\n⚔️ Vũ khí: Tay Không\n🛡️ Giáp ngực: Áo Vải Thường\n🪖 Mũ bảo hộ: Không\nKỸ NĂNG ĐÃ MỞ KHÓA\nChưa mở khóa kỹ năng nào"
+}

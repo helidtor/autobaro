@@ -1,0 +1,151 @@
+{
+  "date": "2026-10-07",
+  "browser": "Edge headless 1366x768",
+  "devErrors": [
+    "this.renderCentaur is not a function",
+    "this.renderCentaur is not a function"
+  ],
+  "production": {
+    "errors": [],
+    "scripts": [
+      {
+        "url": "http://127.0.0.1:4173/js/data/traitsData.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/data/monstersData.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/data/skillsData.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/data/equipmentsData.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/renderer/weaponAnimations.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/renderer/proceduralPawn.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/renderer/paperdoll.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/renderer/monsterRenderer.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/renderer/vfxManager.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/engine/spatialHash.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/engine/mapTerrain.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/engine/zoneCircle.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/engine/camera.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/ai/emotionEngine.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/ai/aiBrain.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/entities/combatSystem.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/entities/entityManager.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/ui/combatTicker.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/ui/inspectModal.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/ui/directorControls.js",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:4173/js/game.js",
+        "status": 404
+      }
+    ]
+  },
+  "probes": {
+    "warriorMana": {
+      "before": 100,
+      "after": "NaN",
+      "stamina": 100
+    },
+    "classSkills": {
+      "class": "mage",
+      "skill": "w_thunder_slash"
+    },
+    "dropReference": {
+      "sameArray": false,
+      "inGame": false,
+      "inEntityManager": true
+    },
+    "skillsAllocation": {
+      "count": 3,
+      "tiers": [
+        3,
+        3,
+        3
+      ],
+      "remaining": 0
+    },
+    "largeExp": {
+      "level": 2,
+      "exp": 99999
+    },
+    "betrayal": {
+      "madeAlliance": true,
+      "bossStillAlive": true,
+      "alliedAfterBossLeavesVision": false
+    }
+  },
+  "additionalProbes": {
+    "damageWithHelmet": 15,
+    "damageWithoutHelmet": 15,
+    "allyDamage": 15,
+    "inWaterInitially": true,
+    "waterDistance": 95,
+    "normalSpeed": 95,
+    "emotionCallsPerUpdate": 2
+  },
+  "simulation": {
+    "failure": {
+      "seconds": 0.2,
+      "error": "Cannot read properties of undefined (reading 'x')",
+      "stack": "TypeError: Cannot read properties of undefined (reading 'x')\n    at Object.engageCombat (http://127.0.0.1:5173/js/ai/aiBrain.js:256:23)\n    at Object.huntSuitableMonster (http://127.0.0.1:5173/js/ai/aiBrain.js:250:10)\n    at Object.update (http://127.0.0.1:5173/js/ai/aiBrain.js:80:14)\n    at Object.updatePawnAI (http://127.0.0.1:5173/js/ai/aiBrain.js:9:10)\n    at http://127.0.0.1:5173/js/game.js:329:31\n    at Array.forEach (<anonymous>)\n    at Object.update (http://127.0.0.1:5173/js/game.js:297:16)\n    at eval (eval at evaluate (:311:30), <anonymous>:1:93)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    "log": [],
+    "alive": 100,
+    "monsters": 190,
+    "isGameOver": false
+  }
+}

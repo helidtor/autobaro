@@ -1,0 +1,25 @@
+{
+  "name": "autobaro-battle-royale",
+  "version": "1.0.0",
+  "description": "RimWorld Cartoon Style AI Sandbox Battle Royale Web Game",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "node --test tests/game.test.cjs",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "sandbox",
+    "battle-royale",
+    "rimworld",
+    "ai-simulation",
+    "canvas",
+    "game"
+  ],
+  "author": "AutoBaro",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

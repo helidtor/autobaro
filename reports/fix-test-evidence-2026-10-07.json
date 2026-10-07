@@ -1,0 +1,109 @@
+{
+  "date": "2026-10-07",
+  "liveResults": [
+    {
+      "url": "http://127.0.0.1:5173",
+      "errors": [],
+      "failed": [],
+      "pauseWorks": true,
+      "playerMode": true,
+      "state": {
+        "time": 2.4755999999999982,
+        "alive": 99,
+        "weaponOwners": 0,
+        "skillsCast": 0,
+        "finite": true
+      }
+    },
+    {
+      "url": "http://127.0.0.1:4173",
+      "errors": [],
+      "failed": [],
+      "pauseWorks": true,
+      "playerMode": true,
+      "state": {
+        "time": 2.435099999999905,
+        "alive": 99,
+        "weaponOwners": 0,
+        "skillsCast": 0,
+        "finite": true
+      }
+    }
+  ],
+  "matchResults": [
+    {
+      "seed": 42,
+      "seconds": 214.5,
+      "wallMs": 1666,
+      "ended": true,
+      "alive": 1,
+      "winner": "Hữu Thắng #35",
+      "highestLevel": 10,
+      "weaponOwners": 36,
+      "skillsCast": 123,
+      "dropsSeen": 53,
+      "finite": true,
+      "storyVisible": true,
+      "errors": []
+    },
+    {
+      "seed": 123,
+      "seconds": 126.1,
+      "wallMs": 1143,
+      "ended": true,
+      "alive": 1,
+      "winner": "Khánh Linh #45",
+      "highestLevel": 6,
+      "weaponOwners": 30,
+      "skillsCast": 57,
+      "dropsSeen": 35,
+      "finite": true,
+      "storyVisible": true,
+      "errors": []
+    },
+    {
+      "seed": 987,
+      "seconds": 318.3,
+      "wallMs": 2311,
+      "ended": true,
+      "alive": 1,
+      "winner": "Quang Hải #98",
+      "highestLevel": 5,
+      "weaponOwners": 19,
+      "skillsCast": 76,
+      "dropsSeen": 49,
+      "finite": true,
+      "storyVisible": true,
+      "errors": []
+    }
+  ],
+  "uiResult": {
+    "dropBefore": 0,
+    "dropAfter": 1,
+    "airdropWorks": true,
+    "moveBefore": 1300,
+    "moveAfter": 1313.7084999999993,
+    "movementWorks": true,
+    "playerCheck": {
+      "mana": 100,
+      "stamina": 85.6,
+      "skillsCast": 1,
+      "targetHp": 9970
+    },
+    "errors": []
+  },
+  "finalSmoke": [
+    {
+      "url": "http://127.0.0.1:5173",
+      "errors": [],
+      "failed": [],
+      "berserk": true
+    },
+    {
+      "url": "http://127.0.0.1:4173",
+      "errors": [],
+      "failed": [],
+      "berserk": true
+    }
+  ]
+}
