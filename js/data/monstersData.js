@@ -938,3 +938,19 @@ window.GameData.Monsters = {
     }
   ]
 };
+
+// Sinh cảnh cố định theo loài; mọi cá thể phải ở trong sinh cảnh này.
+window.GameData.HabitatNames = {grassland:'Đồng cỏ',forest:'Rừng già',ruins:'Phế tích',marsh:'Đầm lầy',village:'Làng mạc',mountain:'Núi đá',lair:'Sào huyệt',temple:'Điện thờ'};
+const monsterHabitats = {
+ spike_hare:'grassland',dungeon_rat:'village',goblin_clubber:'village',stone_monkey:'forest',rusty_skeleton:'ruins',cave_spiderling:'mountain',armored_beetle:'mountain',shambling_zombie:'ruins',grass_viper:'grassland',starving_wolf:'forest',
+ ironspine_boar:'forest',swamp_serpent:'marsh',magma_toad:'mountain',shadow_panther:'forest',frost_ursa:'mountain',vampire_bat:'ruins',sand_trapper:'grassland',ancient_rock_crab:'marsh',alpha_timberwolf:'forest',rotting_treant:'forest',
+ executioner_golem:'mountain',naga_spitfire:'marsh',centaur_warlord:'grassland',lich_acolyte:'ruins',gorilla_berserker:'forest'
+};
+for (const definitions of Object.values(window.GameData.Monsters)) for (const def of definitions) def.habitat = monsterHabitats[def.id] || (def.tier===4?'lair':'temple');
+
+// Fifth species appears only in the survivor's final hunt.
+window.GameData.FinalLord = {...window.GameData.Monsters.lords[0],id:'ironhide_rhino_lord',name:'Thiết Giáp Tê Ngưu Vương',habitat:'lair',visual:{type:'rhino',bodyColor:'#768695'},passives:[{name:'Thiết Giáp Hộ Thể',flatDamageReduction:8},{name:'Ý Chí Sơn Vương'}],skills:[
+ {id:'rhino_charge',name:'Thiết Giáp Xung Phong',type:'charge',cooldown:11},
+ {id:'rhino_slam',name:'Địa Chấn Thiết Đề',type:'slam',cooldown:14},
+ {id:'rhino_roar',name:'Gầm Thét Sơn Hà',type:'roar',cooldown:17}
+]};

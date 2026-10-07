@@ -39,6 +39,8 @@ window.GameUI.InspectModal = {
     const thresholds=window.GameData.LevelTable.expRequirements;
     const levelBase=thresholds[p.level-1]||0,next=p.level<15?thresholds[p.level]:null;
     const xpInLevel=Math.max(0,p.currentExp-levelBase),xpNeeded=next===null?0:next-levelBase;
+    const stats=window.GameEntities.CombatSystem.combatStats(p);
+    const personality=p.personality||window.GameData.PersonalityProfiles[p.trait];
     const fearPct = Math.round(p.fear || 0);
     const confPct = Math.round(p.confidence || 0);
     const despPct = Math.round(p.despair || 0);
@@ -85,10 +87,17 @@ window.GameUI.InspectModal = {
       </div>
 
       <div class="inspect-section">
+        <div class="section-title">Chỉ số thực chiến</div>
+        <div>ATK: <b>${stats.attack}</b> • DEF: <b>${stats.defense}</b></div>
+        <div>Tốc độ: <b>${Math.round(stats.speed)}</b> • Tầm đánh: <b>${stats.range}</b> • Tầm nhìn: <b>${window.GameEntities.CombatSystem.visionRange(p)}</b> • Chí mạng: <b>${Math.round(Math.min(.35,(p.critChance||0)+(p.weapon?.critChance||0))*100)}%</b></div>
+        <div class="section-title">Tính cách cá nhân</div>
+        <div>Chủ đạo: ${traitDef.name} • Phụ: ${window.GameData.Traits[p.secondaryTrait]?.name||'—'}</div>
+        ${Object.entries(window.GameData.PersonalityAxes).map(([key,name])=>'<div class="emotion-row"><span>'+name+':</span><b>'+personality[key]+'/100</b></div>').join('')}
         <div class="section-title">Suy nghĩ & mục tiêu hiện tại</div>
         <div class="bot-objective">${p.objective || "Quan sát chiến trường"}</div>
         <p class="bot-thought">${p.thought || "Đang lựa chọn hành động."}</p>
-        <div>Bình máu: <b>${p.healthPotions || 0}</b> • ${p.action ? ({attack:"Ra đòn",skill:"Thi triển kỹ năng",block:"Đỡ đòn",dodge:"Né đòn",drink:"Uống bình"}[p.action.kind]) : "Sẵn sàng"}</div>
+        <div>Chiến thuật: <b>${p.isHiding?"Đang ẩn nấp":p.combatTactic|| (p.chase?"Truy đuổi có giới hạn":"Cơ động")}</b></div><div>Bình máu: <b>${p.healthPotions || 0}</b> • ${p.action ? ({attack:"Ra đòn",skill:"Thi triển kỹ năng",block:"Đỡ đòn",dodge:"Né đòn",drink:"Uống bình"}[p.action.kind]) : "Sẵn sàng"}</div>
+        ${p.allyPawn?.isAlive?'<div>Đồng minh: <b>'+p.allyPawn.name+'</b>'+ (p.pactTarget?' • Truy tìm '+p.pactTarget.name:'')+'</div>':''}
         <div class="section-title">Trạng thái cảm xúc</div>
         <div class="emotion-row"><span>Sợ hãi (Fear):</span> <b>${fearPct}%</b></div>
         <div class="bar-container"><div class="bar-fill bar-fear" style="width: ${fearPct}%"></div></div>
@@ -139,7 +148,10 @@ window.GameUI.InspectModal = {
         <div class="section-title">Chỉ Số Thực Chiến</div>
         <div>Tấn công: <b>${m.attack}</b></div>
         <div>Phòng ngự: <b>${m.defense}</b></div>
-        <div>Tốc độ chạy: <b>${m.speed}</b></div>
+        <div>Tốc độ chạy: <b>${m.speed}</b></div><div>Tầm đánh: <b>${window.GameEntities.CombatSystem.combatStats(m).range}</b> • Tầm nhìn: <b>${window.GameEntities.CombatSystem.visionRange(m)}</b></div>
+        <div>Sinh cảnh: <b>${m.territory?.name||window.GameData.HabitatNames[m.habitat]||'—'}</b></div>
+        <div>EXP khi hạ: <b>${m.expReward}</b></div>
+        <div>Nhịp phép chung: <b>${m.globalSkillCooldown>0?m.globalSkillCooldown.toFixed(1)+'s':'Sẵn sàng'}</b> • Tối đa 1 phép / 3s</div>
         <div>Phẩm chất rơi đồ: <b>${m.dropTier}</b></div>
         <div>Tỷ lệ rơi: <b>${[0,20,30,40,100,100][m.tier]}%</b> • ${m.tier>=4?"1 bình máu + 1 trang bị/vũ khí":"1 bình máu hoặc 1 trang bị/vũ khí"}</div>
       </div>

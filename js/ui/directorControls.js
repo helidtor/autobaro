@@ -133,7 +133,7 @@ window.GameUI.DirectorControls = {
         </div>
 
         <button class="btn-restart" id="btn-continue" onclick="window.GameManager.continueAfterResult()">✕ Đóng kết quả • Tiếp tục trận đấu</button>
-        <p>Người sống sót sẽ tiến đến Yêu Thần nếu nó còn sống. Vòng bo đã dừng.</p>
+        <p>Đóng kết quả: quái cũ rời bản đồ, 5 Yêu Vương mới xuất hiện. Luyện tới cấp 15 rồi mới quyết chiến Yêu Thần. Hạ hết 5 Yêu Vương để mở điện thờ.</p>
         <button class="btn-ctrl" onclick="window.GameManager.startNewMatch()">Bắt đầu trận mới</button>
       </div>
     `;

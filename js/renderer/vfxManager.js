@@ -188,7 +188,7 @@ window.GameRenderer.VfxManager = {
       let hit = false;
       for(let j=0;j<steps && !hit;j++){
         p.x += p.vx*dt/steps; p.y += p.vy*dt/steps;
-        hit = !window.GameEngine.MapTerrain.canStand(p.x,p.y,0) || (p.onHit ? p.onHit(p.x,p.y,p) : false);
+        hit = !window.GameEngine.MapTerrain.canStand(p.x,p.y,0) || !window.GameEngine.MapTerrain.templeAccess(null,p.x,p.y) || (p.onHit ? p.onHit(p.x,p.y,p) : false);
       }
       p.rangeLeft -= moveDist;
       if (hit || p.rangeLeft <= 0) {

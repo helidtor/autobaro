@@ -9,7 +9,6 @@ import './renderer/paperdoll.js';
 import './renderer/vfxManager.js';
 import './engine/spatialHash.js';
 import './engine/mapTerrain.js';
-import './engine/zoneCircle.js';
 import './engine/camera.js';
 import './ai/emotionEngine.js';
 import './ai/aiBrain.js';

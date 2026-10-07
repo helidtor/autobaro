@@ -47,16 +47,9 @@ window.GameRenderer.Paperdoll = {
       ctx.fillStyle = '#f4d4a1'; ctx.fillRect(-3,-9,6,5);
       ctx.fillStyle = '#fff0e5'; ctx.fillRect(-1,-2,2,7); ctx.fillRect(-3,0,6,2);
     } else if (item.slot === 'weapon') {
-      // Icon thanh kiếm/vũ khí chéo
-      ctx.fillStyle = tierColor;
-      ctx.beginPath();
-      ctx.moveTo(-6, -8);
-      ctx.lineTo(6, 6);
-      ctx.lineTo(3, 8);
-      ctx.lineTo(-8, -5);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      ctx.save();ctx.scale(.45,.45);ctx.translate(-15,0);ctx.rotate(-.65);
+      window.GameRenderer.WeaponAnimations.drawWeapon(ctx,item.data||item);
+      ctx.restore();
     } else {
       // Icon áo giáp/mũ
       ctx.fillStyle = tierColor;

@@ -43,6 +43,25 @@ window.GameEntities.CombatSystem = {
     }
   },
 
+ visionRange(e){return e.isMonster?(e.tier>=4?300:220):230+(e.personality?.curiosity||50);},
+ canSee(observer,target){
+  if(!target?.isAlive||observer===target)return false;
+  const M=window.GameEngine.MapTerrain,d=Math.hypot(target.x-observer.x,target.y-observer.y);
+  if(d>this.visionRange(observer)||!M.segmentClear(observer.x,observer.y,target.x,target.y,false,0))return false;
+  if(target.stealthTimer>0&&d>32)return false;
+  return !(target.isHiding&&M.isInBush(target.x,target.y)&&d>55);
+ },
+ validMembers(members){
+  return members.size<=3||members.size===4&&[...members].every(p=>p.isPawn&&p.allyPawn!==p&&p.allyPawn?.isAlive&&members.has(p.allyPawn)&&p.allyPawn.allyPawn===p);
+ },
+ crowdAt(e,x,y){
+  const pawns=window.GameManager?.pawns||[];
+  return new Set([e,...pawns.filter(p=>p!==e&&p.isAlive&&Math.hypot(p.x-x,p.y-y)<75)]);
+ },
+ canApproach(e,target){
+  if(!this.canJoin(e,target))return false;
+  return this.validMembers(this.crowdAt(e,target.x,target.y));
+ },
  groupMembers(e){
   const members=new Set([e]),G=window.GameManager,M=window.GameEngine.MapTerrain;
   const addGroup=g=>{
@@ -53,9 +72,14 @@ window.GameEntities.CombatSystem = {
     }
   };
   addGroup(e.combatGroup);
-  // Nearby duels share a battle: starting a separate target pair cannot bypass the cap.
-  for(const p of [...(G?.pawns||[]),...(G?.monsters||[])])
-    if(p.isAlive&&p.combatLease>0&&Math.hypot(p.x-e.x,p.y-e.y)<120)addGroup(p.combatGroup);
+  // Connected nearby encounters are one battle, including chains of separate pairs.
+  const active=[...(G?.pawns||[]),...(G?.monsters||[])].filter(p=>p.isAlive&&(p.combatLease>0||p.action?.target));
+  for(const origin of members){
+    for(const p of active)if(Math.hypot(p.x-origin.x,p.y-origin.y)<120){addGroup(p.combatGroup);members.add(p);}
+    const ally=origin.allyPawn;
+    if(ally?.isAlive&&ally.allyPawn===origin&&Math.hypot(origin.x-ally.x,origin.y-ally.y)<240&&!M.isInWater(ally.x,ally.y))members.add(ally);
+    if(members.size>4)break;
+  }
   for(const p of [...members]){
     const ally=p.allyPawn;
     if(ally?.isAlive&&ally.allyPawn===p&&Math.hypot(p.x-ally.x,p.y-ally.y)<240&&!M.isInWater(ally.x,ally.y))members.add(ally);
@@ -63,20 +87,24 @@ window.GameEntities.CombatSystem = {
   return [...members];
  },
  canJoin(a,t){
+  const general=a.isMonster&&a.tier===3?a:t.isMonster&&t.tier===3?t:null;
+  const pawn=a.isPawn?a:t.isPawn?t:null;
+  if(general&&pawn&&(window.GameManager?.monsters||[]).some(m=>m!==general&&m.isAlive&&m.tier===3&&((m.combatLease>0&&m.focusPawn===pawn)||m.action?.target===pawn)))return false;
   const members=new Set([...this.groupMembers(a),...this.groupMembers(t),a,t]);
-  if(members.size<=3)return true;
-  return members.size===4 && [...members].every(p=>p.allyPawn?.isAlive&&members.has(p.allyPawn)&&p.allyPawn.allyPawn===p);
+  return this.validMembers(members);
  },
  reserveCombat(a,t){
   if(!this.canJoin(a,t))return false;
   const members=new Set([...this.groupMembers(a),...this.groupMembers(t),a,t]),g={members};
   for(const p of members){p.combatGroup=g;if(!(p.combatLease>0))p.combatLease=6;}
   a.combatLease=t.combatLease=6;
+  if(a.isMonster&&a.tier===3&&t.isPawn)a.focusPawn=t;
+  if(t.isMonster&&t.tier===3&&a.isPawn)t.focusPawn=a;
   return true;
  },
  canEngage(a,t){
   const M=window.GameEngine.MapTerrain;
-  return this.isEnemy(a,t) && !M.isInWater(a.x,a.y) && !M.isInWater(t.x,t.y) && this.canJoin(a,t) && M.segmentClear(a.x,a.y,t.x,t.y,false,0);
+  return this.isEnemy(a,t) && M.templeAccess(a,t.x,t.y) && M.templeAccess(t,a.x,a.y) && (!a.isMonster || M.monsterCanTarget(a,t)) && !M.isInWater(a.x,a.y) && !M.isInWater(t.x,t.y) && this.canJoin(a,t) && M.segmentClear(a.x,a.y,t.x,t.y,false,0);
  },
  grantLevel(p){
   if(p.level>=15)return false;
@@ -85,15 +113,19 @@ window.GameEntities.CombatSystem = {
  },
  rewardBotKill(killer,victim){
   if(!killer?.isPawn || killer.isPlayerControlled || !victim.isPawn)return false;
-  if(killer.level<15 && Math.random()<.5){this.grantLevel(killer);return true;}
   const D=window.GameData.Equipments,tiers=['common','rare','super_rare','supreme','god'];
-  const rank=Math.max(0,...[victim.weapon,victim.armor,victim.helmet].filter(Boolean).map(e=>tiers.indexOf(e.tier)));
-  const tier=tiers[Math.min(4,rank+(Math.random()<.2?1:0))];
-  const pool=[...Object.values(D.weapons),...Object.values(D.armors)].filter(e=>e.tier===tier);
-  const item=pool[Math.floor(Math.random()*pool.length)];
-  if(item)window.GameManager.spawnDropItem(victim.x,victim.y,item,item.slot||'weapon');
+  const carried=victim.weapon||victim.armor||victim.helmet;
+  const rank=Math.max(0,tiers.indexOf(carried?.tier||'common'));
+  let item=carried;
+  if(!item || Math.random()<.25){
+   const tier=tiers[Math.min(4,rank+ (item?1:Math.random()<.25?1:0))];
+   const pool=[...Object.values(D.weapons),...Object.values(D.armors)].filter(e=>e.tier===tier);
+   item=pool[Math.floor(Math.random()*pool.length)];
+  }
+  if(item)window.GameManager.spawnDropItem(victim.x,victim.y,{...item},item.slot||'weapon');
   return true;
  },
+ combatStats(e){return {attack:(e.attack||16)+Math.min(65,e.weapon?.attack||e.weapon?.magicPower||0),defense:(e.defense||0)+(e.armor?.defense||0)+(e.helmet?.defense||0)+(e.weapon?.defense||0),range:e.weapon?.range||(e.tier>=4?130:38),speed:window.GameEngine.MapTerrain.getMoveSpeed(e)};},
 
   canAttack(e) {
     return !!e?.isAlive && !e.action && !(e.stunTimer > 0) && !(e.pacifyTimer > 0) &&
@@ -103,7 +135,7 @@ window.GameEntities.CombatSystem = {
     return !!t?.isAlive && !(a?.isMonster && t.isMonster) && t !== a && t !== a?.allyPawn && t.allyPawn !== a && (t.isPawn || t.isMonster);
   },
   weaponStyle(e) {
-    if (e.weapon) return this.styles[e.weapon.type] ? e.weapon.type : 'sword';
+    if (e.weapon) return e.weapon.type==='hybrid_cane'?'staff':this.styles[e.weapon.type] ? e.weapon.type : 'sword';
     if (!e.isMonster) return 'unarmed';
     if (['golem', 'titan_ape', 'demon_lord'].includes(e.visual?.type)) return 'hammer';
     if (e.visual?.type === 'centaur') return 'spear';
@@ -112,6 +144,7 @@ window.GameEntities.CombatSystem = {
   startAction(e, kind, target, resolve, options = {}) {
     if (e.action || !e.isAlive) return false;
     if (target && ['attack','skill'].includes(kind) && (!this.canEngage(e,target)||!this.reserveCombat(e,target))) return false;
+    if(target&&['attack','skill'].includes(kind)){e.isHiding=false;e.stealthTimer=0;}
     const style = options.style || this.weaponStyle(e), timing = this.styles[style];
     const windup = options.windup ?? timing.windup;
     const duration = windup + (options.active ?? timing.active) + (options.recovery ?? timing.recovery);
@@ -165,7 +198,7 @@ window.GameEntities.CombatSystem = {
     }};
   },
   castSkill(e, skill, target) {
-    if (!this.canAttack(e) || !skill?.def || skill.cooldownTimer > 0 || e.silenceTimer > 0) return false;
+    if (!this.canAttack(e) || !skill?.def || skill.cooldownTimer > 0 || (e.isMonster && e.globalSkillCooldown>0) || e.silenceTimer > 0) return false;
     const c = this.getSkillConfig(e, skill), type = c.type;
     const utility = ['teleport', 'speed_buff', 'ethereal_speed', 'stealth', 'smoke_cloud', 'weapon_swap', 'weapon_buff', 'self_heal', 'aura_heal', 'shield_stance', 'counter_stance', 'mana_shield_toggle', 'stasis'].includes(type);
     if (!utility && (!this.isEnemy(e, target) || Math.hypot(target.x - e.x, target.y - e.y) > c.range)) return false;
@@ -241,7 +274,7 @@ window.GameEntities.CombatSystem = {
     }, { style: this.weaponStyle(e), windup, recovery: 0.35, color, skillName: c.name });
     if (!ok) return false;
     e.currentMana -= mana; e.currentStamina -= stamina;
-    skill.cooldownTimer = c.cooldown; e.attackCooldown = windup + 0.35;
+    skill.cooldownTimer = c.cooldown; if(e.isMonster)e.globalSkillCooldown=3; e.attackCooldown = windup + 0.35;
     e.skillsCast = (e.skillsCast || 0) + 1;
     if (!utility && area) window.GameRenderer.VfxManager.addEffect('telegraph', ['line','cone'].includes(c.shape) ? e.x : tx, ['line','cone'].includes(c.shape) ? e.y : ty, { radius: c.radius, angle, shape: c.shape || 'circle', length: c.range, color, life: windup, label: c.name });
     else window.GameRenderer.VfxManager.addEffect('rune', e.x, e.y, { radius: 24, color, life: windup });
@@ -272,7 +305,7 @@ window.GameEntities.CombatSystem = {
       const a=t.action;
       return a && !a.released && (a.target===e || (a.kind==='skill' && Math.hypot(e.x-a.targetX,e.y-a.targetY)<70)) && a.elapsed>a.windup*.35;
     });
-    if (!threat || Math.random() > (e.confidence > 85 ? 0.18 : 0.4)) return false;
+    if (!threat || Math.random() > (e.confidence > 85 ? .18 : .25+(e.personality?.caution||50)*.004)) return false;
     const angle = Math.atan2(threat.y - e.y, threat.x - e.x);
     const dodge = ['archer', 'assassin'].includes(e.classId) || e.trait === 'coward';
     e.thought = dodge ? 'Thấy đối thủ lấy đà — né sang sườn!' : 'Đọc đòn, nâng vũ khí đỡ chính diện.';
@@ -290,7 +323,7 @@ window.GameEntities.CombatSystem = {
     }, { windup: 0.65, active: 0.1, recovery: 0.15, style: 'unarmed' });
   },
   updateStatus(e, dt) {
-    for (const k of ['combatLease', 'stunTimer', 'slowTimer', 'silenceTimer', 'speedBuffTimer', 'waterWalkTimer', 'pacifyTimer', 'weaponBuffTimer', 'stealthTimer', 'guardTimer', 'controlImmunityTimer', 'defenseCooldown', 'potionCooldown', 'attackCooldown', 'hitFlashTimer']) e[k] = Math.max(0, (e[k] || 0) - dt);
+    for (const k of ['globalSkillCooldown', 'combatLease', 'stunTimer', 'slowTimer', 'silenceTimer', 'speedBuffTimer', 'waterWalkTimer', 'pacifyTimer', 'weaponBuffTimer', 'stealthTimer', 'guardTimer', 'controlImmunityTimer', 'defenseCooldown', 'potionCooldown', 'attackCooldown', 'hitFlashTimer']) e[k] = Math.max(0, (e[k] || 0) - dt);
     for (const p of e.passives || []) p.cooldownTimer=Math.max(0,(p.cooldownTimer||0)-dt);
     for (const s of e.skills || []) s.cooldownTimer = Math.max(0, (s.cooldownTimer || 0) - dt);
     if (e.healTimer > 0) { const time = Math.min(dt, e.healTimer); e.currentHp = Math.min(e.maxHp, e.currentHp + e.healPerSecond * time); e.healTimer -= time; }
@@ -308,7 +341,9 @@ window.GameEntities.CombatSystem = {
   },
   applyDamage(a, t, weapon, c = {}) {
     if (!a || !this.canEngage(a,t) || t.invincible || !this.reserveCombat(a,t)) return 0;
-    if (t.action?.kind === 'dodge' && t.action.elapsed < 0.3) { window.GameRenderer.VfxManager.addDamageNumber(t.x, t.y - 15, 'NÉ', 'block'); return 0; }
+    if (t.action?.kind === 'dodge' && t.action.elapsed < 0.3) {
+      this.counterOpening(t,a);window.GameRenderer.VfxManager.addDamageNumber(t.x,t.y-15,'NÉ','block');return 0;
+    }
     let raw = c.baseDamage ?? ((a.attack || 16) + Math.min(65, weapon?.attack || weapon?.magicPower || 0));
     if (a.weaponBuffTimer > 0) raw += a.magicOnHit || 0;
     if (a.currentHp < a.maxHp * 0.25) raw *= 1 + (window.GameData.Traits[a.trait]?.lowHpDamageBonus || 0);
@@ -316,12 +351,15 @@ window.GameEntities.CombatSystem = {
     if (crit) raw *= 1.35;
     const ambush=(a.passives||[]).find(p=>p.type==='ambush'&&p.cooldownTimer<=0);
     if(ambush&&window.GameEngine.MapTerrain.isInBush(a.x,a.y)){raw*=1.2;ambush.cooldownTimer=ambush.cooldown;}
-    const armor = (t.defense || 0) + (t.armor?.defense || 0) + (t.helmet?.defense || 0) + (t.weapon?.defense || 0);
+    const armor = this.combatStats(t).defense;
     let damage = raw * 100 / (100 + armor);
+    const M=window.GameEngine.MapTerrain;
+    if(Math.hypot(a.x-t.x,a.y-t.y)>90 && M.isInBush(t.x,t.y))damage*=.85;
+    if(M.isOnCliff(a.x,a.y)&&!M.isOnCliff(t.x,t.y))damage*=1.1;
     if (t.action?.kind === 'block' || t.guardTimer > 0) {
       const incoming = Math.atan2(a.y - t.y, a.x - t.x);
       if (Math.cos(incoming - (t.action?.angle ?? t.aimAngle)) > 0.25) {
-        damage *= 0.3;
+        damage *= 0.3;this.counterOpening(t,a);
         window.GameRenderer.VfxManager.addEffect('guard', t.x, t.y, { angle: incoming, radius: 30, color: '#8be6ff', life: 0.3 });
         window.GameRenderer.VfxManager.addDamageNumber(t.x, t.y - 20, 'ĐỠ', 'block');
       }
@@ -329,23 +367,42 @@ window.GameEntities.CombatSystem = {
     const shell=(t.passives||[]).find(p=>p.type==='shell'&&p.cooldownTimer<=0);
     if(shell){damage-=Math.min(8,damage*.25);shell.cooldownTimer=shell.cooldown;}
     damage = Math.max(1, Math.round(damage)); t.currentHp = Math.max(0, t.currentHp - damage);
-    t.hitFlashTimer = 0.13; t.stealthTimer = 0; a.stealthTimer = 0;
+    a.lastDamageTarget=t;a.lastDamageDealtAt=window.GameManager.matchTime||0;t.lastDamageTakenAt=window.GameManager.matchTime||0;
+    t.hitFlashTimer = 0.13; t.stealthTimer = 0; a.stealthTimer = 0;t.isHiding=a.isHiding=false;
     if (a.isBerserk) a.currentHp = Math.min(a.maxHp, a.currentHp + damage * 0.15);
     window.GameRenderer.VfxManager.addDamageNumber(t.x, t.y, damage, crit ? 'crit' : 'normal');
     window.GameRenderer.VfxManager.addEffect('hit', t.x, t.y - 15, { angle: a.aimAngle || 0, radius: 15, color: crit ? '#ffb38d' : '#fff2d6', life: 0.2 });
-    if (t.isPawn) window.GameAI.EmotionEngine.onDamageTaken(t, damage, a);
+    if (t.isPawn) {t.lastAttacker=a;t.grudgeUntil=(window.GameManager.matchTime||0)+18; window.GameAI.EmotionEngine.onDamageTaken(t, damage, a);}
     if (t.currentHp <= 0) this.handleDeath(a, t);
     if(a.isAlive && t.isAlive) {this.triggerPassives(a,t,damage,false,c);this.triggerPassives(t,a,damage,true,c);}
     return damage;
+  },
+  counterOpening(defender,attacker){
+    if(!defender.isPawn)return;
+    defender.counterTarget=attacker;defender.counterUntil=(window.GameManager.matchTime||0)+1.5;
+    defender.confidence=Math.min(100,(defender.confidence||0)+4);defender.fear=Math.max(0,(defender.fear||0)-3);
+    defender.successfulDefenses=(defender.successfulDefenses||0)+1;
+  },
+  rememberBotKill(killer,victim){
+    if(!killer?.isPawn||killer.isPlayerControlled||!victim.isPawn)return;
+    const G=window.GameManager,now=G.matchTime||0;
+    killer.botKillTimes=[...(killer.botKillTimes||[]).filter(at=>now-at<60),now];killer.botKillStreak=killer.botKillTimes.length;
+    for(const observer of G.pawns){
+      if(observer===killer||!observer.isAlive||!this.canSee(observer,killer))continue;
+      const previous=observer.knownThreat;
+      observer.knownThreat={target:killer,x:killer.x,y:killer.y,seenAt:now,killAt:now,kills:previous?.target===killer&&now-previous.killAt<60?previous.kills+1:1,snapshot:window.GameAI.AIBrain.threatSnapshot(killer)};
+    }
   },
   handleDeath(killer, victim) {
     if (!victim?.isAlive) return;
     if (victim.armor?.reviveOnce && !victim.hasRevived) { victim.hasRevived = true; victim.currentHp = victim.maxHp * 0.2; return; }
     victim.isAlive = false; victim.action = null;
+    if(victim.isMonster&&victim.tier>=4&&victim.territory)victim.territory.isCleared=true;
     window.GameRenderer.VfxManager.addBurstParticles(victim.x, victim.y, '#d8c4a3', 12);
-    if (killer?.isPawn) { if(!this.rewardBotKill(killer,victim)){killer.currentExp += victim.expReward || (victim.level || 1) * 60; this.checkLevelUp(killer);} killer.killCount = (killer.killCount || 0) + 1; window.GameAI.EmotionEngine.onKillOrLoot(killer, victim.dropTier || 'rare'); }
+    if (killer?.isPawn) { this.rewardBotKill(killer,victim);killer.currentExp += victim.isPawn ? Math.max(1,victim.level||1)*60 : victim.expReward||50; this.checkLevelUp(killer); killer.killCount = (killer.killCount || 0) + 1; window.GameAI.EmotionEngine.onKillOrLoot(killer, victim.dropTier || 'rare'); }
+    this.rememberBotKill(killer,victim);
     this.dropLootOnDeath(victim);
-    window.GameUI.CombatTicker.log('💀 ' + victim.name + ' bị hạ bởi ' + (killer?.name || 'Vòng Bo Độc') + '.');
+    window.GameUI.CombatTicker.log('💀 ' + victim.name + ' bị hạ bởi ' + (killer?.name || 'Thiên tai') + '.');
   },
   checkLevelUp(p) {
     const table = window.GameData.LevelTable.expRequirements;

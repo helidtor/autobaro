@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-08",
+  "validation": {
+    "tests": 64,
+    "passed": 64,
+    "failed": 0,
+    "durationMs": 219640.4226,
+    "build": "passed",
+    "browserErrors": [],
+    "commitOrPush": false
+  },
+  "browser": {
+    "seed": 42,
+    "initialBots": 100,
+    "initialMonsters": 71,
+    "dt": 0.1,
+    "pvp": {
+      "steps": 8266,
+      "loot": 84,
+      "gear": 74,
+      "potions": 10,
+      "counters": 461,
+      "coalitions": 7,
+      "phases": {
+        "pressure": 5177,
+        "probe": 1412,
+        "counter": 1431,
+        "retreat": 539,
+        "bait": 64,
+        "escape": 32
+      },
+      "maxCrowd": 3,
+      "maxGroup": 3,
+      "violations": 0,
+      "time": 826.6000000001194,
+      "winner": "Hữu Thắng #63",
+      "winnerLevel": 9
+    },
+    "final": {
+      "time": 1070.5000000001219,
+      "winner": "Hữu Thắng #63",
+      "level": 15,
+      "hp": 946,
+      "maxHp": 946,
+      "weapon": "Cung Thần Mặt Trời Thái Dương",
+      "armor": "Áo Choàng Niết Bàn",
+      "godAlive": false,
+      "lords": 0,
+      "loot": 93,
+      "gear": 77
+    },
+    "earlyGodTargets": 0
+  },
+  "rules": {
+    "pvpInitiate": 0.5,
+    "coalitionInitiate": 0.4,
+    "coalitionDisengage": 0.35,
+    "killWindowSeconds": 60,
+    "minimumWitnessedKills": 2,
+    "pactSeconds": 25,
+    "lastSeenExpirySeconds": 12,
+    "searchSeconds": 3
+  }
+}

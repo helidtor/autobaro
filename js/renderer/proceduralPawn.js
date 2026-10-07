@@ -154,7 +154,7 @@ window.GameRenderer.ProceduralPawn = {
         tiltAngle=facing*lean*.025;walkSquashY=action.released?1.04:.96;
       }
     }
-    if(pawn.stealthTimer>0)ctx.globalAlpha=.5;
+    if(pawn.stealthTimer>0||pawn.isHiding)ctx.globalAlpha=.5;
     if(pawn.hitFlashTimer>0)ctx.translate(-Math.cos(aimAngle)*3,0);
     ctx.rotate(tiltAngle);
 

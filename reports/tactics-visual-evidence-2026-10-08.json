@@ -1,0 +1,87 @@
+{
+  "seed": 42,
+  "dt": 0.1,
+  "survival": {
+    "maxMembers": 3,
+    "invalidGroups": 0,
+    "maxCrowd": 3,
+    "crowdViolations": 0,
+    "maxConnected": 3,
+    "connectedViolations": 0,
+    "hidingFrames": 1752,
+    "chasingFrames": 2464,
+    "steps": 5153
+  },
+  "finalHunt": {
+    "steps": 2309,
+    "earlyGodTargets": 0,
+    "maxMembers": 2,
+    "invalidGroups": 0,
+    "blockedEntries": 0
+  },
+  "time": 746.2000000001011,
+  "winner": {
+    "id": "pawn_66",
+    "name": "Quốc Bảo #67",
+    "level": 15,
+    "hp": 451,
+    "exp": 7904
+  },
+  "lords": [
+    {
+      "name": "Viêm Ma Bạo Chúa",
+      "alive": false
+    },
+    {
+      "name": "Cuồng Bạo Kim Cương Vương",
+      "alive": false
+    },
+    {
+      "name": "Thanh Xà Đế Vương",
+      "alive": false
+    },
+    {
+      "name": "Lãnh Chúa Xương Vong Hồn",
+      "alive": false
+    },
+    {
+      "name": "Thiết Giáp Tê Ngưu Vương",
+      "alive": false
+    }
+  ],
+  "god": {
+    "name": "Viêm Đế Phượng Hoàng",
+    "alive": false
+  },
+  "monstersHaveShapes": 32,
+  "survivalResult": {
+    "time": 515.3000000000486,
+    "winner": {
+      "id": "pawn_66",
+      "name": "Quốc Bảo #67",
+      "level": 10,
+      "hp": 376
+    },
+    "stats": {
+      "maxMembers": 3,
+      "invalidGroups": 0,
+      "maxCrowd": 3,
+      "crowdViolations": 0,
+      "maxConnected": 3,
+      "connectedViolations": 0,
+      "hidingFrames": 1752,
+      "chasingFrames": 2464,
+      "steps": 5153
+    }
+  },
+  "browserErrors": [],
+  "validation": {
+    "tests": 51,
+    "passed": 51,
+    "failed": 0,
+    "fullSuiteDurationMs": 130861.0516,
+    "productionBuild": "passed",
+    "gitDiffCheck": "passed",
+    "commitOrPush": false
+  }
+}

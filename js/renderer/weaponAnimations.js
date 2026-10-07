@@ -11,76 +11,102 @@ window.GameRenderer.WeaponAnimations = {
     const recover = Math.max(0,(a.elapsed-a.windup-(a.active || .12))/Math.max(.01,a.duration-a.windup-(a.active || .12)));
     return {a,wind,strike,recover};
   },
-  renderWeaponAndHands(ctx,pawn,weapon,state,aim,time) {
-    const {a,wind,strike,recover} = this.pose(pawn);
-    const style = a?.style || window.GameEntities.CombatSystem.weaponStyle(pawn);
-    const attack = a && ['attack','skill'].includes(a.kind);
-    const thrust = attack ? (a.released ? Math.sin((1-recover)*Math.PI/2) : -wind*.35) : 0;
-    const sweep = attack ? (a.released ? -.9+strike*1.6-recover*.7 : .1-wind*1.05) : .05;
-    const skin = pawn.appearance?.skinColor || '#efd0a1';
-    const steel = weapon?.tier==='god' ? '#ffdd7e' : '#d9e9ed';
-    ctx.save();ctx.translate(0,-12);ctx.rotate(a?.angle ?? aim);
-    ctx.lineCap='round';ctx.lineJoin='round';
-    const line=(x1,y1,x2,y2,color,width)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();};
-    const hand=(x,y)=>{ctx.fillStyle=skin;ctx.strokeStyle='#27323d';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();ctx.stroke();};
-    if(a?.kind==='drink'){
-      hand(8,-10);ctx.fillStyle='#ec6476';ctx.fillRect(6,-19,8,11);ctx.fillStyle='#ead7aa';ctx.fillRect(8,-22,4,4);
-      ctx.restore();return;
-    }
-    if(a?.kind==='dodge'){
-      for(let i=0;i<3;i++)line(-15-i*10,4+i*4,-24-i*10,4+i*4,'#e8f7ff',2);
-      hand(5,10);hand(10,-9);ctx.restore();return;
-    }
-    if(a?.kind==='block' || pawn.guardTimer>0) {
-      if(style==='unarmed'){line(8,-11,18,6,skin,5);line(8,11,18,-6,skin,5);hand(18,6);hand(18,-6);}
-      else if(style==='tome'){ctx.fillStyle='#7965a5';ctx.fillRect(10,-14,12,25);line(16,-14,16,11,'#fff0c3',1);hand(11,5);}
-      else if(style==='bow'||style==='crossbow'){line(13,-17,18,17,'#b99765',4);hand(12,-5);hand(17,8);}
-      else if(style==='spear'||style==='staff'){line(13,-27,18,24,'#b59566',4);hand(14,-4);hand(16,9);if(style==='staff'){ctx.fillStyle='#c2a6ff';ctx.beginPath();ctx.arc(13,-28,5,0,Math.PI*2);ctx.fill();}}
-      else if(style==='axe'||style==='hammer'){line(15,-25,15,20,'#b59566',4);ctx.fillStyle=steel;ctx.fillRect(8,-27,15,11);hand(15,0);hand(15,9);}
-      else {line(15,-22,15,20,steel,5);line(8,-8,22,-8,'#b28b4c',4);hand(15,0);hand(12,8);}
-      ctx.strokeStyle='#9ceaff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(2,0,27,-.8,.8);ctx.stroke();
-      ctx.restore();return;
-    }
-    if(style==='unarmed'){
-      const punch=thrust*15;line(5,-6,16+punch,-6,'#3b4352',4);hand(16+punch,-6);hand(11,10);
-    } else if(['sword','axe','hammer','dagger'].includes(style)){
-      ctx.translate(12+Math.max(0,thrust)*4,5);ctx.rotate(sweep);
-      const length=style==='dagger'?21:style==='sword'?39:34;
-      line(-5,0,length,0,'#243340',7);line(-5,0,length,0,style==='sword'||style==='dagger'?steel:'#947350',4);
-      if(style==='sword'||style==='dagger'){
-        ctx.fillStyle=steel;ctx.beginPath();ctx.moveTo(9,-3);ctx.lineTo(length+5,0);ctx.lineTo(9,3);ctx.closePath();ctx.fill();
-        line(5,-7,5,7,'#d4ac63',3);
-      } else if(style==='hammer'){
-        ctx.fillStyle=steel;ctx.strokeStyle='#263744';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(length-8,-12,14,24,3);ctx.fill();ctx.stroke();
-      } else {
-        ctx.fillStyle=steel;ctx.beginPath();ctx.moveTo(length-7,-3);ctx.quadraticCurveTo(length-18,-20,length+9,-16);ctx.lineTo(length+4,5);ctx.closePath();ctx.fill();ctx.stroke();
+  drawWeapon(ctx,weapon={},draw=0){
+    const type=this.weaponType(weapon),rank=Math.max(0,['common','rare','super_rare','supreme','god'].indexOf(weapon.tier));
+    const accent=window.GameData.Equipments.TIER_COLORS[weapon.tier]||'#a68c62',wood=rank?'#73524a':'#98754d',metal=rank===4?'#ffe8a4':'#c3d5df';
+    const variation=[...(weapon.id||type)].reduce((v,c)=>v+c.charCodeAt(0),0)%3;
+    ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
+    const line=(x,y,tx,ty,color,width=1.5)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(tx,ty);ctx.stroke();};
+    const poly=(points,color)=>{ctx.fillStyle=color;ctx.strokeStyle='#202e3b';ctx.lineWidth=1.5;ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();ctx.stroke();};
+    const gem=(x,y,r=3)=>poly([[x-r,y],[x,y-r],[x+r,y],[x,y+r]],accent);
+    if(['sword','dagger','spear'].includes(type)){
+      const length=type==='dagger'?27:type==='spear'?62:44+variation*3;
+      if(type==='spear'){
+        line(-25,0,44,0,'#26323c',5);line(-25,0,44,0,wood,3);
+        poly([[40,-4],[length,0],[40,4],[44,0]],metal);
+        if(rank>1){poly([[43,0],[51,-12],[47,-2]],metal);poly([[43,0],[49,10],[47,2]],metal);}
+        line(32,-4,34,4,accent,3);line(36,-4,38,4,accent,3);
+        poly([[32,2],[28,14],[36,11]],rank?'#bf5362':'#c4a87c');
+      }else{
+        const curved=variation===1&&type==='sword',wide=variation===2?5:3.5;
+        if(curved)poly([[7,-wide],[length-10,-wide-3],[length+3,-9],[length,0],[12,wide]],metal);
+        else poly([[7,-wide],[length-7,-wide],[length+3,0],[length-7,wide],[7,wide]],metal);
+        line(12,0,length-6,0,'#f6fcff',1.2);line(13,2,length-8,2,'#7e93a6',1);
+        poly([[3,-2],[-10,-2],[-10,2],[3,2]],wood);line(5,-8,5,8,accent,3);
+        for(let x=-8;x<2;x+=3)line(x,-2,x+1,2,'#d4bd98',1);
+        gem(-12,0,rank?3.5:2);if(rank>1)gem(12,0,2);
       }
-      hand(0,0);if(style==='axe'||style==='hammer')hand(-7,0);
-    } else if(style==='spear'){
-      const x=thrust*23;line(-18+x,3,45+x,3,'#263744',6);line(-18+x,3,45+x,3,'#b89c68',3);
-      ctx.fillStyle=steel;ctx.beginPath();ctx.moveTo(43+x,-3);ctx.lineTo(58+x,3);ctx.lineTo(43+x,9);ctx.closePath();ctx.fill();
-      hand(7+x,3);hand(-8+x,3);
-    } else if(style==='bow'){
-      const draw=attack && !a.released?wind*13:0;
-      ctx.strokeStyle='#d3a66a';ctx.lineWidth=4;ctx.beginPath();ctx.arc(9,0,20,-1.2,1.2);ctx.stroke();
-      line(16,-19,7-draw,0,'#f5ecd4',1);line(7-draw,0,16,19,'#f5ecd4',1);
-      if(!a?.released)line(5-draw,0,35-draw,0,steel,2);hand(19,0);hand(7-draw,0);
-    } else if(style==='crossbow'){
-      const recoil=a?.released ? (1-strike)*5 : 0;line(4-recoil,0,34-recoil,0,'#9e7952',7);
-      line(26-recoil,-14,26-recoil,14,steel,4);line(26-recoil,-14,12-recoil,0,'#e8d5af',1);line(26-recoil,14,12-recoil,0,'#e8d5af',1);
-      hand(9-recoil,0);hand(18-recoil,5);
-    } else if(style==='staff'){
-      const lift=attack ? wind*8*(1-recover):0;
-      ctx.translate(16+thrust*6,-lift);ctx.rotate(-.35+thrust*.25);
-      line(0,18,0,-23,'#302b45',7);line(0,18,0,-23,'#b59566',4);
-      ctx.fillStyle=a?.color || '#c2a6ff';ctx.beginPath();ctx.arc(0,-25,7,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='#fff0bd';ctx.lineWidth=2;ctx.stroke();hand(0,4);hand(-9,10);
-      if(attack){ctx.strokeStyle=a.color||'#c2a6ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-25,11+wind*5,0,Math.PI*2);ctx.stroke();}
-    } else if(style==='tome'){
-      ctx.translate(15,-wind*4);ctx.fillStyle='#7965a5';ctx.strokeStyle='#263744';ctx.lineWidth=2;
-      ctx.beginPath();ctx.moveTo(-10,-10);ctx.lineTo(0,-6);ctx.lineTo(10,-10);ctx.lineTo(10,10);ctx.lineTo(0,14);ctx.lineTo(-10,10);ctx.closePath();ctx.fill();ctx.stroke();
-      line(0,-6,0,14,'#fff0c3',2);hand(-9,10);hand(12+thrust*8,-8);
-      if(attack){ctx.strokeStyle=a.color||'#bd9cff';ctx.beginPath();ctx.arc(25,-9,7+wind*7,0,Math.PI*2);ctx.stroke();}
+    }else if(type==='axe'||type==='hammer'){
+      line(-12,0,38,0,'#26323c',6);line(-12,0,38,0,wood,3.5);
+      for(let x=-8;x<8;x+=4)line(x,-2,x+1,2,'#d7c19a',1);
+      if(type==='hammer'){
+        poly([[27,-13],[42,-13],[45,-9],[45,9],[42,13],[27,13],[24,9],[24,-9]],metal);
+        line(29,-10,29,10,'#f8ffff',2);line(41,-9,41,9,'#7f929e',3);gem(35,0,5);
+        if(rank>1)for(const y of [-8,8])poly([[32,y],[36,y*1.9],[40,y]],metal);
+      }else{
+        poly([[29,-3],[23,-13],[30,-21],[44,-23],[40,-14],[40,5],[31,9]],metal);
+        line(28,-16,41,-21,'#f7ffff',2);line(31,-9,36,-4,'#7f929e',1.5);
+        if(rank>0)poly([[31,2],[25,12],[32,20],[43,21],[39,11],[39,2]],metal);
+        gem(35,0,3);
+      }
+    }else if(type==='bow'){
+      const recurve=rank||variation;
+      ctx.strokeStyle='#27323c';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(15,-24);ctx.bezierCurveTo(recurve?35:27,-27,36,-9,29,0);ctx.bezierCurveTo(36,9,recurve?35:27,27,15,24);ctx.stroke();
+      ctx.strokeStyle=wood;ctx.lineWidth=3;ctx.stroke();
+      line(15,-24,7-draw,0,'#ede5cd',1);line(7-draw,0,15,24,'#ede5cd',1);
+      line(26,-5,29,5,accent,4);line(16,-21,21,-23,accent,3);line(16,21,21,23,accent,3);
+      line(2-draw,0,38-draw,0,'#ddc8a0',2);poly([[38-draw,-3],[44-draw,0],[38-draw,3]],metal);
+      for(const y of [-2,2])line(3-draw,0,-3-draw,y,accent,2);
+    }else if(type==='crossbow'){
+      poly([[0,-4],[36,-4],[39,0],[36,4],[0,4],[-4,1]],wood);
+      ctx.strokeStyle=metal;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(20,-20);ctx.quadraticCurveTo(37,0,20,20);ctx.stroke();
+      line(20,-20,12,0,'#eee0c3',1);line(20,20,12,0,'#eee0c3',1);line(5,0,40,0,'#344555',2);
+      poly([[4,3],[10,3],[7,12],[2,12]],wood);gem(30,0,3);
+      line(12,-5,12,5,accent,2);line(34,-4,34,4,accent,2);
+    }else if(type==='staff'){
+      line(-20,0,31,0,'#29313d',6);line(-20,0,31,0,wood,3.5);
+      for(const x of [7,12,22])line(x,-3,x,3,accent,2);
+      const crystal=rank>1;
+      poly(crystal?[[26,0],[30,-10],[37,-12],[43,0],[37,12],[30,10]]:[[28,-6],[38,-8],[43,0],[38,8],[28,6]],accent);
+      line(33,-6,38,-4,'#fbf6ff',2);line(32,0,36,7,'#645c91',1.5);
+      ctx.strokeStyle=rank?'#ead59c':'#8c7654';ctx.lineWidth=2;ctx.beginPath();ctx.arc(35,0,12,-1.8,1.8);ctx.stroke();
+      if(rank>2){gem(35,-16,2);gem(35,16,2);}
+    }else if(type==='tome'){
+      poly([[3,-14],[17,-10],[31,-14],[31,13],[17,17],[3,13]],rank?'#55416e':'#6e584d');
+      poly([[5,-11],[16,-7],[16,13],[5,9]],'#eedfbc');poly([[18,-7],[29,-11],[29,9],[18,13]],'#d7c69f');
+      for(let y=-3;y<10;y+=4){line(7,y,13,y+2,'#937d69',1);line(21,y+2,27,y,'#937d69',1);}
+      line(17,-9,17,15,accent,2);poly([[22,-13],[25,-14],[25,-3],[22,-6]],accent);
+      gem(1,-13,2);gem(33,-13,2);
+    }
+    if(rank>1&&type!=='bow'&&type!=='tome')for(const x of [17,22]){line(x,-2,x+2,2,accent,1);line(x+2,2,x+3,-1,accent,1);}
+    ctx.restore();
+  },
+  weaponType(w){return w.type==='hybrid_cane'?'staff':this.stylesHas(w.type)?w.type:'sword';},
+  stylesHas(type){return ['sword','dagger','axe','hammer','spear','bow','crossbow','staff','tome'].includes(type);},
+  renderWeaponAndHands(ctx,pawn,weapon,state,aim,time){
+    const {a,wind,strike,recover}=this.pose(pawn),style=weapon?this.weaponType(weapon):'unarmed';
+    const attack=a&&['attack','skill'].includes(a.kind),thrust=attack?(a.released?Math.sin((1-recover)*Math.PI/2):-wind*.35):0;
+    ctx.save();ctx.translate(0,-12);ctx.rotate(a?.angle??aim);
+    const hand=(x,y)=>{ctx.fillStyle=pawn.appearance?.skinColor||'#efd0a1';ctx.strokeStyle='#27323d';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,3.8,0,Math.PI*2);ctx.fill();ctx.stroke();};
+    if(a?.kind==='drink'){hand(8,-10);ctx.fillStyle='#ec6476';ctx.fillRect(6,-19,8,11);ctx.fillStyle='#ead7aa';ctx.fillRect(8,-22,4,4);}
+    else if(a?.kind==='dodge'){hand(5,10);hand(10,-9);}
+    else if(a?.kind==='block'||pawn.guardTimer>0){
+      if(style!=='unarmed'){ctx.save();ctx.translate(15,12);ctx.rotate(-Math.PI/2);this.drawWeapon(ctx,weapon);ctx.restore();}
+      hand(15,-3);hand(15,9);ctx.strokeStyle='#9ceaff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(2,0,27,-.8,.8);ctx.stroke();
+    }else if(style==='unarmed'){hand(16+thrust*15,-6);hand(11,10);}
+    else{
+      ctx.save();
+      if(['sword','axe','hammer','dagger'].includes(style)){
+        ctx.translate(12+Math.max(0,thrust)*4,5);ctx.rotate(attack?(a.released?-.9+strike*1.6-recover*.7:.1-wind*1.05):.05);
+        this.drawWeapon(ctx,weapon);hand(0,0);if(['axe','hammer'].includes(style))hand(-7,0);
+      }else if(style==='spear'){ctx.translate(thrust*23,3);this.drawWeapon(ctx,weapon);hand(7,0);hand(-8,0);}
+      else if(style==='bow'){this.drawWeapon(ctx,weapon,attack&&!a.released?wind*13:0);hand(29,0);hand(7-(attack&&!a.released?wind*13:0),0);}
+      else if(style==='crossbow'){ctx.translate(a?.released?-(1-strike)*5:0,0);this.drawWeapon(ctx,weapon);hand(5,7);hand(19,5);}
+      else if(style==='staff'){
+        ctx.translate(12+thrust*6,4);ctx.rotate(-.8-wind*.2*(1-recover));this.drawWeapon(ctx,weapon);hand(-2,0);hand(-12,0);
+        if(attack){ctx.strokeStyle=a.color||'#c2a6ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(35,0,14+wind*4,0,Math.PI*2);ctx.stroke();}
+      }else if(style==='tome'){ctx.translate(7,-wind*4);this.drawWeapon(ctx,weapon);hand(5,12);hand(31+thrust*8,-8);}
+      ctx.restore();
     }
     ctx.restore();
   }

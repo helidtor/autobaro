@@ -1,0 +1,76 @@
+{
+  "match": {
+    "seed": 42,
+    "time": 294.89999999999856,
+    "alive": 1,
+    "initialCounts": [
+      40,
+      20,
+      6,
+      4,
+      1
+    ],
+    "winner": {
+      "name": "Hải Yến #49",
+      "level": 6,
+      "hp": 108.8000000000124
+    },
+    "badDomains": 0,
+    "badStand": 0,
+    "maxCombat": 3,
+    "minSpellGap": 3.499999999999801,
+    "p95UpdateMs": 25.700000001117587,
+    "p99UpdateMs": 51.80000000074506
+  },
+  "finalHunt": {
+    "trace": [
+      {
+        "time": 295,
+        "level": 6,
+        "hp": 109,
+        "goal": "Nhặt Cung Bão Tố Tật Phong",
+        "lords": 5
+      },
+      {
+        "time": 395,
+        "level": 11,
+        "hp": 680,
+        "goal": "Farm cấp 11/15: Thanh Xà Đế Vương",
+        "lords": 3
+      },
+      {
+        "time": 495,
+        "level": 13,
+        "hp": 898,
+        "goal": "Nhặt Bình Hồi Máu",
+        "lords": 1
+      }
+    ],
+    "premature": 0,
+    "alive": true,
+    "level": 15,
+    "target": "Viêm Đế Phượng Hoàng",
+    "bossHp": 2610,
+    "liveFarmLords": 0
+  },
+  "errors": [],
+  "godFight": {
+    "winnerAlive": true,
+    "bossAlive": false,
+    "bossHp": 0,
+    "time": 572.1000000000615
+  },
+  "checks": {
+    "tests": {
+      "passed": 38,
+      "failed": 0
+    },
+    "productionBuild": "passed",
+    "newMatch": {
+      "bots": 100,
+      "monsters": 71,
+      "lairs": 4,
+      "finalHuntStarted": false
+    }
+  }
+}

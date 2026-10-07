@@ -169,3 +169,12 @@ window.GameData.LevelTable = {
     6400   // Lv 15 (Max Level)
   ]
 };
+
+window.GameData.PersonalityAxes = {aggression:'Hiếu chiến',caution:'Thận trọng',greed:'Tham vọng',loyalty:'Trung thành',patience:'Kiên nhẫn',curiosity:'Khám phá'};
+window.GameData.PersonalityProfiles = {
+ brave:{aggression:90,caution:25,greed:45,loyalty:65,patience:25,curiosity:70},
+ coward:{aggression:15,caution:95,greed:30,loyalty:50,patience:80,curiosity:35},
+ wise:{aggression:40,caution:85,greed:45,loyalty:70,patience:85,curiosity:65},
+ greedy:{aggression:65,caution:40,greed:95,loyalty:20,patience:35,curiosity:80},
+ cunning:{aggression:55,caution:65,greed:75,loyalty:15,patience:95,curiosity:60}
+};
