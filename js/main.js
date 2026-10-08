@@ -25,6 +25,7 @@ import './entities/entityManager.js';
 import './entities/ancientSystem.js';
 import './entities/relicSystem.js';
 import './ui/combatTicker.js';
+import './ui/botRoster.js';
 import './ui/inspectModal.js';
 import './ui/directorControls.js';
 import './game.js';

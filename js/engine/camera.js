@@ -62,7 +62,7 @@ window.GameEngine.Camera = {
     if (this.autoDirector) {
       this.directorTimer -= dt;
       if (this.directorTimer <= 0 || !this.targetEntity || !this.targetEntity.isAlive) {
-        this.directorTimer = 3.5; // Đổi tiêu điểm mỗi 3.5s
+        this.directorTimer = 10; // Giữ tiêu điểm 10 giây thực tế.
 
         let bestScore = -1;
         let bestCandidate = null;

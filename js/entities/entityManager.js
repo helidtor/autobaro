@@ -72,7 +72,7 @@ window.GameEntities.EntityManager = {
         helmet: null,
         armor: null,
         skills: [],
-        healthPotions: 0,
+        healthPotions: 0,fullHealthPotions:0,
         thought: 'Tìm quái yếu để luyện cấp, chưa có vũ khí.',
         objective: 'Khám phá vùng ngoại ô',
         battleWill: 0,decisionReason: 'Tìm mục tiêu phù hợp',

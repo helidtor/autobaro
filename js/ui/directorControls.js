@@ -10,18 +10,28 @@ window.GameUI.DirectorControls = {
     this.bindEvents();
   },
 
+  setSpeed(speed) {
+    const G=window.GameManager;
+    if(!G||G.resultOpen||G.isGameOver)return;
+    if(speed>0)G.gameSpeed=speed;
+    G.isPaused=speed===0;
+    this.syncSpeed();
+  },
+
+  togglePause() {
+    const G=window.GameManager;
+    if(G)this.setSpeed(G.isPaused?(G.gameSpeed||1):0);
+  },
+
+  syncSpeed() {
+    const G=window.GameManager;
+    document.querySelectorAll('.btn-speed').forEach(button=>button.classList.toggle('active',Number(button.dataset.speed)===(G.isPaused?0:G.gameSpeed)));
+  },
+
   bindEvents: function() {
     // Tốc độ game
     document.querySelectorAll('.btn-speed').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.btn-speed').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const speed = parseFloat(btn.dataset.speed);
-        if (window.GameManager) {
-          window.GameManager.gameSpeed = speed;
-          window.GameManager.isPaused = speed === 0;
-        }
-      });
+      btn.addEventListener('click', () => this.setSpeed(Number(btn.dataset.speed)));
     });
 
     // Chuyển đổi chế độ chơi
@@ -112,15 +122,15 @@ window.GameUI.DirectorControls = {
     const sortedByKills = [...allPawns].sort((a, b) => (b.killCount || 0) - (a.killCount || 0));
     const topKiller = sortedByKills[0];
 
-    const weaponName = winner.weapon ? winner.weapon.name : 'Tay Không';
-    const godArtifact = winner.weapon && winner.weapon.tier === 'god' ? `🏆 Sở hữu: ${winner.weapon.name}` : 'Chưa có Thần Khí';
+    const weaponName = winner.weapon ? '<span style="color:'+window.GameData.Equipments.TIER_COLORS[winner.weapon.tier]+'">'+winner.weapon.name+'</span>' : 'Tay Không';
+    const godArtifact = winner.weapon && winner.weapon.tier === 'god' ? '🏆 Sở hữu: '+weaponName : 'Chưa có Thần Khí';
 
     cardEl.innerHTML = `
       <div class="story-card-box">
         <h1 class="story-card-title">👑 KẺ SỐNG SÓT CUỐI CÙNG 👑</h1>
         <div class="story-card-winner">${winner.name}</div>
         <div class="story-card-subtitle">
-          Cấp ${winner.level} | Nhánh ${window.GameData.Classes[winner.classId || 'warrior'].name} | Tính cách: ${window.GameData.Traits[winner.trait].name}
+          Cấp ${winner.level} | Vũ khí ${window.GameData.Classes[winner.classId || 'warrior'].name} | Tính cách: ${window.GameData.Traits[winner.trait].name}
         </div>
         <div class="story-card-god">${godArtifact}</div>
         <div class="story-card-weapon">Vũ khí tối hậu: ${weaponName} (Tổng Kills: ${winner.killCount})</div>

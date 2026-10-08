@@ -30,7 +30,8 @@ window.GameEntities.AncientSystem={
   const def=this.queue.shift();if(!def||!original?.isAlive)return null;
   this.nextAt=null;
   const angle=Math.atan2(this.arena.cy-original.y,this.arena.cx-original.x),spawn=window.GameEngine.MapTerrain.nearestFree(this.arena.cx+Math.cos(angle)*110,this.arena.cy+Math.sin(angle)*110);
-  const profile={colossus:{hp:650,hp2:1700,atk:52,atk2:78,def:30,def2:15},mirror:{hp:450,hp2:1350,atk:44,atk2:65,def:12,def2:8},void:{hp:550,hp2:1550,atk:48,atk2:72,def:18,def2:10},chaos:{hp:450,hp2:1400,atk:56,atk2:84,def:10,def2:6},mecha:{hp:500,hp2:1500,atk:50,atk2:75,def:20,def2:10}}[def.kind];
+  const profile={colossus:{atk:52,atk2:78,def:30,def2:15},mirror:{atk:44,atk2:65,def:12,def2:8},void:{atk:48,atk2:72,def:18,def2:10},chaos:{atk:56,atk2:84,def:10,def2:6},mecha:{atk:50,atk2:75,def:20,def2:10}}[def.kind];
+  profile.hp=Math.round(original.maxHp*1.5);profile.hp2=Math.round(original.maxHp*3);
   const hp=profile.hp;
   const m=E.spawnMonster({id:def.id,name:def.name,tier:6,tierName:'Thượng Cổ',scale:def.scale,maxHp:hp,attack:profile.atk,defense:profile.def,speed:def.kind==='mirror'?(original?.moveSpeed||95):105,expReward:0,passives:[],skills:[],visual:{type:'primordial_'+def.kind,bodyColor:def.color}},spawn.x,spawn.y);
   Object.assign(m,{profile,homeX:m.x,homeY:m.y,gauntletRound:this.defeated+1,isAncient:true,ancientKind:def.kind,ancientDef:def,phase:1,phaseHp:hp,phaseMaxHp:hp,ccImmune:true,globalSkillCooldown:1,original,passives:def.passives.map(p=>({...p})),skills:def.skills.map((s,i)=>({id:s.id,def:{...s},tier:3,cooldownTimer:i*.35})),territory:{id:'ancient_arena',name:'Đấu trường Thượng Cổ',x:this.arena.cx,y:this.arena.cy,radius:this.arena.w/2,isCleared:false},foreseen:false,passiveClock:0,petrification:new Map(),shield:def.kind==='mecha'?hp*.12:0,maxShield:def.kind==='mecha'?hp*.12:0});
@@ -66,6 +67,7 @@ window.GameEntities.AncientSystem={
   const G=window.GameManager,D=window.GameData.Equipments;
   this.defeated++;const pool=Object.values(D.relics).filter(d=>!this.usedRelics.includes(d.id)),relic=pool[Math.floor(Math.random()*pool.length)];
   if(relic){this.usedRelics.push(relic.id);const drop=G.spawnDropItem(m.x,m.y,relic,relic.slot);if(killer?.isPawn){killer.relicLoot=drop;killer.relicPriorityUntil=this.clock+1.5;}}
+  const potion=G.spawnDropItem(m.x+28,m.y,{id:'full_health_potion',name:'Bình Máu Toàn Phần',tier:'ancient',fullHeal:true,desc:'Hồi đầy 100% máu tối đa.'},'potion');if(killer?.isPawn)killer.ancientPotionLoot=potion;
   if(killer?.isAlive){killer.action=null;killer.attackState=null;killer.targetEnemy=null;killer.combatGroup=null;killer.combatLease=0;killer.navTimer=0;killer.navPath=[];}
   window.GameEntities.CombatSystem.pendingEffects=[];window.GameRenderer.VfxManager.projectiles=[];
   if(this.defeated<this.total){this.nextAt=this.clock+10;window.GameUI.CombatTicker.log('🏺 Hạ Thượng Cổ '+this.defeated+'/'+this.total+'. Nhặt Thượng Bảo; boss tiếp theo thức tỉnh sau 10 giây.');return;}
@@ -204,7 +206,7 @@ window.GameEntities.AncientSystem={
   if(!this.awakened){const G=window.GameManager;if(this.pendingGod){this.wakeRemaining=Math.max(0,this.wakeRemaining-dt);if(this.wakeRemaining===0&&G.battleRoyaleResolved&&G.winnerPawn?.isAlive&&G.winnerPawn.level>=15&&!window.GameEngine.MapTerrain.remainingLords())this.awaken(this.pendingGod,G.winnerPawn,true);}return;}
   this.clock+=dt;this.walls=this.walls.filter(w=>w.end>this.clock&&w.hp>0);
   const C=window.GameEntities.CombatSystem,M=window.GameEngine.MapTerrain,G=window.GameManager,m=this.boss;
-  if(!m?.isAlive){if(this.victoryPending&&(this.original?.relicLoot?.isCollected||this.clock-this.finalAt>=5))this.showVictory();if(this.nextAt!==null&&this.clock>=this.nextAt)this.spawnNext();return;}
+  if(!m?.isAlive){if(this.victoryPending&&(this.original?.relicLoot?.isCollected&&this.original?.ancientPotionLoot?.isCollected&&this.original?.currentHp>=this.original?.maxHp&&!this.original?.action||this.clock-this.finalAt>=15))this.showVictory();if(this.nextAt!==null&&this.clock>=this.nextAt)this.spawnNext();return;}
   if(m.isSplit){m.currentHp=m.clones.reduce((sum,c)=>sum+(c.isAlive?c.currentHp:0),0);this.fields=this.fields.filter(f=>f.owner!==m);return;}
   if(this.clock>=this.lightningAt){this.lightningAt=this.clock+4;this.field(m,{name:'Sấm Tận Thế',radius:45,damage:25},this.arena.x+Math.random()*this.arena.w,this.arena.y+Math.random()*this.arena.h,.8);}
   this.passives(m,dt);
@@ -313,6 +315,8 @@ window.GameEntities.AncientSystem={
   if(relic&&!relic.isCollected){
    p.action=null;p.attackState=null;A.seekLoot(p,relic,dt);p.objective='Nhặt Thượng Bảo: '+relic.name;p.thought='Ưu tiên chiến lợi phẩm, thích ứng trang bị trước lượt boss tiếp theo.';return true;
   }
+  if(!this.boss?.isAlive&&p.ancientPotionLoot&&!p.ancientPotionLoot.isCollected){A.seekLoot(p,p.ancientPotionLoot,dt);p.objective='Nhặt bình hồi đầy máu';return true;}
+  if(!this.boss?.isAlive&&p.currentHp<p.maxHp&&C.usePotion(p))return true;
   if(p.relicPriorityUntil>this.clock){p.vx=p.vy=0;p.objective='Thích ứng Thượng Bảo vừa nhặt';return true;}
   if(this.boss?.isAlive)return false;
   const item=A.findBestItemToLoot(p,G.dropItems.filter(d=>!d.isCollected));

@@ -650,10 +650,10 @@ window.GameEntities.CombatSystem = {
     return this.defend(e, dodge ? 'dodge' : 'block', dodge ? angle + Math.PI / 2 : angle);
   },
   usePotion(e) {
-    if (!e?.isAlive || window.GameEngine.MapTerrain.isInWater(e.x,e.y) || e.action || !e.healthPotions || e.potionCooldown > 0 || e.currentHp >= e.maxHp) return false;
-    e.healthPotions--; e.potionCooldown = 8;
+    if (!e?.isAlive || window.GameEngine.MapTerrain.isInWater(e.x,e.y) || e.action || !(e.healthPotions||e.fullHealthPotions) || e.potionCooldown > 0 || e.currentHp >= e.maxHp) return false;
+    const full=e.fullHealthPotions>0;if(full)e.fullHealthPotions--;else e.healthPotions--; e.potionCooldown = 8;
     return this.startAction(e, 'drink', null, () => {
-      const hp = Math.min(220, e.maxHp * 0.35);
+      const hp = full?e.maxHp-e.currentHp:Math.min(220, e.maxHp * 0.35);
       e.currentHp = Math.min(e.maxHp, e.currentHp + hp);
       window.GameRenderer.VfxManager.addEffect('heal', e.x, e.y, { radius: 35, color: '#86efb5', life: 0.8 });
       window.GameRenderer.VfxManager.addDamageNumber(e.x, e.y - 20, '+' + Math.round(hp), 'heal');
