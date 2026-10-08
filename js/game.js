@@ -65,6 +65,7 @@ window.GameManager = {
     this.monsters = window.GameEntities.EntityManager.monsters;
     this.dropItems = window.GameEntities.EntityManager.dropItems;
     this.playerPawn = window.GameEntities.EntityManager.playerPawn;
+    window.GameUI.BotRoster.init();
 
     // Gán listener sự kiện bàn phím & chuột
     this.bindInputs();
@@ -91,8 +92,9 @@ window.GameManager = {
     window.GameEntities.EntityManager.init(this.width,this.height,100);
     const E=window.GameEntities.EntityManager;
     this.pawns=E.pawns;this.monsters=E.monsters;this.dropItems=E.dropItems;this.playerPawn=E.playerPawn;
+    window.GameUI.BotRoster.init();
     this.spatialGrid.clear();
-    document.querySelectorAll('.btn-speed').forEach(b=>b.classList.toggle('active',b.dataset.speed==='1'));
+    window.GameUI.DirectorControls.syncSpeed();
     document.getElementById('btn-toggle-mode').innerText='👁️ Chế độ: Đạo Diễn (Spectator)';
     document.getElementById('btn-toggle-mode').classList.remove('btn-player-mode');
     this.updateHUD();
@@ -109,19 +111,17 @@ window.GameManager = {
 
   bindInputs: function() {
     window.addEventListener('keydown', (e) => {
+      if(e.target?.matches?.('input,textarea,select,[contenteditable=true]'))return;
+      if(e.target?.matches?.('button,summary')&&e.key==='Enter')return;
+      if(e.key===' '){e.preventDefault();if(!e.repeat)window.GameUI.DirectorControls.togglePause();return;}
       this.keys[e.key.toLowerCase()] = true;
 
-      if (e.repeat && [' ', 'Shift', 'h', 'q', 'e', 'r', 'f'].includes(e.key)) return;
-      if (e.key === ' ') e.preventDefault();
+      if (e.repeat && ['Shift', 'h', 'q', 'e', 'r', 'f', 'v', 'c'].includes(e.key)) return;
       if (e.key.toLowerCase() === 'm') this.showMapOverview();
-      // Phím tắt chế độ
-      if (e.key === ' ') {
-        // Space: Lướt né đòn (trong Player mode) hoặc Bật/Tắt Auto-Director (trong Spectator mode)
-        if (this.isPlayerMode && this.playerPawn && this.playerPawn.isAlive) {
-          this.executePlayerDodge();
-        } else {
-          window.GameEngine.Camera.autoDirector = !window.GameEngine.Camera.autoDirector;
-        }
+      if(e.key.toLowerCase()==='v'&&this.isPlayerMode&&this.playerPawn?.isAlive)this.executePlayerDodge();
+      if(e.key.toLowerCase()==='c'&&!this.isPlayerMode){
+        const camera=window.GameEngine.Camera;
+        camera.autoDirector=!camera.autoDirector;camera.directorTimer=0;
       }
 
       if (e.key === 'Escape' && this.resultOpen) this.continueAfterResult();
@@ -237,7 +237,7 @@ window.GameManager = {
         window.GameEngine.Camera.autoDirector = false;
         window.GameEngine.Camera.targetEntity = this.playerPawn;
         if (window.GameUI.CombatTicker) {
-          window.GameUI.CombatTicker.log(`🎮 [NGƯỜI CHƠI] Bạn đã nhập hồn vào ${this.playerPawn.name}! Dùng WASD di chuyển, Chuột trái tấn công, Phím Space lướt!`);
+          window.GameUI.CombatTicker.log(`🎮 [NGƯỜI CHƠI] Bạn đã nhập hồn vào ${this.playerPawn.name}! Dùng WASD di chuyển, Chuột trái tấn công, Phím V lướt, Space tạm dừng/tiếp tục!`);
         }
       }
     }
@@ -266,7 +266,7 @@ window.GameManager = {
     }
   },
 
-  // Lướt né đòn của Player (Space)
+  // Lướt né đòn của Player (V)
   executePlayerDodge: function() {
     const p = this.playerPawn;
     if (this.isPaused || this.isGameOver) return;
@@ -300,6 +300,7 @@ window.GameManager = {
 
     window.GameEngine.Camera.update(Math.min(.1,dtRaw),undefined,this.pawns,this.monsters,window.GameEntities.EntityManager.worldBoss);
     window.GameEngine.Audio.sync();
+    window.GameUI.BotRoster.update(Math.min(.1,dtRaw));
     this.render();
     this.updateHUD();
 
@@ -448,7 +449,7 @@ window.GameManager = {
     this.finalShowdown=!this.battleRoyaleResolved&&alive.length>=2&&alive.length<=5;
     if (!this.battleRoyaleResolved && alive.length <= 1) {
       this.battleRoyaleResolved = true; this.winnerPawn = alive[0] || null;
-      this.resultOpen = true; this.isPaused = true;
+      this.resultOpen = true; this.isPaused = true;window.GameUI.DirectorControls.syncSpeed();
       if (!this.winnerPawn) this.isGameOver = true;
       else {
         const boss=window.GameEntities.EntityManager.worldBoss;
@@ -460,7 +461,7 @@ window.GameManager = {
       window.GameUI.DirectorControls.showPostMatchStoryCard(this.winnerPawn);
     } else if (this.battleRoyaleResolved && !alive.length) {
       this.isGameOver=true;
-      if(window.GameEntities.AncientSystem.awakened&&!this.resultOpen){this.resultOpen=true;this.isPaused=true;window.GameUI.DirectorControls.showPostMatchStoryCard(null);}
+      if(window.GameEntities.AncientSystem.awakened&&!this.resultOpen){this.resultOpen=true;this.isPaused=true;window.GameUI.DirectorControls.syncSpeed();window.GameUI.DirectorControls.showPostMatchStoryCard(null);}
     }
   },
 
@@ -469,6 +470,7 @@ window.GameManager = {
     this.resultOpen = false; this.isPaused = false;
     window.GameEntities.EntityManager.startFinalHunt(this.winnerPawn);
     if (!this.gameSpeed) this.gameSpeed = 1;
+    window.GameUI.DirectorControls.syncSpeed();
     document.getElementById('story-card-modal').classList.add('hidden');
     window.GameEngine.Camera.targetEntity = this.winnerPawn;
     window.GameEngine.Camera.autoDirector = false;
@@ -567,7 +569,7 @@ window.GameManager = {
         document.getElementById('player-hp-bar').style.width = `${(p.currentHp / p.maxHp) * 100}%`;
         document.getElementById('player-stamina-bar').style.width = `${(p.currentStamina / p.maxStamina) * 100}%`;
         document.getElementById('player-mana-bar').style.width = `${(p.currentMana / p.maxMana) * 100}%`;
-        document.getElementById('player-level-badge').innerText = 'Lv '+p.level+' • H: bình máu ('+(p.healthPotions||0)+')';
+        document.getElementById('player-level-badge').innerText = 'Lv '+p.level+' • H: bình máu ('+(p.healthPotions||0)+(p.fullHealthPotions?' + '+p.fullHealthPotions+' hồi đầy':'')+')';
         document.querySelectorAll('.action-slot').forEach((el,i)=>{
           const s=p.skills[i];el.innerHTML='<span class="action-key">'+['Q','E','R','F'][i]+'</span>'+(s?(s.cooldownTimer>0?s.cooldownTimer.toFixed(1)+'s':'✓'):'—');
           el.title=s?s.def.name+' • '+window.GameEntities.CombatSystem.getSkillConfig(p,s).cooldown+'s cooldown':'Chưa mở khóa';

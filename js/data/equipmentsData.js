@@ -7,17 +7,17 @@ window.GameData = window.GameData || {};
 window.GameData.Equipments = {
   // Cấu hình màu sắc theo bậc phẩm chất
   TIER_COLORS: {
-    common: '#95a5a6',      // Xám trắng
-    rare: '#2ecc71',        // Xanh lá
-    super_rare: '#9b59b6',  // Tím
-    supreme: '#e67e22',     // Cam vàng
-    god: '#e74c3c'          // Đỏ rực rỡ / Thần bí
+    common: '#f1f5f9',      // Xám trắng
+    rare: '#4ade80',        // Xanh lá
+    super_rare: '#60a5fa',  // Tím
+    supreme: '#c084fc',     // Cam vàng
+    god: '#ff6b6b'          // Đỏ rực rỡ / Thần bí
   },
 
   TIER_NAMES: {
     common: 'Thường',
     rare: 'Hiếm',
-    super_rare: 'Siêu Hiếm',
+    super_rare: 'Cực Hiếm',
     supreme: 'Cực Phẩm',
     god: 'Thần Khí'
   },

@@ -12,22 +12,23 @@
   <canvas id="game-canvas"></canvas>
 
   <!-- Top HUD: Thống kê trạng thái trận đấu -->
-  <div id="top-hud">
+  <header id="top-hud" aria-label="Trạng thái trận đấu">
+    <div class="game-brand"><span>THE CRUCIBLE OF SOULS</span><strong>Đấu trường sinh tử</strong></div>
     <div class="hud-stat-box">
       <span class="icon">🚹</span>
-      <span>Bot Sống Sót:</span>
+      <span>Bot sống</span>
       <span id="hud-pawns-count" class="value">100 / 100</span>
     </div>
     <div class="hud-divider"></div>
     <div class="hud-stat-box">
       <span class="icon">👹</span>
-      <span>Quái Vật:</span>
+      <span>Quái vật</span>
       <span id="hud-monsters-count" class="value">40</span>
     </div>
     <div class="hud-divider"></div>
     <div class="hud-stat-box">
       <span class="icon">⏱️</span>
-      <span>Thời Gian:</span>
+      <span>Thời gian</span>
       <span id="hud-match-time" class="value">00:00</span>
     </div>
     <div class="hud-divider"></div>
@@ -36,27 +37,37 @@
       <span>Điện thờ:</span>
       <span id="hud-temple-status" class="value">Khóa • còn 4 Yêu Vương</span>
     </div>
-  </div>
+  </header>
 
   <!-- Combat Ticker: Nhật ký chiến trường kể chuyện tự phát RimWorld -->
+  <aside id="left-panels" aria-label="Bot và nhật ký chiến trường">
+  <div class="left-panel-controls"><button type="button" aria-controls="bot-roster" aria-expanded="true" onclick="window.GameUI.BotRoster.toggle('bot-roster',this)">Ẩn danh sách bot</button><button type="button" aria-controls="combat-ticker-container" aria-expanded="true" onclick="window.GameUI.BotRoster.toggle('combat-ticker-container',this)">Ẩn log</button></div>
+  <section id="bot-roster" aria-label="Danh sách tất cả bot">
+    <div class="ticker-header">Bảng xếp hạng <span id="bot-roster-count"></span></div>
+    <input id="bot-search" type="search" placeholder="Tìm tên bot…" aria-label="Tìm tên bot" oninput="window.GameUI.BotRoster.render()">
+    <div class="bot-roster-scroll">
+      <table><thead><tr><th scope="col">Tên bot</th><th scope="col">HP</th><th scope="col">Lv</th><th scope="col">EXP</th></tr></thead><tbody id="bot-roster-rows"></tbody></table>
+    </div>
+  </section>
   <div id="combat-ticker-container">
-    <div class="ticker-header">📜 Nhật Ký Chiến Trường Tự Phát (RimWorld Log)</div>
+    <div class="ticker-header">Nhật ký chiến trường</div>
     <div id="combat-ticker-list"></div>
   </div>
+  </aside>
 
   <!-- Thông báo trạng thái chọn vị trí Quyền Năng Chúa Tể -->
   <div id="god-power-prompt" class="hidden"></div>
 
   <!-- Director Bar: Quyền năng chúa tể, Tốc độ trận đấu, Chế độ chơi -->
-  <div id="director-bar">
-    <div class="director-group">
+  <div id="director-bar" role="toolbar" aria-label="Điều khiển trận đấu">
+    <div class="director-group" data-label="Quyền năng">
       <button class="btn-ctrl btn-god" onclick="window.GameUI.DirectorControls.useGodPower('smite')" title="Giáng sét 250 sát thương chuẩn vào mục tiêu">⚡ Thiên Lôi</button>
       <button class="btn-ctrl btn-god" onclick="window.GameUI.DirectorControls.useGodPower('firestorm')" title="Đốt cháy bụi rậm xua đuổi bot trốn núp">🔥 Hỏa Thần</button>
       <button class="btn-ctrl btn-god" onclick="window.GameUI.DirectorControls.useGodPower('berserk')" title="Ép bot gần nhất vào trạng thái Cuồng Nộ đột phá">😈 Cuồng Nộ</button>
     </div>
     <div class="hud-divider"></div>
     <div class="director-group">
-      <button class="btn-ctrl btn-speed" data-speed="0">⏸️ Tạm Dừng</button>
+      <button class="btn-ctrl btn-speed" data-speed="0" title="Space: tạm dừng / tiếp tục ở tốc độ đã chọn">⏸️ Tạm Dừng</button>
       <button class="btn-ctrl btn-speed active" data-speed="1">1x</button>
       <button class="btn-ctrl btn-speed" data-speed="2">2x</button>
       <button class="btn-ctrl btn-speed" data-speed="5">5x</button>
@@ -66,8 +77,8 @@
       <button id="btn-sound" class="btn-ctrl" aria-pressed="true" onclick="window.GameEngine.Audio.toggle()" title="Bật/tắt âm thanh">🔊 Âm thanh</button>
       <label class="sound-volume">Âm lượng <input id="sound-volume" type="range" min="0" max="100" value="30" aria-label="Âm lượng hiệu ứng" oninput="window.GameEngine.Audio.setVolume(this.value)"></label>
       <button id="btn-new-match" class="btn-ctrl" onclick="window.GameManager.startNewMatch()">↻ Ván mới</button>
-      <button class="btn-ctrl" onclick="window.GameManager.showMapOverview()" title="M: bản đồ toàn cảnh">🗺 Bản đồ</button>
-      <button id="btn-toggle-mode" class="btn-ctrl">👁️ Chế độ: Đạo Diễn (Spectator)</button>
+      <button class="btn-ctrl" onclick="window.GameManager.showMapOverview()" title="M: bản đồ toàn cảnh • C: bật/tắt camera tự động">🗺 Bản đồ</button>
+      <button id="btn-toggle-mode" class="btn-ctrl">👁️ Đạo diễn</button>
     </div>
   </div>
 
@@ -88,8 +99,8 @@
         <div id="player-mana-bar" class="bar-fill bar-mana" style="width: 100%;"></div>
       </div>
     </div>
-    <div class="player-control-hint">WASD di chuyển · Chuột đánh · Space né · Shift đỡ · H bình máu</div>
-    <div class="player-action-slots" title="WASD: di chuyển • Chuột trái: đánh • Space: né • Shift: đỡ • H: bình máu">
+    <div class="player-control-hint">WASD di chuyển · Chuột đánh · V né · Space tạm dừng · Shift đỡ · H bình máu</div>
+    <div class="player-action-slots" title="WASD: di chuyển • Chuột trái: đánh • V: né • Space: tạm dừng / tiếp tục • Shift: đỡ • H: bình máu">
       <div class="action-slot" title="Kỹ năng nhánh 1"><span class="action-key">Q</span>⚔️</div>
       <div class="action-slot" title="Kỹ năng nhánh 2"><span class="action-key">E</span>🛡️</div>
       <div class="action-slot" title="Kỹ năng nhánh 3"><span class="action-key">R</span>⚡</div>
@@ -98,7 +109,7 @@
   </div>
 
   <!-- Inspect Panel: Bảng soi chi tiết nhân vật & quái vật -->
-  <div id="inspect-panel" class="hidden"></div>
+  <aside id="inspect-panel" aria-label="Thông tin đối tượng" class="hidden"></aside>
 
   <!-- Post-Match Story Card Modal: Vinh danh kẻ sống sót cuối cùng -->
   <div id="story-card-modal" class="hidden"></div>

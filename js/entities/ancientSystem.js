@@ -30,13 +30,14 @@ window.GameEntities.AncientSystem={
   const def=this.queue.shift();if(!def||!original?.isAlive)return null;
   this.nextAt=null;
   const angle=Math.atan2(this.arena.cy-original.y,this.arena.cx-original.x),spawn=window.GameEngine.MapTerrain.nearestFree(this.arena.cx+Math.cos(angle)*110,this.arena.cy+Math.sin(angle)*110);
-  const profile={colossus:{hp:650,hp2:1700,atk:52,atk2:78,def:30,def2:15},mirror:{hp:450,hp2:1350,atk:44,atk2:65,def:12,def2:8},void:{hp:550,hp2:1550,atk:48,atk2:72,def:18,def2:10},chaos:{hp:450,hp2:1400,atk:56,atk2:84,def:10,def2:6},mecha:{hp:500,hp2:1500,atk:50,atk2:75,def:20,def2:10}}[def.kind];
+  const profile={colossus:{atk:125,atk2:160,def:30,def2:15},mirror:{atk:100,atk2:130,def:12,def2:8},void:{atk:110,atk2:140,def:18,def2:10},chaos:{atk:130,atk2:165,def:10,def2:6},mecha:{atk:105,atk2:135,def:20,def2:10}}[def.kind];
+  profile.hp=Math.round(original.maxHp);profile.hp2=Math.round(original.maxHp*2);profile.shield=Math.round(original.maxHp*.5);
   const hp=profile.hp;
   const m=E.spawnMonster({id:def.id,name:def.name,tier:6,tierName:'Thượng Cổ',scale:def.scale,maxHp:hp,attack:profile.atk,defense:profile.def,speed:def.kind==='mirror'?(original?.moveSpeed||95):105,expReward:0,passives:[],skills:[],visual:{type:'primordial_'+def.kind,bodyColor:def.color}},spawn.x,spawn.y);
-  Object.assign(m,{profile,homeX:m.x,homeY:m.y,gauntletRound:this.defeated+1,isAncient:true,ancientKind:def.kind,ancientDef:def,phase:1,phaseHp:hp,phaseMaxHp:hp,ccImmune:true,globalSkillCooldown:1,original,passives:def.passives.map(p=>({...p})),skills:def.skills.map((s,i)=>({id:s.id,def:{...s},tier:3,cooldownTimer:i*.35})),territory:{id:'ancient_arena',name:'Đấu trường Thượng Cổ',x:this.arena.cx,y:this.arena.cy,radius:this.arena.w/2,isCleared:false},foreseen:false,passiveClock:0,petrification:new Map(),shield:def.kind==='mecha'?hp*.12:0,maxShield:def.kind==='mecha'?hp*.12:0});
+  Object.assign(m,{profile,homeX:m.x,homeY:m.y,gauntletRound:this.defeated+1,isAncient:true,ancientKind:def.kind,ancientDef:def,phase:1,phaseHp:hp,phaseMaxHp:hp,ccImmune:true,globalSkillCooldown:1,original,passives:def.passives.map(p=>({...p})),skills:def.skills.map((s,i)=>({id:s.id,def:{...s},tier:3,cooldownTimer:i*.35})),territory:{id:'ancient_arena',name:'Đấu trường Thượng Cổ',x:this.arena.cx,y:this.arena.cy,radius:this.arena.w/2,isCleared:false},foreseen:false,passiveClock:0,petrification:new Map(),shield:def.kind==='mecha'?profile.shield:0,maxShield:def.kind==='mecha'?profile.shield:0});
   if(def.kind==='mirror'&&original){
    m.maxMana=m.currentMana=original.maxMana;m.maxStamina=m.currentStamina=original.maxStamina;m.critChance=original.critChance;m.secondaryWeapon=original.secondaryWeapon?{...original.secondaryWeapon}:null;
-   m.weapon=original.weapon?{...original.weapon}:null;m.armor=null;m.helmet=null;m.boots=null;m.appearance={...original.appearance};m.classId=original.classId;
+   m.weapon=original.weapon?{...original.weapon,attack:0,magicPower:0}:null;m.armor=null;m.helmet=null;m.boots=null;m.appearance={...original.appearance};m.classId=original.classId;
    m.copiedSkills=(original.skills||[]).map(s=>({...s,cooldownTimer:0}));const first=m.copiedSkills[0],different=m.copiedSkills.find(s=>s.def.role!==first?.def.role);if(different)m.copiedSkills=[first,different,...m.copiedSkills.filter(s=>s!==first&&s!==different)];m.copiedPassives=(original.passives||[]).map(p=>({...p,cooldownTimer:0}));m.passiveMultiplier=1;m.recordedCombo=(original.attackHistory||[]).filter(a=>a.targetId===god.id).slice(-4);
   }
   this.boss=m;G.monsters=E.monsters;G.cataclysm=true;window.GameEngine.Audio?.awaken(m);
@@ -67,6 +68,7 @@ window.GameEntities.AncientSystem={
   const G=window.GameManager,D=window.GameData.Equipments;
   window.GameEngine.Audio?.play('ancientDown',m);this.defeated++;const pool=Object.values(D.relics).filter(d=>!this.usedRelics.includes(d.id)),relic=pool[Math.floor(Math.random()*pool.length)];
   if(relic){this.usedRelics.push(relic.id);const drop=G.spawnDropItem(m.x,m.y,relic,relic.slot);if(killer?.isPawn){killer.relicLoot=drop;killer.relicPriorityUntil=this.clock+1.5;}}
+  const potion=G.spawnDropItem(m.x+28,m.y,{id:'full_health_potion',name:'Bình Máu Toàn Phần',tier:'ancient',fullHeal:true,desc:'Hồi đầy 100% máu tối đa.'},'potion');if(killer?.isPawn)killer.ancientPotionLoot=potion;
   if(killer?.isAlive){killer.action=null;killer.attackState=null;killer.targetEnemy=null;killer.combatGroup=null;killer.combatLease=0;killer.navTimer=0;killer.navPath=[];}
   window.GameEntities.CombatSystem.pendingEffects=[];window.GameRenderer.VfxManager.projectiles=[];
   if(this.defeated<this.total){this.nextAt=this.clock+10;window.GameUI.CombatTicker.log('🏺 Hạ Thượng Cổ '+this.defeated+'/'+this.total+'. Nhặt Thượng Bảo; boss tiếp theo thức tỉnh sau 10 giây.');return;}
@@ -81,11 +83,14 @@ window.GameEntities.AncientSystem={
  config(m,s){
   const d={...s.def},owner=m.ancientOwner||m;
   d.cooldown=owner.ancientKind==='mecha'&&owner.phase===2?0:(d.cooldown||8)*(owner.ancientKind==='mirror'&&owner.phase===2?.5:1);
-  d.damage=window.GameEntities.CombatSystem.combatStats(m).attack*Math.min(d.effect==='nuclear'?2.5:2,d.damageScale||1.2);d.stun=d.stun||0;d.slow=0;return d;
+  d.scaling=['wall','swap','split'].includes(d.effect)?{}:{damage:{base:d.effect==='nuclear'?150:owner.phase===2?120:90,ratio:.4,stat:'attack'}};
+  d.role='strike';d.trueHpPct=0;d.stun=d.stun||0;d.slow=0;
+  return window.GameEntities.CombatSystem.evaluateScaling(m,d);
  },
  cast(m,s,t){
   const C=window.GameEntities.CombatSystem,c=this.config(m,s),owner=m.ancientOwner||m;
   if(this.clock<(m.ventUntil||0)||!C.canAttack(m)||s.cooldownTimer>0||owner.globalSkillCooldown>0||c.phase&&m.phase<c.phase||!t?.isAlive||Math.hypot(t.x-m.x,t.y-m.y)>c.range||!C.canEngage(m,t))return false;
+  c.damageBudget=C.damageBudget(m,c);
   const angle=Math.atan2(t.y-m.y,t.x-m.x),point={x:t.x,y:t.y};
   if(c.id==='av_dive'){const pawns=window.GameManager.pawns.filter(p=>p.isAlive&&C.canEngage(m,p));const center=pawns.sort((a,b)=>pawns.filter(p=>Math.hypot(p.x-b.x,p.y-b.y)<120).length-pawns.filter(p=>Math.hypot(p.x-a.x,p.y-a.y)<120).length)[0];if(center){point.x=center.x;point.y=center.y;}}
   const ok=C.startAction(m,'skill',t,()=>this.resolve(m,c,t,point,angle),{windup:c.windup,active:.05,recovery:.45,style:C.weaponStyle(m),color:m.ancientDef.color,skillName:c.name});
@@ -105,6 +110,7 @@ window.GameEntities.AncientSystem={
  resolve(m,c,t,point,angle){
   window.GameEngine.Audio?.play('ancient',m,c.effect);
   const M=window.GameEngine.MapTerrain,V=window.GameRenderer.VfxManager,C=window.GameEntities.CombatSystem;
+  if(!c.damageBudget)c.damageBudget=C.damageBudget(m,c);
   const area=(extra={},delay=.3,x=point.x,y=point.y)=>this.field(m,c,x,y,delay,extra);
   if(m.phase===2&&c.effect==='devour'){const f=C.fields.find(f=>f.owner===t&&Math.hypot(f.x-m.x,f.y-m.y)<c.range&&Math.abs(Math.atan2(f.y-m.y,f.x-m.x)-angle)<.4);if(f){f.life=0;c={...c,damage:c.damage*1.15};}}
   if(m.phase===2&&c.effect==='acid')for(const f of this.fields.filter(f=>f.owner===m&&f.effect==='acid'&&!f.warningOnly&&f.end>this.clock)){f.end=this.clock;area({effect:'acid_pull',damage:0,pull:12,end:this.clock+1,tick:.4},.2,f.x,f.y);}
@@ -112,7 +118,7 @@ window.GameEntities.AncientSystem={
   if(c.effect==='wall')this.walls=this.walls.filter(w=>w.owner!==m);
   if(c.effect==='spin_beam'&&m.phase===2&&this.walls.some(w=>w.owner===m)){const w=this.walls.find(w=>w.owner===m);area({shape:'line',angle:angle+Math.PI/2,length:220,radius:15,damage:c.damage*.15},.7,w.x,w.y);c={...c,damage:c.damage*.85};}
   if(c.effect==='collapse'){for(const side of [-1,0,1])area({shape:'line',angle,length:600,radius:32,damage:c.damage/3,trueHpPct:0},.5+(side+1)*.4,m.x-Math.sin(angle)*side*160,m.y+Math.cos(angle)*side*160);}
-  else if(c.effect==='meteor')for(let i=0;i<8;i++){const a=i*Math.PI/4;const f=area({damage:c.damage/8},.5+i*.25,point.x+Math.cos(a)*(i?130:0),point.y+Math.sin(a)*(i?130:0));if(i<2)f.rockCover=true;}
+  else if(c.effect==='meteor')for(let i=0;i<8;i++){const a=i*Math.PI/4;const f=area({damage:c.damage},.5+i*.25,point.x+Math.cos(a)*(i?130:0),point.y+Math.sin(a)*(i?130:0));if(i<2)f.rockCover=true;}
   else if(c.effect==='sweep'){area({shape:'cone',angle,arc:Math.PI/2,knockback:c.knockback},.25,m.x,m.y);if(m.phase===2){for(const w of this.walls.filter(w=>w.owner===m&&Math.hypot(w.x-m.x,w.y-m.y)<180)){w.hp=0;area({radius:35,damage:c.damage*.1},.7,w.x,w.y);}}}
   else if(['pull','devour'].includes(c.effect)){
    area({shape:c.effect==='devour'?'line':'circle',angle,length:c.range,pull:25,trueHpPct:0},c.effect==='collapse'?.05:1,m.x,m.y);
@@ -121,11 +127,11 @@ window.GameEntities.AncientSystem={
    for(const offset of [-70,70]){const x=point.x+Math.cos(angle)*90-Math.sin(angle)*offset,y=point.y+Math.sin(angle)*90+Math.cos(angle)*offset;
     const pos=M.nearestFree(x,y,24);
     if(M.canStand(pos.x,pos.y,22)&&!window.GameManager.pawns.some(p=>p.isAlive&&Math.hypot(p.x-pos.x,p.y-pos.y)<35)){this.walls.push({x:pos.x-16,y:pos.y-16,w:32,h:32,end:this.clock+(m.phase===2?3:5),owner:m,hp:80});V.addEffect('impact',pos.x,pos.y,{anc:'wall',tint:m.ancientDef?.color,radius:42,color:m.ancientDef?.color,life:.7});}}
-  }else if(c.effect==='spin_beam')for(let i=0;i<12;i++)area({shape:'line',angle:angle+i*Math.PI/6,length:360,radius:24,damage:c.damage/12},.2+i*.2,m.x,m.y);
-  else if(c.effect==='lava')for(const side of [-1,1])area({shape:'line',angle:Math.PI/2,length:1250,radius:70,end:this.clock+5,tick:1,damage:c.damage/10},.8,this.arena.cx+side*260,this.arena.y+100);
+  }else if(c.effect==='spin_beam')for(let i=0;i<12;i++)area({shape:'line',angle:angle+i*Math.PI/6,length:360,radius:24,damage:c.damage/3},.2+i*.2,m.x,m.y);
+  else if(c.effect==='lava')for(const side of [-1,1])area({shape:'line',angle:Math.PI/2,length:1250,radius:70,end:this.clock+5,tick:1,damage:c.damage/5},.8,this.arena.cx+side*260,this.arena.y+100);
   else if(['copy_first','copy_second'].includes(c.effect)){
    const index=c.effect==='copy_first'?0:1,s=m.copiedSkills?.[index];
-   if(s){const original=C.getSkillConfig(m,s);C.resolveSkill(m,s,t,{...original,radius:Math.min(130,original.radius*1.2),range:Math.min(300,original.range*1.2),damage:Math.min(c.damage,original.damage*1.2),useCurrentOrigin:true,originX:m.x,originY:m.y,tx:point.x,ty:point.y,angle,attackSnapshot:C.combatStats(m).attack,castId:m.skillsCast});}
+   if(s){const original=C.getSkillConfig(m,s);C.resolveSkill(m,s,t,{...original,radius:Math.min(130,original.radius*1.2),range:Math.min(300,original.range*1.2),damage:Math.min(c.damage,original.damage*1.2),damageBudget:c.damageBudget,useCurrentOrigin:true,originX:m.x,originY:m.y,tx:point.x,ty:point.y,angle,attackSnapshot:C.combatStats(m).attack,castId:m.skillsCast});}
    else area({damage:c.damage},.4);
   }else if(c.effect==='leap'||c.effect==='saw'){
    if(c.effect==='saw'&&m.phase===2)m.ventUntil=this.clock+1.5;
@@ -133,15 +139,15 @@ window.GameEntities.AncientSystem={
    const goal=M.safeGoal(m,point.x,point.y);M.moveEntity(m,goal.x-m.x,goal.y-m.y);
    V.addEffect('dash',m.action.originX,m.action.originY,{tx:m.x,ty:m.y,color:m.ancientDef.color,life:.7});area({stun:c.stun,knockback:c.knockback},.2,m.x,m.y);
   }else if(c.effect==='swap'){
-   m.weapon=m.weapon?.range>90?{id:'mirror_blade',name:'Binh khí phản chiếu',type:'sword',attack:35,range:55,speed:1}:{id:'mirror_bow',name:'Binh khí phản chiếu',type:'bow',attack:35,range:240,speed:1};m.magicOnHit=20;m.weaponBuffTimer=3;
+   m.weapon=m.weapon?.range>90?{id:'mirror_blade',name:'Binh khí phản chiếu',type:'sword',attack:0,range:55,speed:1}:{id:'mirror_bow',name:'Binh khí phản chiếu',type:'bow',attack:0,range:240,speed:1};m.magicOnHit=Math.min(15,4+C.combatStats(m).attack*.06);m.weaponBuffTimer=3;
   }else if(c.effect==='combo'){
    const combo=m.recordedCombo?.length?m.recordedCombo:[{kind:'attack'},{kind:'skill'},{kind:'attack'}];
    combo.forEach((a,i)=>area({damage:c.damage/combo.length,radius:60},.2+i*1));
   }else if(c.effect==='split')this.split(m,t);
   else if(c.effect==='acid')area({end:this.clock+3,tick:1,armorBreak:.25,damage:c.damage/3},.6);
-  else if(c.effect==='tentacles')for(let i=0;i<6;i++){const a=i*Math.PI/3;area({damage:c.damage/6,radius:45,neoHp:m.phase===2?60:undefined},.3+(i%3)*.5,m.x+Math.cos(a)*130,m.y+Math.sin(a)*130);}
+  else if(c.effect==='tentacles')for(let i=0;i<6;i++){const a=i*Math.PI/3;area({damage:c.damage/2,radius:45,neoHp:m.phase===2?60:undefined},.3+(i%3)*.5,m.x+Math.cos(a)*130,m.y+Math.sin(a)*130);}
   else if(c.effect==='panic')area({damage:c.damage*.6,stun:.3,shape:'cone',angle,arc:Math.PI/3},.2,m.x,m.y);
-  else if(c.effect==='cross')for(let i=0;i<4;i++)area({shape:'line',angle:angle+i*Math.PI/2,length:300,radius:28,damage:c.damage/4},.3,m.x,m.y);
+  else if(c.effect==='cross')for(let i=0;i<4;i++)area({shape:'line',angle:angle+i*Math.PI/2,length:300,radius:28,damage:c.damage},.3,m.x,m.y);
   else if(c.effect==='homing'){
    const targets=window.GameManager.pawns.filter(p=>p.isAlive&&C.canEngage(m,p));
    for(let i=0;i<c.count;i++){const prey=targets[i%targets.length]||t;area({homing:m.phase===2&&i%2?null:prey,color:m.phase===2&&i%2?'#ffb36e':m.ancientDef.color,x:m.x,y:m.y,radius:c.radius,damage:c.damage/c.count,end:this.clock+3,speed:160+i%3*20},.3+i*.04,m.x,m.y);}
@@ -149,8 +155,8 @@ window.GameEntities.AncientSystem={
   else if(c.effect==='fissure')area({shape:'line',angle,length:c.range,radius:45,end:this.clock+4,tick:1,damage:c.damage/4},.5,m.x,m.y);
   else if(c.effect==='map_arrow')area({shape:'line',angle,length:1200,radius:22,damage:c.damage},.5,m.x,m.y);
   else if(c.effect==='matrix'){
-   for(let i=0;i<6;i++)area({damage:c.damage/6,radius:65,neoHp:60},.5+i*1,m.x+Math.cos(angle+i*Math.PI/3)*130,m.y+Math.sin(angle+i*Math.PI/3)*130);
-  }else if(c.effect==='lasers')for(let i=0;i<3;i++)area({shape:'line',angle:angle+(i-1)*.6,length:500,radius:25,end:this.clock+2.5,tick:.6,damage:c.damage/12},.35+i*.3,m.x,m.y);
+   for(let i=0;i<6;i++)area({damage:c.damage/2,radius:65,neoHp:60},.5+i*1,m.x+Math.cos(angle+i*Math.PI/3)*130,m.y+Math.sin(angle+i*Math.PI/3)*130);
+  }else if(c.effect==='lasers')for(let i=0;i<3;i++)area({shape:'line',angle:angle+(i-1)*.6,length:500,radius:25,end:this.clock+2.5,tick:.6,damage:c.damage/3},.35+i*.3,m.x,m.y);
   else if(c.effect==='net')area({silence:.6,stun:.4,innerRadius:25,neoHp:m.phase===2?70:undefined},.3);
   else if(c.effect==='nuclear')area({damage:c.damage},.05,m.x,m.y);
  },
@@ -163,7 +169,7 @@ window.GameEntities.AncientSystem={
   m.clones=[-1,1].map(side=>{
    const pos=M.nearestFree(t.x+side*95,t.y+45);
    const c=E.spawnMonster({id:'mirror_clone',name:'Phân thân Phản Chiếu',tier:6,tierName:'Phân thân Thượng Cổ',maxHp:m.phaseMaxHp/2,attack:m.attack,defense:m.defense,speed:m.speed,scale:1,skills:[],visual:{type:'primordial_mirror'}},pos.x,pos.y);
-   Object.assign(c,{cloneRole:side===-1?'pressure':'control',isAncientClone:true,ancientOwner:m,ancientKind:'mirror',statMultiplier:.5,weapon:m.original?.weapon?{...m.original.weapon}:null,armor:m.armor,helmet:m.helmet,boots:m.boots,appearance:m.appearance,classId:m.classId,speed:m.speed*.5,maxMana:m.maxMana*.5,currentMana:m.maxMana*.5,maxStamina:m.maxStamina*.5,currentStamina:m.maxStamina*.5,critChance:m.critChance*.5,skills:m.copiedSkills.filter(s=>side===-1?!['control','defense'].includes(s.def.role):['control','defense','strike'].includes(s.def.role)).map(s=>({...s,cooldownTimer:0})),passives:m.copiedPassives,progression:m.progression||(m.progression={}),territory:m.territory,ccImmune:true,expReward:0});return c;
+   Object.assign(c,{cloneRole:side===-1?'pressure':'control',isAncientClone:true,ancientOwner:m,ancientKind:'mirror',statMultiplier:.5,weapon:m.original?.weapon?{...m.original.weapon,attack:0,magicPower:0}:null,armor:m.armor,helmet:m.helmet,boots:m.boots,appearance:m.appearance,classId:m.classId,speed:m.speed*.5,maxMana:m.maxMana*.5,currentMana:m.maxMana*.5,maxStamina:m.maxStamina*.5,currentStamina:m.maxStamina*.5,critChance:m.critChance*.5,skills:m.copiedSkills.filter(s=>side===-1?!['control','defense'].includes(s.def.role):['control','defense','strike'].includes(s.def.role)).map(s=>({...s,cooldownTimer:0})),passives:m.copiedPassives,progression:m.progression||(m.progression={}),territory:m.territory,ccImmune:true,expReward:0});return c;
   });
  },
  breakCover(x1,y1,x2,y2,r){
@@ -176,7 +182,7 @@ window.GameEntities.AncientSystem={
   if(!m.isAncient)return damage;
   if(this.clock<(m.ventUntil||0))damage*=1.25;
   if(m.action?.skillName&&m.action?.kind==='skill'&&!m.action.released&&m.skills.find(s=>s.def.name===m.action.skillName)?.id==='az_nuclear'){m.coreDamage=(m.coreDamage||0)+damage;if(m.coreDamage>=100){m.action=null;m.attackState=null;m.coreDamage=0;m.ventUntil=this.clock+3;this.fields=this.fields.filter(f=>f.owner!==m||!f.warningOnly);}}
-  if(m.ancientKind==='colossus')return c.trueDamage?damage*.75:c.skill?damage:Math.max(damage*.8,damage-10);
+  if(m.ancientKind==='colossus')return c.trueDamage?damage*.75:c.skill?damage:Math.max(damage*.8,damage-(8+m.defense*.1));
   if(m.ancientKind==='mirror'){
    if(c.skill&&!m.foreseen&&window.GameEntities.CombatSystem.canSee(m,a)){m.foreseen=true;window.GameRenderer.VfxManager.addDamageNumber(m.x,m.y,'TIÊN TRI','block');return 0;}
    if(weapon?.name&&weapon.name===m.weapon?.name)damage*=.85;
@@ -187,7 +193,7 @@ window.GameEntities.AncientSystem={
   }
   if(m.ancientKind==='mecha'){
    if(Math.cos(Math.atan2(a.y-m.y,a.x-m.x)-m.aimAngle)<-.3)damage*=.65;
-   m.heatHits=(m.heatHits||0)+1;if(m.heatHits>=10){m.heatHits=0;this.field(m,{name:'Xả Nhiệt Quá Tải',radius:130,damage:m.attack*.6},m.x,m.y,.3);}
+   m.heatHits=(m.heatHits||0)+1;if(m.heatHits>=10){m.heatHits=0;this.field(m,{name:'Xả Nhiệt Quá Tải',radius:130,damage:30+m.attack*.4},m.x,m.y,.3);}
    if(m.shield>0){const dealt=Math.min(m.shield,damage);m.shield-=dealt;window.GameRenderer.VfxManager.addDamageNumber(m.x,m.y,Math.round(dealt),'block');damage-=dealt;}
    damage*=.85;
   }
@@ -197,17 +203,17 @@ window.GameEntities.AncientSystem={
   const C=window.GameEntities.CombatSystem;
   if(t.isAncientClone){t.ancientOwner.currentHp=t.ancientOwner.clones.reduce((sum,p)=>sum+(p.isAlive?p.currentHp:0),0);}
   if(t.isAncient){
-   if(t.ancientKind==='void'&&(c.magic||c.skill&&c.magic===undefined&&a.classId==='mage'))t.currentHp=Math.min(t.maxHp,t.currentHp+damage*.2);
-   if(t.ancientKind==='chaos'&&!c.reflected&&t.weapon?.type==='sword'&&this.clock>=(t.reflectAt||0)){const near=window.GameManager.pawns.filter(p=>p.isAlive&&C.canEngage(t,p)).sort((p,q)=>Math.hypot(p.x-t.x,p.y-t.y)-Math.hypot(q.x-t.x,q.y-t.y))[0];if(near){t.reflectAt=this.clock+3;C.applyDamage(t,near,null,{baseDamage:damage*.1,reflected:true});}}
+   if(t.ancientKind==='void'&&(c.magic||c.skill&&c.magic===undefined&&a.classId==='mage'))t.currentHp=Math.min(t.maxHp,t.currentHp+Math.min(damage*.2,2+damage*.15));
+   if(t.ancientKind==='chaos'&&!c.reflected&&t.weapon?.type==='sword'&&this.clock>=(t.reflectAt||0)){const near=window.GameManager.pawns.filter(p=>p.isAlive&&C.canEngage(t,p)).sort((p,q)=>Math.hypot(p.x-t.x,p.y-t.y)-Math.hypot(q.x-t.x,q.y-t.y))[0];if(near){t.reflectAt=this.clock+3;C.applyDamage(t,near,null,{baseDamage:Math.min(damage*.1,1+damage*.08),reflected:true});}}
   }
-  if(a.isAncient&&a.ancientKind==='chaos'&&!c.reflected&&!c.dot)a.currentHp=Math.min(a.maxHp,a.currentHp+Math.min(4,damage*.05));
+  if(a.isAncient&&a.ancientKind==='chaos'&&!c.reflected&&!c.dot)a.currentHp=Math.min(a.maxHp,a.currentHp+Math.min(4,1+damage*.03));
  },
  control(p,kind,duration,source){if(p.ccImmune||p.invincible||p.controlImmunityTimer>0)return;p[kind]=window.GameEntities.RelicSystem.control(p,kind,duration,source);p.controlImmunityTimer=3;},
  tick(dt){
   if(!this.awakened){const G=window.GameManager;if(this.pendingGod){this.wakeRemaining=Math.max(0,this.wakeRemaining-dt);if(this.wakeRemaining===0&&G.battleRoyaleResolved&&G.winnerPawn?.isAlive&&G.winnerPawn.level>=15&&!window.GameEngine.MapTerrain.remainingLords())this.awaken(this.pendingGod,G.winnerPawn,true);}return;}
   this.clock+=dt;this.walls=this.walls.filter(w=>w.end>this.clock&&w.hp>0);
   const C=window.GameEntities.CombatSystem,M=window.GameEngine.MapTerrain,G=window.GameManager,m=this.boss;
-  if(!m?.isAlive){if(this.victoryPending&&(this.original?.relicLoot?.isCollected||this.clock-this.finalAt>=5))this.showVictory();if(this.nextAt!==null&&this.clock>=this.nextAt)this.spawnNext();return;}
+  if(!m?.isAlive){if(this.victoryPending&&(this.original?.relicLoot?.isCollected&&this.original?.ancientPotionLoot?.isCollected&&this.original?.currentHp>=this.original?.maxHp&&!this.original?.action||this.clock-this.finalAt>=15))this.showVictory();if(this.nextAt!==null&&this.clock>=this.nextAt)this.spawnNext();return;}
   if(m.isSplit){m.currentHp=m.clones.reduce((sum,c)=>sum+(c.isAlive?c.currentHp:0),0);this.fields=this.fields.filter(f=>f.owner!==m);return;}
   if(this.clock>=this.lightningAt){this.lightningAt=this.clock+4;this.field(m,{name:'Sấm Tận Thế',fxKey:'doom_bolt',radius:45,damage:25},this.arena.x+Math.random()*this.arena.w,this.arena.y+Math.random()*this.arena.h,.8);}
   this.passives(m,dt);
@@ -222,7 +228,7 @@ window.GameEntities.AncientSystem={
     const dx=p.x-f.x,dy=p.y-f.y,d=Math.hypot(dx,dy),along=Math.cos(f.angle||0)*dx+Math.sin(f.angle||0)*dy,across=Math.abs(-Math.sin(f.angle||0)*dx+Math.cos(f.angle||0)*dy);
     const inside=f.shape==='line'?along>=0&&along<=f.length&&across<f.radius:f.shape==='cone'?d<f.radius&&Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-f.angle),Math.cos(Math.atan2(dy,dx)-f.angle)))<=f.arc:d<f.radius;
     if(!inside||(f.innerRadius&&d<f.innerRadius)||!C.canEngage(f.owner,p)||!C.reserveCombat(f.owner,p))continue;
-    const dealt=f.damage>0||f.trueHpPct?C.applyDamage(f.owner,p,null,{baseDamage:f.trueHpPct?p.maxHp*f.trueHpPct:f.damage,skill:true,trueDamage:!!f.trueHpPct,effect:f.effect,magic:!['sweep','saw','leap','spear','cross'].includes(f.effect),element:['lava','nuclear','meteor'].includes(f.effect)?'fire':f.effect==='acid'?'poison':undefined}):1;
+    const dealt=f.damage>0||f.trueHpPct?C.applyDamage(f.owner,p,null,{baseDamage:f.trueHpPct?p.maxHp*f.trueHpPct:f.damage,skill:true,damageBudget:f.damageBudget,trueDamage:!!f.trueHpPct,effect:f.effect,magic:!['sweep','saw','leap','spear','cross'].includes(f.effect),element:['lava','nuclear','meteor'].includes(f.effect)?'fire':f.effect==='acid'?'poison':undefined}):1;
     if(!dealt||!p.isAlive)continue;
     if(f.stun)this.control(p,'stunTimer',f.stun,f.owner);if(f.silence)this.control(p,'silenceTimer',f.silence,f.owner);
     if(f.panic){p.panicSource=f.owner;this.control(p,'panicTimer',f.panic,f.owner);}
@@ -250,17 +256,17 @@ window.GameEntities.AncientSystem={
   }
   if(kind==='colossus'&&Math.hypot(m.x-(m.lastStepX??m.x),m.y-(m.lastStepY??m.y))>25){m.lastStepX=m.x;m.lastStepY=m.y;}
   if(m.lastStepX===undefined){m.lastStepX=m.x;m.lastStepY=m.y;}
-  if(kind==='void'&&m.passiveClock>=4){m.passiveClock=0;const prey=pawns.sort((a,b)=>a.currentHp/a.maxHp-b.currentHp/b.maxHp)[0];if(prey)this.field(m,{name:'Bào Tử Đói Khát',radius:24,damage:m.attack*.4},m.x,m.y,.1,{homing:prey,speed:95,end:this.clock+6});}
-  if(kind==='void'&&m.phase===2&&this.clock>=(m.consumeAt||0))for(const item of G.dropItems)if(!item.isCollected&&!['god','ancient'].includes(item.tier)&&Math.hypot(item.x-m.x,item.y-m.y)<250&&M.segmentClear(m.x,m.y,item.x,item.y,false,0)){item.isCollected=true;m.consumeAt=this.clock+4;m.currentHp=Math.min(m.maxHp,m.currentHp+Math.min(15,m.maxHp*.01));window.GameRenderer.VfxManager.addEffect('dash',item.x,item.y,{tx:m.x,ty:m.y,color:'#ac79ed',life:.5});break;}
+  if(kind==='void'&&m.passiveClock>=4){m.passiveClock=0;const prey=pawns.sort((a,b)=>a.currentHp/a.maxHp-b.currentHp/b.maxHp)[0];if(prey)this.field(m,{name:'Bào Tử Đói Khát',radius:24,damage:10+m.attack*.25},m.x,m.y,.1,{homing:prey,speed:95,end:this.clock+6});}
+  if(kind==='void'&&m.phase===2&&this.clock>=(m.consumeAt||0))for(const item of G.dropItems)if(!item.isCollected&&!['god','ancient'].includes(item.tier)&&Math.hypot(item.x-m.x,item.y-m.y)<250&&M.segmentClear(m.x,m.y,item.x,item.y,false,0)){item.isCollected=true;m.consumeAt=this.clock+4;m.currentHp=Math.min(m.maxHp,m.currentHp+Math.min(15,3+C.supportHp(m)*.01));window.GameRenderer.VfxManager.addEffect('dash',item.x,item.y,{tx:m.x,ty:m.y,color:'#ac79ed',life:.5});break;}
   if(kind==='chaos'){
    m.attackSpeedMultiplier=1+(1-m.currentHp/m.maxHp);
    if(m.passiveClock>=2){m.passiveClock=0;
     const high=[...pawns].sort((a,b)=>b.level-a.level)[0],strong=high?.skills?.map(s=>({...s,tier:3,cooldownTimer:0})).sort((a,b)=>C.getSkillConfig(high,b).damage-C.getSkillConfig(high,a).damage)[0];
-    if(strong&&high&&C.canSee(m,high)){const copied=C.getSkillConfig(m,strong);this.field(m,{name:'Tâm Ma: '+strong.def.name,radius:copied.radius,damage:0},high.x,high.y,.8,{damage:Math.min(m.attack*.6,copied.damage),replayTarget:high});}
-    if(m.phase===2)for(let i=0;i<4;i++){const t=pawns[i%pawns.length];if(t)this.field(m,{name:'Linh Hồn Binh Khí',radius:28,damage:m.attack*.35},m.x+Math.cos(i*Math.PI/2)*65,m.y+Math.sin(i*Math.PI/2)*65,.2,{homing:t,speed:170,end:this.clock+4});}
+    if(strong&&high&&C.canSee(m,high)){const copied=C.getSkillConfig(m,strong);this.field(m,{name:'Tâm Ma: '+strong.def.name,radius:copied.radius,damage:0},high.x,high.y,.8,{damage:Math.min(15+m.attack*.35,copied.damage),replayTarget:high});}
+    if(m.phase===2)for(let i=0;i<4;i++){const t=pawns[i%pawns.length];if(t)this.field(m,{name:'Linh Hồn Binh Khí',radius:28,damage:5+m.attack*.15},m.x+Math.cos(i*Math.PI/2)*65,m.y+Math.sin(i*Math.PI/2)*65,.2,{homing:t,speed:170,end:this.clock+4});}
    }
   }
-  if(kind==='mecha'&&this.clock>=(m.ventUntil||0)&&m.passiveClock>=1.5){m.passiveClock=0;const far=pawns.filter(p=>Math.hypot(p.x-m.x,p.y-m.y)>130).sort((a,b)=>b.currentHp-a.currentHp)[0];if(far)this.field(m,{name:'Súng Phụ Tự Động',radius:20,damage:m.attack*.25},m.x,m.y,.1,{homing:far,speed:270,end:this.clock+3});}
+  if(kind==='mecha'&&this.clock>=(m.ventUntil||0)&&m.passiveClock>=1.5){m.passiveClock=0;const far=pawns.filter(p=>Math.hypot(p.x-m.x,p.y-m.y)>130).sort((a,b)=>b.currentHp-a.currentHp)[0];if(far)this.field(m,{name:'Súng Phụ Tự Động',radius:20,damage:6+m.attack*.2},m.x,m.y,.1,{homing:far,speed:270,end:this.clock+3});}
  },
 
  breakAnchor(p){
@@ -316,6 +322,8 @@ window.GameEntities.AncientSystem={
   if(relic&&!relic.isCollected){
    p.action=null;p.attackState=null;A.seekLoot(p,relic,dt);p.objective='Nhặt Thượng Bảo: '+relic.name;p.thought='Ưu tiên chiến lợi phẩm, thích ứng trang bị trước lượt boss tiếp theo.';return true;
   }
+  if(!this.boss?.isAlive&&p.ancientPotionLoot&&!p.ancientPotionLoot.isCollected){A.seekLoot(p,p.ancientPotionLoot,dt);p.objective='Nhặt bình hồi đầy máu';return true;}
+  if(!this.boss?.isAlive&&p.currentHp<p.maxHp&&C.usePotion(p))return true;
   if(p.relicPriorityUntil>this.clock){p.vx=p.vy=0;p.objective='Thích ứng Thượng Bảo vừa nhặt';return true;}
   if(this.boss?.isAlive)return false;
   const item=A.findBestItemToLoot(p,G.dropItems.filter(d=>!d.isCollected));

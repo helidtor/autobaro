@@ -1,5 +1,5 @@
-window.GameData.Equipments.TIER_COLORS.ancient='#ffd166';
-window.GameData.Equipments.TIER_NAMES.ancient='Thượng Bảo';
+window.GameData.Equipments.TIER_COLORS.ancient='#fb923c';
+window.GameData.Equipments.TIER_NAMES.ancient='Thượng Cổ';
 window.GameData.Equipments.relics={
  core:{id:'relic_core',name:'Bàn Cổ Hộ Tâm Giáp',slot:'body',hp:350,defense:45,magicDefense:30,effect:'core',color:'#e9bb57',desc:'Giảm 25% sát thương nổ/thiên thạch. Dưới 30% HP: khiên 25% HP trong 4s, miễn đẩy lùi, hồi 45s.'},
  voidblade:{id:'relic_voidblade',name:'Truy Hồn Đoản Đao Quy Khư',slot:'weapon',type:'dagger',attack:65,speed:1.2,range:42,critChance:.15,effect:'voidblade',color:'#b782ff',desc:'Mỗi chém lấy 2% giáp/kháng thành ATK, tối đa 10 tầng trong 5s. Lướt 120px, miễn sát thương 0.4s, xóa chậm; hồi 12s.'},

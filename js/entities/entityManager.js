@@ -72,7 +72,7 @@ window.GameEntities.EntityManager = {
         helmet: null,
         armor: null,
         skills: [],
-        healthPotions: 0,
+        healthPotions: 0,fullHealthPotions:0,
         thought: 'Tìm quái yếu để luyện cấp, chưa có vũ khí.',
         objective: 'Khám phá vùng ngoại ô',
         battleWill: 0,decisionReason: 'Tìm mục tiêu phù hợp',
@@ -156,7 +156,7 @@ window.GameEntities.EntityManager = {
       visual: def.visual || {},
       maxHp: Math.round(def.maxHp * ([0, 0.5, 0.5, 0.7, 0.65, 0.45][def.tier]??1)),
       currentHp: Math.round(def.maxHp * ([0, 0.5, 0.5, 0.7, 0.65, 0.45][def.tier]??1)),
-      attack: Math.round(def.attack * ([0, 0.45, 0.4, 0.65, 0.5, 0.35][def.tier]??1)),
+      attack: Math.round(def.attack * ([0, 0.45, 0.4, 0.65, 1, 1][def.tier]??1)),
       defense: Math.round(def.defense*(def.tier<=2?.55:1)),
       speed: def.speed || 80,
       expReward: def.tier===5?Math.max(10000,def.expReward||0):def.expReward??50,
@@ -199,10 +199,11 @@ window.GameEntities.EntityManager = {
       const m=this.spawnMonster(def,sites[i].x,sites[i].y,sites[i]);
       m.isFinalHunt=true;m.expReward=Math.max(def.expReward,Math.ceil(missing/5));
       // Five distinct bosses get stronger in sequence; the first is viable for the survivor.
-      m.maxHp=m.currentHp=Math.round(winner.maxHp*(.9+i*.35));
-      m.attack=Math.round((winner.attack+Math.min(40,winner.weapon?.attack||winner.weapon?.magicPower||0)+i*6)*(.3+i*.015));
+      const readiness=Math.min(1,window.GameEntities.CombatSystem.combatStats(winner).attack/Math.max(1,m.attack));
+      m.maxHp=m.currentHp=Math.max(24,Math.round(winner.maxHp*(.9+i*.35)*readiness));
+      m.attack=Math.max(60,Math.min(80,def.attack));
       m.defense=8+i*5;m.huntOrder=i;
-      if(i===0&&winner.currentHp<winner.maxHp*.5){m.maxHp=m.currentHp=Math.round(m.maxHp*.55);m.attack=Math.max(4,Math.round(m.attack*.6));}
+      if(i===0&&winner.currentHp<winner.maxHp*.5){m.maxHp=m.currentHp=Math.round(m.maxHp*.55);}
       return m;
     });
     winner.objective=winner.level<15?'Săn 5 Yêu Vương để đạt cấp 15':'Chuẩn bị đấu Yêu Thần';
