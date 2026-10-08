@@ -1,6 +1,6 @@
 window.GameEntities=window.GameEntities||{};
 window.GameEntities.AncientSystem={
- boss:null,awakened:false,fields:[],walls:[],clock:0,lightningAt:0,queue:[],defeated:0,usedRelics:[],nextAt:null,arena:null,god:null,original:null,victoryPending:false,pendingGod:null,wakeRemaining:null,
+ boss:null,awakened:false,fields:[],walls:[],clock:0,lightningAt:0,queue:[],defeated:0,total:6,usedRelics:[],nextAt:null,arena:null,god:null,original:null,victoryPending:false,pendingGod:null,wakeRemaining:null,
  reset(){if(window.GameEntities.CombatSystem){window.GameEntities.CombatSystem.fields=[];window.GameEntities.CombatSystem.fieldClock=0;}this.boss=null;this.awakened=false;this.fields=[];this.walls=[];this.clock=0;this.lightningAt=0;this.queue=[];this.defeated=0;this.usedRelics=[];this.nextAt=null;this.arena=null;this.god=null;this.original=null;this.victoryPending=false;this.pendingGod=null;this.wakeRemaining=null;if(window.GameEngine.MapTerrain)window.GameEngine.MapTerrain.ancientArena=null;},
  awaken(god,killer,ready=false){
   if(this.awakened)return this.boss;
@@ -10,7 +10,7 @@ window.GameEntities.AncientSystem={
   if(G.pawns.filter(p=>p.isAlive).length!==1){this.pendingGod=god;return null;}
   this.pendingGod=null;this.awakened=true;
   const original=G.winnerPawn?.isAlive?G.winnerPawn:killer?.isPawn?killer:G.pawns.find(p=>p.isAlive);
-  const first=D[Math.floor(Math.random()*D.length)];this.queue=[first,...D.filter(d=>d!==first)];this.god=god;this.original=original;
+  const first=D[Math.floor(Math.random()*D.length)];this.queue=[first,...D.filter(d=>d!==first),window.GameData.FinalAncientBoss];this.god=god;this.original=original;
   this.openArena(original,god);
   return this.spawnNext();
  },
@@ -30,8 +30,8 @@ window.GameEntities.AncientSystem={
   const def=this.queue.shift();if(!def||!original?.isAlive)return null;
   this.nextAt=null;
   const angle=Math.atan2(this.arena.cy-original.y,this.arena.cx-original.x),spawn=window.GameEngine.MapTerrain.nearestFree(this.arena.cx+Math.cos(angle)*110,this.arena.cy+Math.sin(angle)*110);
-  const hp=def.kind==='mirror'?(original?.maxHp||500)*15:Math.max(god.maxHp*1.5,(original?.maxHp||500)*4,6000);
-  const m=E.spawnMonster({id:def.id,name:def.name,tier:6,tierName:'Thượng Cổ',scale:def.scale,maxHp:hp,attack:def.kind==='mirror'?(original?.attack||40):Math.max(god.attack*1.3,55),defense:def.kind==='mirror'?(original?.defense||20):god.defense+15,speed:def.kind==='mirror'?(original?.moveSpeed||95):105,expReward:0,passives:[],skills:[],visual:{type:'primordial_'+def.kind,bodyColor:def.color}},spawn.x,spawn.y);
+  const hp=def.kind==='mirror'?(original?.maxHp||500)*15:def.final?Math.max(god.maxHp*2,(original?.maxHp||500)*6,9000):Math.max(god.maxHp*1.5,(original?.maxHp||500)*4,6000);
+  const m=E.spawnMonster({id:def.id,name:def.name,tier:6,tierName:'Thượng Cổ',scale:def.scale,maxHp:hp,attack:def.kind==='mirror'?(original?.attack||40):Math.max(god.attack*(def.final?1.5:1.3),def.final?70:55),defense:def.kind==='mirror'?(original?.defense||20):god.defense+(def.final?20:15),speed:def.kind==='mirror'?(original?.moveSpeed||95):def.final?115:105,expReward:0,passives:[],skills:[],visual:{type:'primordial_'+def.kind,bodyColor:def.color}},spawn.x,spawn.y);
   Object.assign(m,{homeX:m.x,homeY:m.y,gauntletRound:this.defeated+1,isAncient:true,ancientKind:def.kind,ancientDef:def,phase:1,phaseHp:hp,phaseMaxHp:hp,ccImmune:true,globalSkillCooldown:1,original,passives:def.passives.map(p=>({...p})),skills:def.skills.map((s,i)=>({id:s.id,def:{...s},tier:3,cooldownTimer:i*.35})),territory:{id:'ancient_arena',name:'Đấu trường Thượng Cổ',x:this.arena.cx,y:this.arena.cy,radius:this.arena.w/2,isCleared:false},foreseen:false,passiveClock:0,petrification:new Map(),shield:def.kind==='mecha'?hp*.12:0,maxShield:def.kind==='mecha'?hp*.12:0});
   if(def.kind==='mirror'&&original){
    m.maxMana=m.currentMana=original.maxMana;m.maxStamina=m.currentStamina=original.maxStamina;m.critChance=original.critChance;m.secondaryWeapon=original.secondaryWeapon?{...original.secondaryWeapon}:null;
@@ -39,7 +39,7 @@ window.GameEntities.AncientSystem={
    m.copiedSkills=(original.skills||[]).map(s=>({...s,tier:3,cooldownTimer:0}));m.copiedPassives=(original.passives||[]).map(p=>({...p,cooldownTimer:0}));m.passiveMultiplier=2;m.recordedCombo=(original.attackHistory||[]).filter(a=>a.targetId===god.id).slice(-4);
   }
   this.boss=m;G.monsters=E.monsters;G.cataclysm=true;
-  window.GameUI.CombatTicker.log('🌋 THƯỢNG CỔ THỨC TỈNH: '+m.name+' • Lượt '+m.gauntletRound+'/5 • Đấu trường 1500×1500!');
+  window.GameUI.CombatTicker.log('🌋 THƯỢNG CỔ THỨC TỈNH: '+m.name+' • Lượt '+m.gauntletRound+'/'+this.total+' • Đấu trường 1500×1500!');
   window.GameRenderer.VfxManager.addEffect('rune',m.x,m.y,{radius:320,color:def.color,life:3});
   return m;
  },
@@ -55,6 +55,7 @@ window.GameEntities.AncientSystem={
   m.phase=2;m.currentHp=m.phaseMaxHp;m.phaseHp=m.phaseMaxHp;m.action=null;m.attackState=null;m.stunTimer=m.slowTimer=m.silenceTimer=0;
   if(['colossus','mirror'].includes(m.ancientKind))m.speed*=1.5;
   if(m.ancientKind==='mecha'){m.speed*=2;m.shield=0;}
+  if(m.ancientKind==='eternal')m.speed*=1.4;
   m.skills.forEach(s=>s.cooldownTimer=s.def.phase?0:s.cooldownTimer);m.globalSkillCooldown=1;
   V.addBurstParticles(m.x,m.y,m.ancientDef.color,45);V.addEffect('impact',m.x,m.y,{radius:220,color:m.ancientDef.color,life:2});
   window.GameUI.CombatTicker.log('🔥 '+m.name+' vỡ thanh máu thứ nhất — PHASE 2!');return true;
@@ -67,18 +68,18 @@ window.GameEntities.AncientSystem={
   if(relic){this.usedRelics.push(relic.id);const drop=G.spawnDropItem(m.x,m.y,relic,relic.slot);if(killer?.isPawn){killer.relicLoot=drop;killer.relicPriorityUntil=this.clock+1.5;}}
   if(killer?.isAlive){killer.action=null;killer.attackState=null;killer.targetEnemy=null;killer.combatGroup=null;killer.combatLease=0;killer.navTimer=0;killer.navPath=[];}
   window.GameEntities.CombatSystem.pendingEffects=[];window.GameRenderer.VfxManager.projectiles=[];
-  if(this.defeated<5){this.nextAt=this.clock+10;window.GameUI.CombatTicker.log('🏺 Hạ Thượng Cổ '+this.defeated+'/5. Nhặt Thượng Bảo; boss tiếp theo thức tỉnh sau 10 giây.');return;}
+  if(this.defeated<this.total){this.nextAt=this.clock+10;window.GameUI.CombatTicker.log('🏺 Hạ Thượng Cổ '+this.defeated+'/'+this.total+'. Nhặt Thượng Bảo; boss tiếp theo thức tỉnh sau 10 giây.');return;}
   this.victoryPending=true;this.finalAt=this.clock;return;
  },
  showVictory(){
   const G=window.GameManager,killer=this.original,m=this.boss;this.victoryPending=false;
   G.ancientDefeated=true;G.isGameOver=true;G.isPaused=true;G.resultOpen=true;
   const el=document.getElementById('story-card-modal');
-  el.innerHTML='<div class="story-card-box"><h1>🏆 CHINH PHỤC THƯỢNG CỔ</h1><div class="story-card-winner">'+(killer?.name||'Người chiến thắng')+'</div><p>Đã hạ '+m.name+' và chinh phục đủ 5 boss qua 10 thanh máu. Trận đấu hoàn tất.</p><button class="btn-restart" onclick="window.GameManager.startNewMatch()">Bắt đầu ván mới</button></div>';el.classList.remove('hidden');
+  el.innerHTML='<div class="story-card-box"><h1>🏆 CHINH PHỤC THƯỢNG CỔ</h1><div class="story-card-winner">'+(killer?.name||'Người chiến thắng')+'</div><p>Đã hạ '+m.name+' và chinh phục đủ 6 boss qua 12 thanh máu. Trận đấu hoàn tất.</p><button class="btn-restart" onclick="window.GameManager.startNewMatch()">Bắt đầu ván mới</button></div>';el.classList.remove('hidden');
  },
  config(m,s){
   const d={...s.def},owner=m.ancientOwner||m;
-  d.cooldown=owner.ancientKind==='mecha'&&owner.phase===2?0:(d.cooldown||8)*(owner.ancientKind==='mirror'&&owner.phase===2?.5:1);
+  d.cooldown=owner.ancientKind==='mecha'&&owner.phase===2?0:(d.cooldown||8)*(owner.ancientKind==='mirror'&&owner.phase===2?.5:owner.ancientKind==='eternal'&&owner.phase===2?.65:1);
   d.damage=window.GameEntities.CombatSystem.combatStats(m).attack*Math.min(d.effect==='nuclear'?2.5:2,d.damageScale||1.2);d.stun=d.stun||0;d.slow=0;return d;
  },
  cast(m,s,t){
@@ -90,6 +91,7 @@ window.GameEntities.AncientSystem={
   if(!ok)return false;
   window.GameEngine.Audio?.play('boss',m);
   s.cooldownTimer=c.cooldown;owner.globalSkillCooldown=1;m.globalSkillCooldown=1;m.skillsCast=(m.skillsCast||0)+1;
+  if(m.ancientKind==='eternal'&&(m.memStacks||0)<8){m.memStacks=(m.memStacks||0)+1;m.attack*=1.03;}
   const self=['sweep','pull','devour','spin_beam','panic','cross','spear','fissure','map_arrow','lasers','collapse','nuclear','matrix'].includes(c.effect);
   this.field(m,c,self?m.x:point.x,self?m.y:point.y,c.windup,{warningOnly:true,end:this.clock+c.windup,shape:['devour','spear','fissure','map_arrow','lasers','spin_beam'].includes(c.effect)?'line':c.effect==='sweep'?'cone':'circle',radius:['devour','spear','fissure','map_arrow','lasers','spin_beam'].includes(c.effect)?25:c.radius,arc:Math.PI/2,angle,length:c.range});return true;
  },
@@ -166,6 +168,10 @@ window.GameEntities.AncientSystem={
   if(m.ancientKind==='mirror'){
    if(c.skill&&!m.foreseen){m.foreseen=true;window.GameRenderer.VfxManager.addDamageNumber(m.x,m.y,'TIÊN TRI','block');return 0;}
    if(weapon?.name&&weapon.name===m.weapon?.name)damage*=.6;
+  }
+  if(m.ancientKind==='eternal'){
+   if(['poison','bleed'].includes(c.dot))return 0;
+   return Math.min(damage,m.phaseMaxHp*.04);
   }
   if(m.ancientKind==='void'){
    if(['poison','bleed'].includes(c.dot))return 0;
@@ -245,6 +251,7 @@ window.GameEntities.AncientSystem={
     if(m.phase===2)for(let i=0;i<4;i++){const t=pawns[i%pawns.length];if(t)this.field(m,{name:'Linh Hồn Binh Khí',radius:28,damage:m.attack*.35},m.x+Math.cos(i*Math.PI/2)*65,m.y+Math.sin(i*Math.PI/2)*65,.2,{homing:t,speed:170,end:this.clock+4});}
    }
   }
+  if(kind==='eternal'&&m.passiveClock>=3){m.passiveClock=0;const prey=pawns[0];if(prey)this.field(m,{name:'Lửa Vĩnh Hằng',radius:60,damage:m.attack*.35,effect:'lava'},prey.x,prey.y,.8);}
   if(kind==='mecha'&&m.passiveClock>=1.5){m.passiveClock=0;const far=pawns.filter(p=>Math.hypot(p.x-m.x,p.y-m.y)>130).sort((a,b)=>b.currentHp-a.currentHp)[0];if(far)this.field(m,{name:'Súng Phụ Tự Động',radius:20,damage:m.attack*.25},m.x,m.y,.1,{homing:far,speed:270,end:this.clock+3});}
  },
  avoid(p,dt){
@@ -297,7 +304,7 @@ window.GameEntities.AncientSystem={
   const item=A.findBestItemToLoot(p,G.dropItems.filter(d=>!d.isCollected));
   if(item){A.seekLoot(p,item,dt);return true;}
   if(p.currentHp<p.maxHp*.85&&C.usePotion(p))return true;
-  p.vx=p.vy=0;p.targetEnemy=null;p.objective=this.victoryPending?'Hoàn tất chuỗi 5 Thượng Cổ':'Chuẩn bị boss '+(this.defeated+1)+'/5 • '+Math.max(0,(this.nextAt||0)-this.clock).toFixed(1)+'s';p.thought='Giữ thể lực, mana và hồi chiêu trong khoảng nghỉ 10 giây.';return true;
+  p.vx=p.vy=0;p.targetEnemy=null;p.objective=this.victoryPending?'Hoàn tất chuỗi '+this.total+' Thượng Cổ':'Chuẩn bị boss '+(this.defeated+1)+'/'+this.total+' • '+Math.max(0,(this.nextAt||0)-this.clock).toFixed(1)+'s';p.thought='Giữ thể lực, mana và hồi chiêu trong khoảng nghỉ 10 giây.';return true;
  },
  render(ctx){
   if(!this.awakened)return;
@@ -322,5 +329,5 @@ window.GameEntities.AncientSystem={
  },
  renderSky(ctx,w,h){if(!this.awakened)return;ctx.save();ctx.strokeStyle='#ffc7b8';ctx.lineWidth=2;ctx.globalAlpha=.5;
   for(let i=0;i<4;i++){const x=(i+.2)*w/4;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+20,35);ctx.lineTo(x-10,62);ctx.lineTo(x+45,95);ctx.stroke();}
-  ctx.fillStyle='#ffe1cb';ctx.font='bold 16px Arial';ctx.textAlign='center';ctx.fillText(this.nextAt!==null?'BOSS TIẾP THEO • '+Math.max(0,this.nextAt-this.clock).toFixed(1)+'s':'THƯỢNG CỔ '+(this.boss?.gauntletRound||1)+'/5 • ĐẤU TRƯỜNG 1500×1500',w/2,125);ctx.restore();}
+  ctx.fillStyle='#ffe1cb';ctx.font='bold 16px Arial';ctx.textAlign='center';ctx.fillText(this.nextAt!==null?'BOSS TIẾP THEO • '+Math.max(0,this.nextAt-this.clock).toFixed(1)+'s':'THƯỢNG CỔ '+(this.boss?.gauntletRound||1)+'/'+this.total+' • ĐẤU TRƯỜNG 1500×1500',w/2,125);ctx.restore();}
 };
