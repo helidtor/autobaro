@@ -37,7 +37,7 @@ window.GameRenderer = window.GameRenderer || {};
     // Đao Phủ Đoạt Mệnh
     golem(ctx, m, time) {
       const { poly, oval, line, glow, lin } = kit(ctx);
-      const a = m.action, p = a ? Math.min(1, a.elapsed / a.duration) : 0, wind = a && !a.released, walk = Math.sin(time * 7) * Math.min(3, Math.hypot(m.vx || 0, m.vy || 0) / 35);
+      const a = m.action, p = a ? Math.min(1, a.elapsed / (a.duration || 1)) : 0, wind = a && !a.released, walk = Math.sin(time * 7) * Math.min(3, Math.hypot(m.vx || 0, m.vy || 0) / 35);
       glow(0, -30, 40, '#ff5a3c', .18 + Math.sin(time * 4) * .05);
       for (const s of [-1, 1]) { poly([[s * 5, -8 + s * walk], [s * 19, -8 + s * walk], [s * 21, 6], [s * 3, 6]], '#3b4352'); poly([[s * 1, 6 + s * walk], [s * 24, 6 + s * walk], [s * 26, 12], [s * -1, 12]], '#1f2530'); line(s * 12, -7, s * 12, 4, '#ff6a4a', 1.2); }
       poly([[-18, -12], [18, -12], [22, 12], [0, 6], [-22, 12]], '#8a3f3c'); line(-8, -10, -10, 8, '#5b2523', 1.5); line(8, -10, 10, 8, '#5b2523', 1.5);
@@ -49,7 +49,7 @@ window.GameRenderer = window.GameRenderer || {};
       glow(0, -55, 14, '#ff4a3a', .5);
       poly([[-10, -58], [-3, -56], [-4, -52], [-10, -53]], '#ff7a5a', 1.2); poly([[10, -58], [3, -56], [4, -52], [10, -53]], '#ff7a5a', 1.2);
       line(-7, -46, 7, -46, '#10131a', 2);
-      ctx.save(); ctx.translate(26, -26); ctx.rotate(wind ? -1.15 * (a.elapsed / a.windup) : a ? Math.sin(p * Math.PI) * 1.05 : .15);
+      ctx.save(); ctx.translate(26, -26); ctx.rotate(wind ? -1.15 * (a.elapsed / (a.windup || 1)) : a ? Math.sin(p * Math.PI) * 1.05 : .15);
       oval(0, 2, 5, 6, '#3d3b47'); line(3, 22, 3, -40, '#8a6240', 5);
       ctx.fillStyle = '#b4bfcb'; ctx.strokeStyle = O; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(2, -41); ctx.lineTo(22, -46); ctx.quadraticCurveTo(42, -30, 26, -12); ctx.lineTo(4, -22); ctx.lineTo(-9, -17); ctx.lineTo(-13, -35); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = '#ff6a4a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(23, -43); ctx.quadraticCurveTo(38, -30, 25, -15); ctx.stroke();

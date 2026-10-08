@@ -8,6 +8,7 @@ window.GameEntities.CombatSystem = {
   fields:[],fieldClock:0,
   field(e,c,x,y,options={}){
     const f={owner:e,x,y,radius:c.radius||55,shape:c.shape||'circle',angle:c.angle||0,length:c.range||120,delay:0,life:2,tick:.5,next:0,damage:0,damageBudget:c.damageBudget,color:c.element==='fire'?'#ff984d':c.element==='ice'?'#85e5ff':'#ad91ec',...options};
+    f.maxLife=f.life;f.delay0=f.delay;f.fx=c.id;f.ftype=c.monsterEffect||c.type;f.mon=!!c.monsterEffect;f.el=c.element;f.tint=window.GameRenderer.VfxManager.ownerTint(e);
     this.fields.push(f);return f;
   },
   fieldContains(f,x,y){
@@ -57,11 +58,7 @@ window.GameEntities.CombatSystem = {
       if(!marks.length&&!e.progression?.bloodRemaining&&!e.armorBreakTimer)continue;
       ctx.save();ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.fillStyle=e.progression?.bloodRemaining?'#99ffbd':e.armorBreakTimer?'#ffd27e':'#aaddff';ctx.fillText(e.progression?.bloodRemaining?'HUYẾT THỂ':e.armorBreakTimer?'GIÁP NỨT':marks.map(m=>(m.kind==='frost'?'❄':'◆')+m.stacks).join(' '),e.x,e.y-42);ctx.restore();
     }
-    for(const f of this.fields){ctx.save();ctx.globalAlpha=f.delay>0?.25:.18;ctx.fillStyle=f.smoke?'#8c8c9b':f.color;ctx.strokeStyle=f.color;ctx.lineWidth=2;
-      ctx.translate(f.x,f.y);ctx.rotate(f.angle);ctx.beginPath();
-      if(f.shape==='line')ctx.rect(0,-f.radius,f.length,f.radius*2);else if(f.shape==='cone'){ctx.moveTo(0,0);ctx.arc(0,0,f.radius,-.75,.75);ctx.closePath();}else ctx.arc(0,0,f.radius,0,Math.PI*2);
-      ctx.fill();ctx.globalAlpha=.85;ctx.setLineDash(f.delay>0?[7,5]:[]);ctx.stroke();ctx.restore();
-    }
+    for(const f of this.fields)window.GameRenderer.VfxManager.drawField(ctx,f);
   },
   potion: { id: 'health_potion', name: 'Bình Hồi Máu', tier: 'common', healPct: 0.35 },
   styles: {
@@ -379,7 +376,7 @@ window.GameEntities.CombatSystem = {
     e.action = { id:e.actionSerial,kind, style, elapsed: 0, startedAt:window.GameManager.matchTime||0, windup, duration, angle, target,
       targetX: target?.x ?? e.x, targetY: target?.y ?? e.y, originX: e.x, originY: e.y,
       released: false, resolve, ...options };
-    window.GameEngine.Audio?.play(kind==='skill'?'cast':kind==='attack'?'attack':kind,e,style);
+    if(kind==='attack'){if(!e.isMonster)window.GameEngine.Audio?.play('wind',e,style);}else if(kind!=='skill')window.GameEngine.Audio?.play(kind==='block'?'raise':kind,e,style);
     e.aimAngle = angle;
     e.attackState = { isAttacking: true, progress: 0 };
     e.vx = e.vy = 0;
@@ -494,14 +491,19 @@ window.GameEntities.CombatSystem = {
     const windup = c.windup ?? (utility ? 0.28 : e.isMonster ? 0.85 : projectile ? 0.45 : 0.38);
     const ok = this.startAction(e, 'skill', utility ? null : target, () => this.resolveSkill(e,skill,target,c), { style: this.weaponStyle(e), windup, recovery: /finisher|execution|nuke/.test(type)||c.monsterEffect==='leap'?.7:.35, color, castId:c.castId,skillId:skill.id,skillName: c.name });
     if (!ok) return false;
+    window.GameEngine.Audio?.castStart(e,skill,c,element);
     if(utility)this.progressionEvent(e,target,'support');
     if(type==='dash_stun'){e.guardTimer=windup;e.guardReduction=.35;e.guardAngle=angle;}
     e.currentMana -= mana; e.currentStamina -= stamina;
     skill.cooldownTimer = c.cooldown; if(e.isMonster){e.globalSkillCooldown=e.isAncientClone?1:e.tier===5?2:3;if(e.isAncientClone)owner.globalSkillCooldown=1;} e.attackCooldown = windup + 0.35;
     if(!e.isMonster)e.globalSkillCooldown=1.8;
     e.skillsCast = (e.skillsCast || 0) + 1;
-    if (!utility && area) window.GameRenderer.VfxManager.addEffect('telegraph', ['line','cone'].includes(c.shape) ? e.x : tx, ['line','cone'].includes(c.shape) ? e.y : ty, { radius: c.radius, angle, shape: c.shape || 'circle', length: c.range, color, life: windup, label: c.name });
-    else window.GameRenderer.VfxManager.addEffect('rune', e.x, e.y, { radius: 24, color, life: windup });
+    const V=window.GameRenderer.VfxManager,mm=c.monsterEffect,fx={fx:skill.id,mon:mm,el:element,tint:V.ownerTint(e),tier:skill.tier};
+    if (!utility && (area || type==='cone_slash')) {
+      // Telegraph khớp hitbox thật: tâm tại thân khi đòn quanh thân/hướng, dải/nón theo shape của field.
+      const shape=type==='cone_slash'?'cone':c.shape||'circle',self=(shape!=='circle'&&mm!=='fissure')||c.selfArea||type==='whirlwind_aoe'||mm==='ring'||mm==='interrupt';
+      V.addEffect('telegraph', self?e.x:tx, self?e.y:ty, { ...fx, radius: c.radius, angle, shape, length: mm&&shape==='cone'?c.radius:c.range, halfW:mm?({line:20,beam:18,charge:22,fan:12,fissure:c.radius})[mm]??25:25, inner:type==='ground_slam'?18:mm==='ring'?20:0, color, life: windup, label: c.name });
+    } else V.addEffect('rune', e.x, e.y, { ...fx, plain:true, ph:'tele', radius: 24, tx, ty, angle, length: Math.hypot(tx-e.x,ty-e.y), color, life: windup });
     return true;
   },
   resolveSkill(e,skill,target,c=this.getSkillConfig(e,skill)){
@@ -512,7 +514,7 @@ window.GameEntities.CombatSystem = {
       for(let i=0;i<count;i++){const pulse=()=>{if(c.castId!==undefined&&e.cancelledCastId===c.castId)return;this.resolveSkill(e,skill,target,{...c,isPulse:true,pulses:0,damage:c.damage/count,tx:c.fanPulses?c.tx+Math.cos(c.angle+Math.PI/2)*(i-1)*25:c.tx,ty:c.fanPulses?c.ty+Math.sin(c.angle+Math.PI/2)*(i-1)*25:c.ty,pulseIndex:i,pulseCount:count,useCurrentOrigin:c.type==='whirlwind_aoe'});};if(i===0)pulse();else this.schedule(e,i*(c.type==='burst_arrows'?.18:.35),pulse);}
       return;
     }
-    if(!c.isPulse)window.GameEngine.Audio?.play(c.role==='heal'?'heal':c.element||'cast',e);
+    window.GameEngine.Audio?.skill(e,skill,c);
     const type=c.type,originX=c.useCurrentOrigin?e.x:c.originX??e.action?.originX??e.x,originY=c.useCurrentOrigin?e.y:c.originY??e.action?.originY??e.y;
     const utility = ['teleport', 'speed_buff', 'ethereal_speed', 'stealth', 'smoke_cloud', 'weapon_swap', 'weapon_buff', 'self_heal', 'aura_heal', 'shield_stance', 'counter_stance', 'mana_shield_toggle', 'stasis'].includes(type);
     const element = c.element || (/fire|meteor/.test(skill.id) ? 'fire' : /frost|ice/.test(skill.id) ? 'ice' : e.classId === 'mage' ? 'void' : 'steel');
@@ -542,20 +544,20 @@ window.GameEntities.CombatSystem = {
       if (c.slow) { victim.slowPct = c.slow; victim.slowTimer = Math.min(2, c.slowDur || 2); }
       if (c.silenceDur) victim.silenceTimer = Math.min(1.5, c.silenceDur);
     };
-      const V = window.GameRenderer.VfxManager;
+      const V = window.GameRenderer.VfxManager,fxo=o=>({fx:skill.id,mon:c.monsterEffect,el:element,tier:skill.tier,tint:V.ownerTint(e),...o});
       if (['teleport', 'teleport_backstab', 'backstep_shot', 'linear_dash', 'dash_stun'].includes(type)) {
         const distance = type === 'backstep_shot' ? -(c.backstep || 45) : Math.min(120, c.distance || c.range * 0.5);
         window.GameEngine.MapTerrain.moveEntity(e,Math.cos(angle)*distance,Math.sin(angle)*distance);
-        V.addEffect('dash', originX, originY, { tx: e.x, ty: e.y, color, life: 0.45 });
+        V.addEffect('dash', originX, originY, fxo({ tx: e.x, ty: e.y, angle, color, life: 0.45 }));
         if(c.cleanseSlow)e.slowTimer=0;
-        if(type==='teleport'&&skill.tier>=2){V.addEffect('rune',originX,originY,{radius:22,color,life:1});if(skill.tier===3)e.blinkReturn={x:originX,y:originY,until:(window.GameManager.matchTime||0)+1.5};}
+        if(type==='teleport'&&skill.tier>=2){V.addEffect('rune',originX,originY,fxo({radius:22,color,life:1,ph:'after'}));if(skill.tier===3)e.blinkReturn={x:originX,y:originY,until:(window.GameManager.matchTime||0)+1.5};}
       }
       if (['self_heal', 'aura_heal'].includes(type)) {
         const total=c.healAmount||0,anti=1-Math.min(.5,e.antiHealUntil>(window.GameManager.matchTime||0)?e.antiHeal||0:0);
         e.healTimer=3;e.healPerSecond=total*.3/3;
         if(type==='self_heal'){e.healInterruptibleTimer=3;e.healCompleteRank=skill.tier;e.currentHp=Math.min(e.maxHp,e.currentHp+total*.7*anti);}
         if(type==='aura_heal'){e.healTimer=0;if(skill.tier>=2)e.slowTimer=0;e.healingAura=this.field(e,c,originX,originY,{radius:100,life:3,heal:total/3,cleanse:skill.tier>=2,convertible:skill.tier===3,color:'#86efb5'});}
-        V.addEffect('heal', e.x, e.y, { radius: 40, color: '#86efb5', life: 0.9 });
+        V.addEffect('heal', e.x, e.y, fxo({ radius: 40, color: '#86efb5', life: 0.9 }));
       } else if (['speed_buff', 'ethereal_speed', 'stealth', 'smoke_cloud'].includes(type)) {
         e.speedBuff = Math.max(e.speedBuffTimer>0?e.speedBuff||0:0,Math.min(.35,c.speedBuff||0));
         e.speedBuffTimer = Math.min(3.5, c.duration || c.stealthDur || 3);
@@ -565,7 +567,7 @@ window.GameEntities.CombatSystem = {
         if(type==='smoke_cloud')this.field(e,c,e.x,e.y,{smoke:true,shape:c.smokeLane?'line':'circle',angle:e.aimAngle,length:100,radius:c.smokeLane?35:65,life:c.duration||2});
         if(type==='ethereal_speed'&&skill.tier>=2)e.slowTimer=0;
         if(c.interrupt){const enemy=window.GameManager.spatialGrid.queryCircle(e.x,e.y,100).find(v=>this.isEnemy(e,v)&&!v.ccImmune&&v.action?.target===e&&!v.action.released);if(enemy)this.interruptChannel(e,enemy);}
-        V.addEffect(type === 'smoke_cloud' ? 'smoke' : 'rune', e.x, e.y, { radius: 40, color, life: 0.8 });
+        V.addEffect(type === 'smoke_cloud' ? 'smoke' : 'rune', e.x, e.y, fxo({ radius: type === 'smoke_cloud' ? 65 : 40, color, life: 0.8 }));
       } else if (['weapon_buff', 'weapon_swap'].includes(type)) {
         if (type === 'weapon_swap') [e.weapon, e.secondaryWeapon] = [e.secondaryWeapon, e.weapon];
         if(skill.id==='h_armament_swap'){e.armamentDefense=!e.armamentDefense;e.guardTimer=e.armamentDefense?1.3:0;e.guardReduction=.35;}
@@ -574,24 +576,24 @@ window.GameEntities.CombatSystem = {
         e.enchantedRank=skill.id==='h_enchanted_blade'?skill.tier:0;e.enchantedCharges=e.enchantedRank?2+skill.tier:0;
         e.weaponBuffTimer = c.duration||4;
         if(c.guardReduction&&skill.id!=='h_armament_swap'){e.guardTimer=.8;e.guardReduction=c.guardReduction;}
-        V.addEffect('rune', e.x, e.y, { radius: 28, color, life: 0.6 });
+        V.addEffect('rune', e.x, e.y, fxo({ radius: 28, color, life: 0.6 }));
       } else if (['shield_stance', 'counter_stance', 'mana_shield_toggle', 'stasis'].includes(type)) {
         if(type==='mana_shield_toggle'){e.manaShieldTimer=c.duration||2;e.manaAbsorb=c.manaAbsorb||.3;e.manaShieldBudget=c.shieldAmount;e.manaShieldRank=skill.tier;e.manaAbsorbed=0;}
         else {e.guardTimer=Math.min(1.6,c.duration||c.window||1.2);e.guardReduction=c.guardReduction||.5;e.guardAngle=e.aimAngle;e.guardBudget=c.guardAmount;}
         if(type==='counter_stance'){e.riposteTimer=c.window;e.counterDamage=c.counterAmount;e.counterMultiplier=0;e.riposteReady=true;}
         if(type==='stasis'){e.slowPct=.8;e.slowTimer=e.guardTimer;e.stasisTimer=e.guardTimer;}
-        V.addEffect('guard', e.x, e.y, { radius: 28, color: '#8be6ff', life: 0.8 });
+        V.addEffect('guard', e.x, e.y, fxo({ radius: 28, angle: e.aimAngle, color: '#8be6ff', life: Math.max(0.8, e.guardTimer||e.manaShieldTimer||0) }));
       } else if (!utility) {
         if(c.monsterEffect){this.resolveMonsterSkill(e,skill,target,c,hit,color);return;}
         if(type==='vortex_pull'){
           this.field(e,c,tx,ty,{life:2,damage:c.damage/4,pull:12,bend:c.bend,tick:.5,magic:true,sourceSkill:{id:skill.id,castId:c.castId}});return;
         }
 
-        if (projectile && !area) this.launchProjectile(e, target, { type: element === 'fire' ? 'fireball' : projectile && e.classId==='archer' ? 'arrow' : 'magic' }, { baseDamage: c.damage, skill: true, onImpact: victim => {
+        if (projectile && !area) this.launchProjectile(e, target, { type: element === 'fire' ? 'fireball' : projectile && e.classId==='archer' ? 'arrow' : 'magic', skillId: skill.id, tier: skill.tier }, { baseDamage: c.damage, skill: true, ownFx: type === 'projectile_explosion', onImpact: victim => {
           if (type === 'projectile_explosion') {
             window.GameManager.spatialGrid.queryCircle(victim.x,victim.y,c.radius).filter(v=>this.isEnemy(e,v)).forEach(hit);
             this.field(e,c,victim.x,victim.y,{life:1.5,damage:c.damage*.05,tick:.5,magic:true,color,sourceSkill:{id:skill.id,castId:c.castId}});
-            V.addEffect(element==='fire'?'flame':'impact',victim.x,victim.y,{radius:c.radius,color,life:.6});
+            V.addEffect(element==='fire'?'flame':'impact',victim.x,victim.y,fxo({radius:c.radius,color,life:.6}));window.GameEngine.Audio?.play('impact',victim,element);
           } else hit(victim);
         } }, color);
         else {
@@ -606,7 +608,8 @@ window.GameEntities.CombatSystem = {
             if (!area && !c.shape && v !== target) continue;
             hit(v);
           }
-          V.addEffect(area ? element === 'fire' ? 'flame' : element === 'ice' ? 'frost' : 'impact' : 'slash', directed ? originX : tx, directed ? originY : ty, { radius: c.radius, angle, color, shape: c.shape, length:c.range, life: 0.7 });
+          const atSelf = directed || c.selfArea || type==='whirlwind_aoe';
+          V.addEffect(area ? element === 'fire' ? 'flame' : element === 'ice' ? 'frost' : 'impact' : 'slash', atSelf ? originX : tx, atSelf ? originY : ty, fxo({ radius: c.radius, angle, color, shape: c.shape||(type==='cone_slash'?'cone':undefined), length:c.range, life: 0.7 }));
         }
         if (element === 'fire') window.GameEngine.MapTerrain.bushes.forEach(b => { if (Math.hypot(b.x - tx, b.y - ty) < c.radius) b.isBurned = true; });
       }
@@ -617,12 +620,12 @@ window.GameEntities.CombatSystem = {
     const x=c.tx??t.x,y=c.ty??t.y,angle=c.angle??e.aimAngle,n=c.monsterPulses||3;
     const victims=(cx,cy,r)=>G.spatialGrid.queryCircle(cx,cy,r).filter(v=>this.isEnemy(e,v));
     const pulse=(cx,cy,shape='circle',ratio=1,extra={})=>this.field(e,{...c,shape},cx,cy,{life:.25,tick:10,damage:c.damage*ratio,color,magic:!['line','cone','ring','charge','flurry'].includes(mode),sourceSkill:{id:s.id,castId:c.castId},...extra});
-    if(mode==='projectile'){this.launchProjectile(e,t,{type:mode,color},{onImpact:v=>hit(v)},color);return;}
+    if(mode==='projectile'){this.launchProjectile(e,t,{type:mode,color,skillId:s.id,tint:V.ownerTint(e),mon:'projectile'},{onImpact:v=>hit(v)},color);return;}
     if(['leap','charge'].includes(mode)){
       M.moveEntity(e,Math.cos(angle)*Math.min(c.range,Math.hypot(x-e.x,y-e.y)),Math.sin(angle)*Math.min(c.range,Math.hypot(x-e.x,y-e.y)));
       pulse(mode==='charge'?c.originX:e.x,mode==='charge'?c.originY:e.y,mode==='charge'?'line':'circle',1,{radius:mode==='charge'?22:65,knockback:25});return;
     }
-    if(mode==='mark'){if(Math.hypot(t.x-x,t.y-y)<c.radius){hit(t);t.deathMarkOwner=e;t.deathMarkTimer=5;V.addEffect('rune',t.x,t.y,{radius:24,color,life:2});}return;}
+    if(mode==='mark'){if(Math.hypot(t.x-x,t.y-y)<c.radius){hit(t);t.deathMarkOwner=e;t.deathMarkTimer=5;V.addEffect('rune',t.x,t.y,{mon:'mark',fx:s.id,tint:V.ownerTint(e),radius:24,color,life:2});}return;}
     if(mode==='judgment'){if(t.deathMarkTimer>0&&t.deathMarkOwner===e)c.damage*=1.25;pulse(x,y);t.deathMarkTimer=0;return;}
     if(['tether','leech'].includes(mode)){pulse(x,y,'circle',.25,{life:2,tick:.5,damage:c.damage/4,target:t,leech:mode==='leech'?.35:0,slow:.2});return;}
     if(mode==='cage'){
@@ -655,7 +658,7 @@ window.GameEntities.CombatSystem = {
       if (Math.hypot(x - target.x, y - target.y) < 22) {
         if (config.onImpact) config.onImpact(target);
         else this.applyDamage(source,target,weapon,{...config,projectile:true});
-        window.GameRenderer.VfxManager.addEffect('impact', x, y, { radius: 24, color, life: 0.3 });
+        if(!config.ownFx)window.GameRenderer.VfxManager.addEffect('impact', x, y, { fx: weapon?.skillId, mon: weapon?.mon, tint: weapon?.tint, tier: weapon?.tier, radius: 24, color, life: 0.3 });
         return true;
       }
       return false;
@@ -692,6 +695,7 @@ window.GameEntities.CombatSystem = {
     return this.startAction(e, 'drink', null, () => {
       const hp = full?e.maxHp-e.currentHp:Math.min(220, e.maxHp * 0.35);
       e.currentHp = Math.min(e.maxHp, e.currentHp + hp);
+      window.GameEngine.Audio?.play('potion',e);
       window.GameRenderer.VfxManager.addEffect('heal', e.x, e.y, { radius: 35, color: '#86efb5', life: 0.8 });
       window.GameRenderer.VfxManager.addDamageNumber(e.x, e.y - 20, '+' + Math.round(hp), 'heal');
     }, { windup: 0.65, active: 0.1, recovery: 0.15, style: 'unarmed' });
@@ -726,7 +730,7 @@ window.GameEntities.CombatSystem = {
       const p = Math.min(1, a.elapsed / 0.3), ease = 1 - (1 - p) ** 2;
       window.GameEngine.MapTerrain.moveEntity(e,a.originX+a.dodgeX*ease-e.x,a.originY+a.dodgeY*ease-e.y);
     }
-    if (!a.released && a.elapsed >= a.windup) { a.released = true; a.resolve(); }
+    if (!a.released && a.elapsed >= a.windup) { a.released = true; if(a.kind==='attack')window.GameEngine.Audio?.attackRelease(e,a); a.resolve(); }
     if (a.elapsed >= a.duration) {if(['attack','skill'].includes(a.kind)&&a.target?.isAlive&&this.canSee(a.target,e)&&(e.lastDamageDealtAt??-Infinity)<(a.startedAt??0))this.progressionEvent(a.target,e,'opening'); e.action = null; e.attackState = null; }
   },
   applyDamage(a, t, weapon, c = {}) {
@@ -734,7 +738,7 @@ window.GameEntities.CombatSystem = {
     if(t.phoenixEgg){const dealt=Math.max(1,c.baseDamage??this.combatStats(a).attack);t.phoenixEgg.hp-=dealt;a.lastHostileAt=t.lastHostileAt=window.GameManager.matchTime||0;window.GameRenderer.VfxManager.addDamageNumber(t.x,t.y,dealt,'normal');if(t.phoenixEgg.hp<=0){t.phoenixEgg=null;t.currentHp=0;this.handleDeath(a,t);}return dealt;}
     if(t.afterimageReady&&c.projectile&&!c.dot&&t.action?.kind==='dodge'){t.afterimageReady=0;return 0;}
     if (t.action?.kind === 'dodge' && t.action.elapsed < 0.3) {
-      if(t.windShotUntil>(window.GameManager.matchTime||0))t.movingShotReady=true;this.progressionEvent(t,a,'dodge',c);this.counterOpening(t,a);window.GameRenderer.VfxManager.addDamageNumber(t.x,t.y-15,'NÉ','block');return 0;
+      if(t.windShotUntil>(window.GameManager.matchTime||0))t.movingShotReady=true;this.progressionEvent(t,a,'dodge',c);this.counterOpening(t,a);window.GameRenderer.VfxManager.addDamageNumber(t.x,t.y-15,'NÉ','block');window.GameEngine.Audio?.play('evade',t);return 0;
     }
     const hpBefore=t.currentHp;
     let raw=c.baseDamage??this.combatStats(a).attack;
@@ -770,7 +774,7 @@ window.GameEntities.CombatSystem = {
     if (!c.trueDamage && (t.action?.kind === 'block' || t.guardTimer > 0)) {
       const incoming = Math.atan2(a.y - t.y, a.x - t.x);
       if (Math.cos(incoming - (t.action?.angle ?? (t.guardTimer>0?t.guardAngle??t.aimAngle:t.aimAngle))) > 0.25) {
-        window.GameEngine.Audio?.play('block',t);
+        window.GameEngine.Audio?.play('block',t,c.magic||c.element?'magic':this.weaponStyle(a));
         this.progressionEvent(t,a,'block',c);
         const desired=damage*(t.action?.kind==='block'?.7:t.guardReduction??.7),absorbed=Math.min(desired,t.guardBudget===undefined?desired:Math.max(0,t.guardBudget));
         damage-=absorbed;this.counterOpening(t,a);
@@ -799,7 +803,7 @@ window.GameEntities.CombatSystem = {
     if(t.currentHp>0&&blood?.tier>=2&&!bs.bloodLocked&&blood.cooldownTimer<=0&&!window.GameEngine.MapTerrain.isInWater(t.x,t.y)){const threshold=blood.tier===3?.4:.35;if(hpBefore>t.maxHp*threshold&&t.currentHp<=t.maxHp*threshold){bs.bloodRemaining=blood.tier===3?3:4;bs.bloodRate=this.passiveConfig(t,blood).burstAmount/bs.bloodRemaining;bs.bloodLocked=true;bs.procUntil=(window.GameManager.matchTime||0)+2;blood.cooldownTimer=60;}}
     c={...c,hpBefore};
     a.lastDamageTarget=t;a.lastDamageDealtAt=window.GameManager.matchTime||0;t.lastDamageTakenAt=window.GameManager.matchTime||0;
-    window.GameEngine.Audio?.play('hit',t);
+    window.GameEngine.Audio?.play('hit',t,c.dot||c.element||(c.magic?'magic':this.weaponStyle(a)),{crit,big:damage/t.maxHp});
     t.hitFlashTimer = 0.13; t.stealthTimer = 0; a.stealthTimer = 0;t.isHiding=a.isHiding=false;
     if (a.isBerserk) a.currentHp = Math.min(a.maxHp, a.currentHp + damage * 0.15);
     window.GameRenderer.VfxManager.addDamageNumber(t.x, t.y, damage, crit ? 'crit' : 'normal');
@@ -837,7 +841,7 @@ window.GameEntities.CombatSystem = {
     if(window.GameEntities.AncientSystem.beforeDeath(victim,killer))return;
     if(victim.defId==='eternal_solar_phoenix'&&!victim.phoenixReborn){victim.phoenixReborn=true;victim.currentHp=1;victim.action=null;victim.attackState=null;victim.stasisTimer=4;victim.phoenixEgg={hp:80,until:(window.GameManager.matchTime||0)+4};window.GameRenderer.VfxManager.addEffect('rune',victim.x,victim.y,{radius:48,color:'#ffb449',life:4});return;}
     if (!victim.isAncient && victim.armor?.reviveOnce && !victim.hasRevived) { victim.hasRevived = true; victim.currentHp = victim.maxHp * 0.2; return; }
-    window.GameEngine.Audio?.play('death',victim);
+    window.GameEngine.Audio?.play('death',victim,undefined,{tier:victim.tier});
     victim.isAlive = false; victim.action = null;
     if(victim.isMonster&&victim.tier>=4&&victim.territory)victim.territory.isCleared=true;
     window.GameRenderer.VfxManager.addBurstParticles(victim.x, victim.y, '#d8c4a3', 12);

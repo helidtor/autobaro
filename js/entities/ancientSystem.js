@@ -40,7 +40,7 @@ window.GameEntities.AncientSystem={
    m.weapon=original.weapon?{...original.weapon,attack:0,magicPower:0}:null;m.armor=null;m.helmet=null;m.boots=null;m.appearance={...original.appearance};m.classId=original.classId;
    m.copiedSkills=(original.skills||[]).map(s=>({...s,cooldownTimer:0}));const first=m.copiedSkills[0],different=m.copiedSkills.find(s=>s.def.role!==first?.def.role);if(different)m.copiedSkills=[first,different,...m.copiedSkills.filter(s=>s!==first&&s!==different)];m.copiedPassives=(original.passives||[]).map(p=>({...p,cooldownTimer:0}));m.passiveMultiplier=1;m.recordedCombo=(original.attackHistory||[]).filter(a=>a.targetId===god.id).slice(-4);
   }
-  this.boss=m;G.monsters=E.monsters;G.cataclysm=true;
+  this.boss=m;G.monsters=E.monsters;G.cataclysm=true;window.GameEngine.Audio?.awaken(m);
   window.GameUI.CombatTicker.log('🌋 THƯỢNG CỔ THỨC TỈNH: '+m.name+' • Lượt '+m.gauntletRound+'/'+this.total+' • Đấu trường 1500×1500!');
   window.GameRenderer.VfxManager.addEffect('rune',m.x,m.y,{radius:320,color:def.color,life:3});
   return m;
@@ -58,6 +58,7 @@ window.GameEntities.AncientSystem={
   if(['colossus','mirror'].includes(m.ancientKind))m.speed*=1.5;
   if(m.ancientKind==='mecha'){m.speed*=2;m.shield=0;}
   m.skills.forEach(s=>s.cooldownTimer=s.def.phase?0:s.cooldownTimer);m.globalSkillCooldown=1;
+  window.GameEngine.Audio?.phase(m);
   V.addBurstParticles(m.x,m.y,m.ancientDef.color,45);V.addEffect('impact',m.x,m.y,{radius:220,color:m.ancientDef.color,life:2});
   window.GameUI.CombatTicker.log('🔥 '+m.name+' vỡ thanh máu thứ nhất — PHASE 2!');return true;
  },
@@ -65,7 +66,7 @@ window.GameEntities.AncientSystem={
   if(!m.isAncient)return;
   this.fields=[];this.walls=[];m.clones?.forEach(c=>c.isAlive=false);
   const G=window.GameManager,D=window.GameData.Equipments;
-  this.defeated++;const pool=Object.values(D.relics).filter(d=>!this.usedRelics.includes(d.id)),relic=pool[Math.floor(Math.random()*pool.length)];
+  window.GameEngine.Audio?.play('ancientDown',m);this.defeated++;const pool=Object.values(D.relics).filter(d=>!this.usedRelics.includes(d.id)),relic=pool[Math.floor(Math.random()*pool.length)];
   if(relic){this.usedRelics.push(relic.id);const drop=G.spawnDropItem(m.x,m.y,relic,relic.slot);if(killer?.isPawn){killer.relicLoot=drop;killer.relicPriorityUntil=this.clock+1.5;}}
   const potion=G.spawnDropItem(m.x+28,m.y,{id:'full_health_potion',name:'Bình Máu Toàn Phần',tier:'ancient',fullHeal:true,desc:'Hồi đầy 100% máu tối đa.'},'potion');if(killer?.isPawn)killer.ancientPotionLoot=potion;
   if(killer?.isAlive){killer.action=null;killer.attackState=null;killer.targetEnemy=null;killer.combatGroup=null;killer.combatLease=0;killer.navTimer=0;killer.navPath=[];}
@@ -75,7 +76,7 @@ window.GameEntities.AncientSystem={
  },
  showVictory(){
   const G=window.GameManager,killer=this.original,m=this.boss;this.victoryPending=false;
-  G.ancientDefeated=true;G.isGameOver=true;G.isPaused=true;G.resultOpen=true;
+  G.ancientDefeated=true;G.isGameOver=true;G.isPaused=true;G.resultOpen=true;window.GameEngine.Audio?.play('victory');
   const el=document.getElementById('story-card-modal');
   el.innerHTML='<div class="story-card-box"><h1>🏆 CHINH PHỤC THƯỢNG CỔ</h1><div class="story-card-winner">'+(killer?.name||'Người chiến thắng')+'</div><p>Đã hạ '+m.name+' và chinh phục đủ 5 boss qua 10 thanh máu. Trận đấu hoàn tất.</p><button class="btn-restart" onclick="window.GameManager.startNewMatch()">Bắt đầu ván mới</button></div>';el.classList.remove('hidden');
  },
@@ -94,7 +95,7 @@ window.GameEntities.AncientSystem={
   if(c.id==='av_dive'){const pawns=window.GameManager.pawns.filter(p=>p.isAlive&&C.canEngage(m,p));const center=pawns.sort((a,b)=>pawns.filter(p=>Math.hypot(p.x-b.x,p.y-b.y)<120).length-pawns.filter(p=>Math.hypot(p.x-a.x,p.y-a.y)<120).length)[0];if(center){point.x=center.x;point.y=center.y;}}
   const ok=C.startAction(m,'skill',t,()=>this.resolve(m,c,t,point,angle),{windup:c.windup,active:.05,recovery:.45,style:C.weaponStyle(m),color:m.ancientDef.color,skillName:c.name});
   if(!ok)return false;
-  window.GameEngine.Audio?.play('boss',m);
+  window.GameEngine.Audio?.castStart(m,s,c);
   m.castHeat=(m.castHeat||0)+1;
   if(m.ancientKind==='mecha'&&m.phase===2&&m.castHeat>=3){m.castHeat=0;m.ventUntil=this.clock+c.windup+2.5;}
   s.cooldownTimer=c.cooldown;owner.globalSkillCooldown=1;m.globalSkillCooldown=1;m.skillsCast=(m.skillsCast||0)+1;
@@ -104,9 +105,10 @@ window.GameEntities.AncientSystem={
  telegraph(m,x,y,r,delay,label){window.GameRenderer.VfxManager.addEffect('telegraph',x,y,{radius:r,shape:'circle',color:m.ancientDef?.color||'#b995ff',life:Math.max(.15,delay),label});},
  field(m,c,x,y,delay=.5,extra={}){
   const f={owner:m,x,y,radius:c.radius,damage:c.damage,at:this.clock+delay,end:this.clock+delay+.15,shape:'circle',name:c.name,...c,...extra};
-  this.fields.push(f);window.GameRenderer.VfxManager.addEffect('telegraph',x,y,{radius:f.radius,shape:f.shape,angle:f.angle||0,length:f.length||c.range,color:m.ancientDef?.color||'#b995ff',life:Math.max(.15,delay),label:c.name});return f;
+  this.fields.push(f);window.GameRenderer.VfxManager.addEffect('telegraph',x,y,{anc:c.effect||c.fxKey,tint:m.ancientDef?.color,radius:f.radius,halfW:f.radius,arc:f.arc,inner:f.innerRadius,shape:f.shape,angle:f.angle||0,length:f.shape==='cone'?f.radius:f.length||c.range,color:m.ancientDef?.color||'#b995ff',life:Math.max(.15,delay),label:c.name});return f;
  },
  resolve(m,c,t,point,angle){
+  window.GameEngine.Audio?.play('ancient',m,c.effect);
   const M=window.GameEngine.MapTerrain,V=window.GameRenderer.VfxManager,C=window.GameEntities.CombatSystem;
   if(!c.damageBudget)c.damageBudget=C.damageBudget(m,c);
   const area=(extra={},delay=.3,x=point.x,y=point.y)=>this.field(m,c,x,y,delay,extra);
@@ -124,7 +126,7 @@ window.GameEntities.AncientSystem={
   }else if(c.effect==='wall'){
    for(const offset of [-70,70]){const x=point.x+Math.cos(angle)*90-Math.sin(angle)*offset,y=point.y+Math.sin(angle)*90+Math.cos(angle)*offset;
     const pos=M.nearestFree(x,y,24);
-    if(M.canStand(pos.x,pos.y,22)&&!window.GameManager.pawns.some(p=>p.isAlive&&Math.hypot(p.x-pos.x,p.y-pos.y)<35))this.walls.push({x:pos.x-16,y:pos.y-16,w:32,h:32,end:this.clock+(m.phase===2?3:5),owner:m,hp:80});}
+    if(M.canStand(pos.x,pos.y,22)&&!window.GameManager.pawns.some(p=>p.isAlive&&Math.hypot(p.x-pos.x,p.y-pos.y)<35)){this.walls.push({x:pos.x-16,y:pos.y-16,w:32,h:32,end:this.clock+(m.phase===2?3:5),owner:m,hp:80});V.addEffect('impact',pos.x,pos.y,{anc:'wall',tint:m.ancientDef?.color,radius:42,color:m.ancientDef?.color,life:.7});}}
   }else if(c.effect==='spin_beam')for(let i=0;i<12;i++)area({shape:'line',angle:angle+i*Math.PI/6,length:360,radius:24,damage:c.damage/3},.2+i*.2,m.x,m.y);
   else if(c.effect==='lava')for(const side of [-1,1])area({shape:'line',angle:Math.PI/2,length:1250,radius:70,end:this.clock+5,tick:1,damage:c.damage/5},.8,this.arena.cx+side*260,this.arena.y+100);
   else if(['copy_first','copy_second'].includes(c.effect)){
@@ -160,6 +162,7 @@ window.GameEntities.AncientSystem={
  },
  split(m,t){
   if(m.isSplit)return;
+  window.GameRenderer.VfxManager.addEffect('impact',m.x,m.y,{anc:'split',tint:m.ancientDef?.color,radius:90,color:m.ancientDef?.color,life:.9});
   this.fields=this.fields.filter(f=>f.owner!==m);
   const E=window.GameEntities.EntityManager,M=window.GameEngine.MapTerrain;
   m.isSplit=true;this.fields=this.fields.filter(f=>f.owner!==m);window.GameEntities.CombatSystem.fields=window.GameEntities.CombatSystem.fields.filter(f=>f.owner!==m);m.action=null;m.attackState=null;m.combatLease=0;m.combatGroup=null;m.targetEnemy=null;
@@ -212,7 +215,7 @@ window.GameEntities.AncientSystem={
   const C=window.GameEntities.CombatSystem,M=window.GameEngine.MapTerrain,G=window.GameManager,m=this.boss;
   if(!m?.isAlive){if(this.victoryPending&&(this.original?.relicLoot?.isCollected&&this.original?.ancientPotionLoot?.isCollected&&this.original?.currentHp>=this.original?.maxHp&&!this.original?.action||this.clock-this.finalAt>=15))this.showVictory();if(this.nextAt!==null&&this.clock>=this.nextAt)this.spawnNext();return;}
   if(m.isSplit){m.currentHp=m.clones.reduce((sum,c)=>sum+(c.isAlive?c.currentHp:0),0);this.fields=this.fields.filter(f=>f.owner!==m);return;}
-  if(this.clock>=this.lightningAt){this.lightningAt=this.clock+4;this.field(m,{name:'Sấm Tận Thế',radius:45,damage:25},this.arena.x+Math.random()*this.arena.w,this.arena.y+Math.random()*this.arena.h,.8);}
+  if(this.clock>=this.lightningAt){this.lightningAt=this.clock+4;this.field(m,{name:'Sấm Tận Thế',fxKey:'doom_bolt',radius:45,damage:25},this.arena.x+Math.random()*this.arena.w,this.arena.y+Math.random()*this.arena.h,.8);}
   this.passives(m,dt);
   for(const f of [...this.fields]){
    if(f.rockCover&&this.clock>=f.at){f.rockCover=false;if(this.walls.filter(w=>w.owner===f.owner).length<2&&M.canStand(f.x,f.y,18)&&!G.pawns.some(p=>p.isAlive&&Math.hypot(p.x-f.x,p.y-f.y)<40))this.walls.push({x:f.x-12,y:f.y-12,w:24,h:24,hp:60,owner:f.owner,end:this.clock+3});}
@@ -232,7 +235,7 @@ window.GameEntities.AncientSystem={
     if(f.armorBreak){p.armorBreak=f.armorBreak;p.armorBreakTimer=1.2;}
     if((f.pull||f.knockback)&&!window.GameEntities.RelicSystem.knockbackImmune(p)){const sign=f.knockback?1:-1,amount=f.knockback||f.pull;M.moveEntity(p,dx/Math.max(1,d)*amount*sign,dy/Math.max(1,d)*amount*sign);}
    }
-   window.GameRenderer.VfxManager.addEffect('impact',f.x,f.y,{radius:f.radius,shape:f.shape,angle:f.angle,length:f.length,color:f.owner.ancientDef?.color||'#ad88ff',life:.4});
+   window.GameRenderer.VfxManager.addEffect('impact',f.x,f.y,{anc:f.end-f.at<=.6?f.effect||f.fxKey:undefined,tint:f.owner.ancientDef?.color,radius:f.radius,halfW:f.radius,arc:f.arc,inner:f.innerRadius,shape:f.shape,angle:f.angle,length:f.shape==='cone'?f.radius:f.length,color:f.owner.ancientDef?.color||'#ad88ff',life:.4});
    if(f.homing)f.end=this.clock;
   }
   this.fields=this.fields.filter(f=>f.end>this.clock&&f.owner.isAlive);
@@ -341,13 +344,10 @@ window.GameEntities.AncientSystem={
   }
   ctx.fillStyle=this.boss?.ancientKind==='mecha'?'rgba(75,62,68,.24)':'rgba(180,35,35,.14)';ctx.fillRect(0,0,G.width,G.height);
   for(const o of window.GameEngine.MapTerrain.obstacles.filter(o=>o.destroyed)){ctx.fillStyle='#4e3237';ctx.fillRect(o.x,o.y,o.w,o.h);ctx.strokeStyle='#ffb48b';ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(o.x+o.w*.4,o.y+o.h*.65);ctx.lineTo(o.x+o.w,o.y+o.h);ctx.stroke();}
-  for(const w of this.walls){ctx.fillStyle='#664953';ctx.strokeStyle='#ffc684';ctx.lineWidth=3;ctx.fillRect(w.x,w.y-35,w.w,w.h+35);ctx.strokeRect(w.x,w.y-35,w.w,w.h+35);}
+  for(const w of this.walls)window.GameRenderer.VfxManager.drawWall(ctx,w,this.clock);
   if(a){ctx.beginPath();ctx.rect(a.x,a.y,a.w,a.h);ctx.clip();}
-  for(const f of this.fields){ctx.strokeStyle=f.owner.ancientDef?.color||'#bfa1ee';ctx.fillStyle=ctx.strokeStyle;ctx.globalAlpha=this.clock<f.at?.18:.32;
-   if(f.homing){ctx.beginPath();ctx.ellipse(f.x,f.y,12,8,0,0,Math.PI*2);ctx.fill();ctx.stroke();}
-   else if(f.shape==='line'){ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.angle);ctx.fillRect(0,-f.radius,f.length,f.radius*2);ctx.restore();}
-   else{ctx.beginPath();ctx.arc(f.x,f.y,f.radius,0,Math.PI*2);ctx.fill();ctx.globalAlpha=.8;ctx.lineWidth=2;ctx.stroke();}
-   if(f.neoHp>0){ctx.globalAlpha=1;ctx.font='bold 13px Arial';ctx.textAlign='center';ctx.fillText('✦ NEO '+Math.ceil(f.neoHp),f.x,f.y-18);}
+  for(const f of this.fields){window.GameRenderer.VfxManager.drawAncientField(ctx,f,this.clock);
+   if(f.neoHp>0){ctx.save();ctx.fillStyle=f.owner.ancientDef?.color||'#bfa1ee';ctx.font='bold 13px Arial';ctx.textAlign='center';ctx.fillText('✦ NEO '+Math.ceil(f.neoHp),f.x,f.y-18);ctx.restore();}
   }ctx.restore();
  },
  renderSky(ctx,w,h){if(!this.awakened)return;ctx.save();ctx.strokeStyle='#ffc7b8';ctx.lineWidth=2;ctx.globalAlpha=.5;
