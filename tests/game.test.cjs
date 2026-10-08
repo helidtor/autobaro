@@ -1277,3 +1277,15 @@ test('final Eternal boss: capped hits, poison immunity, stacking attack, Red Fla
  const speed=m.speed;m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(m.speed,speed*1.4);
  assert.equal(A.config(m,m.skills[0]).cooldown,m.skills[0].def.cooldown*.65);G.monsters=[m];G.render();
 });
+
+test('final Miku boss: hologram dodge, poison immunity, beat ring, fan heal, Dark Encore phase 2, renders both phases',()=>{
+ const {w,G,C,A,p}=ancientScenario('colossus');
+ assert.deepEqual(Array.from(w.GameData.FinalAncientBosses,d=>d.kind),['eternal','diva']);
+ A.queue=[w.GameData.MikuBoss];A.boss.isAlive=false;A.spawnNext();
+ const m=A.boss;assert.equal(m.ancientKind,'diva');assert.equal(m.skills.length,6);assert.equal(m.passives.length,6);
+ assert.equal(A.incoming(p,m,500,{dot:'poison'}),0);assert.equal(A.incoming(p,m,500,{}),0);assert.equal(A.incoming(p,m,500,{}),500);
+ p.x=m.x+60;p.y=m.y;G.pawns=[p];m.currentHp=m.phaseMaxHp*.5;const n=A.fields.length,hp=m.currentHp;A.passives(m,5);
+ assert.ok(A.fields.length>n);assert.ok(m.currentHp>hp);assert.equal(p.auraSlow,.15);
+ const speed=m.speed;m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(m.speed,speed*1.3);
+ assert.equal(A.config(m,m.skills[0]).cooldown,m.skills[0].def.cooldown*.7);G.monsters=[m];G.render();
+});

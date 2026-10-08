@@ -10,7 +10,7 @@ window.GameEntities.AncientSystem={
   if(G.pawns.filter(p=>p.isAlive).length!==1){this.pendingGod=god;return null;}
   this.pendingGod=null;this.awakened=true;
   const original=G.winnerPawn?.isAlive?G.winnerPawn:killer?.isPawn?killer:G.pawns.find(p=>p.isAlive);
-  const first=D[Math.floor(Math.random()*D.length)];this.queue=[first,...D.filter(d=>d!==first),window.GameData.FinalAncientBoss];this.god=god;this.original=original;
+  const first=D[Math.floor(Math.random()*D.length)];const F=window.GameData.FinalAncientBosses;this.queue=[first,...D.filter(d=>d!==first),F[Math.floor(Math.random()*F.length)]];this.god=god;this.original=original;
   this.openArena(original,god);
   return this.spawnNext();
  },
@@ -56,6 +56,7 @@ window.GameEntities.AncientSystem={
   if(['colossus','mirror'].includes(m.ancientKind))m.speed*=1.5;
   if(m.ancientKind==='mecha'){m.speed*=2;m.shield=0;}
   if(m.ancientKind==='eternal')m.speed*=1.4;
+  if(m.ancientKind==='diva')m.speed*=1.3;
   m.skills.forEach(s=>s.cooldownTimer=s.def.phase?0:s.cooldownTimer);m.globalSkillCooldown=1;
   V.addBurstParticles(m.x,m.y,m.ancientDef.color,45);V.addEffect('impact',m.x,m.y,{radius:220,color:m.ancientDef.color,life:2});
   window.GameUI.CombatTicker.log('🔥 '+m.name+' vỡ thanh máu thứ nhất — PHASE 2!');return true;
@@ -79,7 +80,7 @@ window.GameEntities.AncientSystem={
  },
  config(m,s){
   const d={...s.def},owner=m.ancientOwner||m;
-  d.cooldown=owner.ancientKind==='mecha'&&owner.phase===2?0:(d.cooldown||8)*(owner.ancientKind==='mirror'&&owner.phase===2?.5:owner.ancientKind==='eternal'&&owner.phase===2?.65:1);
+  d.cooldown=owner.ancientKind==='mecha'&&owner.phase===2?0:(d.cooldown||8)*(owner.ancientKind==='mirror'&&owner.phase===2?.5:owner.ancientKind==='eternal'&&owner.phase===2?.65:owner.ancientKind==='diva'&&owner.phase===2?.7:1);
   d.damage=window.GameEntities.CombatSystem.combatStats(m).attack*Math.min(d.effect==='nuclear'?2.5:2,d.damageScale||1.2);d.stun=d.stun||0;d.slow=0;return d;
  },
  cast(m,s,t){
@@ -169,6 +170,10 @@ window.GameEntities.AncientSystem={
    if(c.skill&&!m.foreseen){m.foreseen=true;window.GameRenderer.VfxManager.addDamageNumber(m.x,m.y,'TIÊN TRI','block');return 0;}
    if(weapon?.name&&weapon.name===m.weapon?.name)damage*=.6;
   }
+  if(m.ancientKind==='diva'){
+   if(['poison','bleed'].includes(c.dot))return 0;
+   if((m.nextHolo||0)<=this.clock){m.nextHolo=this.clock+12;window.GameRenderer.VfxManager.addDamageNumber(m.x,m.y,'ẢO ẢNH','block');return 0;}
+  }
   if(m.ancientKind==='eternal'){
    if(['poison','bleed'].includes(c.dot))return 0;
    return Math.min(damage,m.phaseMaxHp*.04);
@@ -231,6 +236,7 @@ window.GameEntities.AncientSystem={
   const pawns=G.pawns.filter(p=>p.isAlive&&C.canEngage(m,p));
   for(const p of pawns){const d=Math.hypot(p.x-m.x,p.y-m.y);
    if(kind==='colossus'&&d<300||kind==='mirror'&&d<200){p.auraSlow=kind==='colossus'?.3:.2;p.auraSlowTimer=.2;}
+   if(kind==='diva'&&d<250){p.auraSlow=.15;p.auraSlowTimer=.2;}
    if(kind==='colossus'){
     const elapsed=d<85?(m.petrification.get(p.id)||0)+dt:0;m.petrification.set(p.id,elapsed);
     if(elapsed>=5){this.control(p,'stunTimer',1.5,m);m.petrification.set(p.id,0);}
@@ -250,6 +256,11 @@ window.GameEntities.AncientSystem={
     if(strong&&high&&C.canSee(m,high)){const copied=C.getSkillConfig(m,strong);this.field(m,{name:'Tâm Ma: '+strong.def.name,radius:copied.radius,damage:0},high.x,high.y,.8,{damage:Math.min(m.attack*.6,copied.damage),replayTarget:high});}
     if(m.phase===2)for(let i=0;i<4;i++){const t=pawns[i%pawns.length];if(t)this.field(m,{name:'Linh Hồn Binh Khí',radius:28,damage:m.attack*.35},m.x+Math.cos(i*Math.PI/2)*65,m.y+Math.sin(i*Math.PI/2)*65,.2,{homing:t,speed:170,end:this.clock+4});}
    }
+  }
+  if(kind==='diva'){
+   m.beatClock=(m.beatClock||0)+dt;m.fanClock=(m.fanClock||0)+dt;
+   if(m.beatClock>=(m.phase===2?2:4)){m.beatClock=0;this.field(m,{name:'Nhịp Điệu Vĩnh Cửu',radius:110,damage:m.attack*.3},m.x,m.y,.6);}
+   if(m.fanClock>=5){m.fanClock=0;m.currentHp=Math.min(m.maxHp,m.currentHp+m.phaseMaxHp*.01);}
   }
   if(kind==='eternal'&&m.passiveClock>=3){m.passiveClock=0;const prey=pawns[0];if(prey)this.field(m,{name:'Lửa Vĩnh Hằng',radius:60,damage:m.attack*.35,effect:'lava'},prey.x,prey.y,.8);}
   if(kind==='mecha'&&m.passiveClock>=1.5){m.passiveClock=0;const far=pawns.filter(p=>Math.hypot(p.x-m.x,p.y-m.y)>130).sort((a,b)=>b.currentHp-a.currentHp)[0];if(far)this.field(m,{name:'Súng Phụ Tự Động',radius:20,damage:m.attack*.25},m.x,m.y,.1,{homing:far,speed:270,end:this.clock+3});}
