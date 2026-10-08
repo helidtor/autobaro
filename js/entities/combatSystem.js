@@ -263,7 +263,11 @@ window.GameEntities.CombatSystem = {
    return ![...nearby].some(e=>{const members=this.crowdAt(e,e.x,e.y);return members.size===4&&(members.has(p)||members.has(q));});
  },
  validMembers(members){
-  return members.size<=3||members.size===4&&[...members].every(p=>p.isPawn&&p.allyPawn!==p&&p.allyPawn?.isAlive&&members.has(p.allyPawn)&&p.allyPawn.allyPawn===p);
+  const list=[...members];
+  const packs=new Set(list.filter(e=>e.isMonster&&e.packId).map(e=>e.packId));
+  const packId=packs.size===1?[...packs][0]:null;
+  const counted=packId?list.filter(e=>!(e.isMonster&&e.packId===packId)):list;
+  return counted.length<=3||counted.length===4&&counted.every(p=>p.isPawn&&p.allyPawn!==p&&p.allyPawn?.isAlive&&counted.includes(p.allyPawn)&&p.allyPawn.allyPawn===p);
  },
  crowdAt(e,x,y){
   const pawns=window.GameManager?.pawns||[];
@@ -289,7 +293,7 @@ window.GameEntities.CombatSystem = {
     for(const p of active)if(Math.hypot(p.x-origin.x,p.y-origin.y)<120){addGroup(p.combatGroup);members.add(p);}
     const ally=origin.allyPawn;
     if(ally?.isAlive&&ally.allyPawn===origin&&Math.hypot(origin.x-ally.x,origin.y-ally.y)<240&&!M.isInWater(ally.x,ally.y))members.add(ally);
-    if(members.size>4)break;
+    if(members.size>8)break;
   }
   for(const p of [...members]){
     const ally=p.allyPawn;
@@ -315,7 +319,18 @@ window.GameEntities.CombatSystem = {
   }
   if(a.isMonster&&a.tier===3&&t.isPawn)a.focusPawn=t;
   if(t.isMonster&&t.tier===3&&a.isPawn)t.focusPawn=a;
+  if(a.packId&&this.isEnemy(a,t))this.alertPack(a,t);
+  if(t.packId&&this.isEnemy(t,a))this.alertPack(t,a);
   return true;
+ },
+ alertPack(monster,enemy){
+  if(!monster?.packId||!enemy?.isAlive)return;
+  const now=window.GameManager.matchTime||0;
+  for(const mate of window.GameManager.monsters||[]){
+    if(!mate.isAlive||mate.packId!==monster.packId)continue;
+    mate.packAlert={target:enemy,until:now+8};
+    mate.targetEnemy=enemy;
+  }
  },
  canEngage(a,t){
   const M=window.GameEngine.MapTerrain;
@@ -842,6 +857,7 @@ window.GameEntities.CombatSystem = {
     if(victim.isMonster&&victim.tier>=4&&victim.territory)victim.territory.isCleared=true;
     window.GameRenderer.VfxManager.addBurstParticles(victim.x, victim.y, '#d8c4a3', 12);
     if (killer?.isPawn&&!victim.isAncient&&!victim.isAncientClone) { this.rewardBotKill(killer,victim);killer.currentExp += victim.isPawn ? Math.max(1,victim.level||1)*60 : victim.expReward||50; this.checkLevelUp(killer); killer.killCount = (killer.killCount || 0) + 1; window.GameAI.EmotionEngine.onKillOrLoot(killer, victim.dropTier || 'rare'); }
+    if(victim.isMonster&&killer?.isPawn)for(const pawn of window.GameManager.pawns||[])if(pawn!==killer&&pawn.isAlive&&(pawn.targetEnemy===victim||pawn.plan?.target===victim))window.GameAI.AIBrain.noteGrudge(pawn,killer,'kill');
     this.rememberBotKill(killer,victim);
     this.dropLootOnDeath(victim);
     if(victim.isAncient)window.GameEntities.AncientSystem.finish(killer,victim);

@@ -51,7 +51,6 @@ window.GameAI.AiBrain = {
     if(underfoot)this.lootItem(pawn,underfoot);
     if(G.finalShowdown&&!G.battleRoyaleResolved){this.updateFinalShowdown(pawn,threats,nearby,dt);return;}
     if(pawn.chase&&!this.keepChasing(pawn,pawn.chase.target)){this.abandonChase(pawn);}
-    if(window.GameEntities.AncientSystem.avoid(pawn,dt))return;
     if(this.hideAfterEscape(pawn,dt))return;
     if(C.tryReaction(pawn,threats))return;
     if(G.battleRoyaleResolved){
@@ -81,21 +80,40 @@ window.GameAI.AiBrain = {
     if(pawn.fear<35)pawn.fleeTime=0;
     const monsters=threats.filter(e=>e.isMonster&&e.tier<5);
     const enemies=threats.filter(e=>e.isPawn);
+    this.noteStrikes(pawn,threats);
+    const revenge=this.retaliationTarget(pawn,threats);
+    if(revenge){
+      pawn.isHiding=false;pawn.plan={kind:revenge.isPawn?'duel':'farm',target:revenge,until:pawn.decisionTime+8};
+      pawn.objective='Phản công '+revenge.name;pawn.thought='Đang đánh mục tiêu khác thì bị tấn công. Quay sang kẻ vừa ra đòn.';
+      this.engageCombat(pawn,revenge,dt);return;
+    }
     const danger=threats.find(e=>C.canSee(e,pawn)&&(e.isPawn?((e.level||1)-(pawn.level||1)>=2||pawn.currentHp<pawn.maxHp*.22&&this.calculateWinRate(pawn,e)<.4):this.calculateWinRate(pawn,e)<.4)&&Math.hypot(e.x-pawn.x,e.y-pawn.y)<(e.isPawn?C.visionRange(pawn):160));
     if(danger){
       const attacking=danger.targetEnemy===pawn||danger.action?.target===pawn||pawn.lastAttacker===danger&&G.matchTime-(pawn.lastDamageAt||0)<6;
-      if(danger.isPawn&&danger.level-pawn.level>=2&&!attacking){pawn.farmMotivationUntil=G.matchTime+4;}
-      else {
-      const chance=this.calculateWinRate(pawn,danger),cornered=!this.hasRetreatRoute(pawn,danger);
-      const fighting=pawn.targetEnemy===danger||pawn.lastAttacker===danger&&pawn.grudgeUntil>(G.matchTime||0)||Math.hypot(pawn.x-danger.x,pawn.y-danger.y)<C.combatStats(danger).range+45;
-      if(P.cowardice<85&&C.canApproach(pawn,danger)&&!pawn.isClutchEscape&&(cornered||fighting&&chance>=.3&&pawn.currentHp>pawn.maxHp*.22||pawn.defiantTarget===danger&&pawn.defiantUntil>(G.matchTime||0)&&pawn.currentHp>pawn.maxHp*.18&&(danger.level||pawn.level)-pawn.level<5)){
-        pawn.objective=cornered?'Đường lui bị chặn: chống trả':'Phòng thủ, tìm cơ hội phản công';
-        pawn.thought='Bất lợi nhưng còn sức chống trả. Đỡ, giữ khoảng cách và chờ địch hụt đòn.';
+      const cornered=!this.hasRetreatRoute(pawn,danger);
+      const seenOnly=danger.isPawn&&(danger.level||1)-pawn.level>=2&&!attacking&&!cornered;
+      if(!seenOnly){
+      if(cornered&&C.canApproach(pawn,danger)){
+        pawn.survivalTarget=danger;pawn.plan={kind:'duel',target:danger,until:pawn.decisionTime+8};
+        pawn.objective='Hết đường: đánh đến chết';pawn.thought='Không còn lối thoát. Giữ mục tiêu này.';
         this.engageCombat(pawn,danger,dt);return;
       }
-      pawn.plan=null;this.abandonChase(pawn);pawn.targetEnemy=null;
-      pawn.objective='Lẩn trốn '+danger.name;pawn.thought='Đối thủ mạnh hơn. Dùng đường khuất và kỹ năng tẩu thoát.';
-      this.escapeThreat(pawn,danger,dt);return;
+      if(danger.isMonster&&!this.canHunt(pawn,danger)){
+        const saved=pawn.plan;pawn.objective='Tránh '+danger.name;pawn.thought='Quái quá mạnh so với chuyến đang đi. Rời tầm rồi làm tiếp.';
+        this.escapeThreat(pawn,danger,dt);pawn.plan=saved;return;
+      }
+      if(!attacking&&pawn.currentHp<pawn.maxHp*.22&&this.calculateWinRate(pawn,danger)<.4&&this.hasRetreatRoute(pawn,danger)){
+        pawn.objective='Lẩn trốn '+danger.name;pawn.thought='Chưa vào trận và bất lợi rõ. Dùng đường khuất.';
+        this.escapeThreat(pawn,danger,dt);return;
+      }
+      if(attacking||danger.isMonster){
+        if(!(this.holdsTarget(pawn)&&pawn.plan.target!==danger)){
+          pawn.plan={kind:danger.isPawn?'duel':'farm',target:danger,until:pawn.decisionTime+8};
+          pawn.objective='Bị đánh: giữ '+danger.name;pawn.thought='Đã giao tranh thì đánh tiếp. Rút chỉ sau khi mất một phần tư máu mà vẫn không có cửa.';
+          this.engageCombat(pawn,danger,dt);return;
+        }
+        this.noteGrudge(pawn,danger,'sneak');
+      }
       }
     }
     const aggressor=enemies.find(e=>pawn.lastAttacker===e&&pawn.grudgeUntil>(G.matchTime||0)&&Math.hypot(e.x-pawn.x,e.y-pawn.y)<C.combatStats(e).range+45&&C.canApproach(pawn,e)&&this.duelEligible(pawn,e));
@@ -105,18 +123,22 @@ window.GameAI.AiBrain = {
     if(pawn.allyPawn?.isAlive&&pawn.allianceBoss?.isAlive&&this.canHunt(pawn,pawn.allianceBoss,true)){this.engageCombat(pawn,pawn.allianceBoss,dt);return;}
     const loot=this.findBestItemToLoot(pawn,nearby.filter(e=>e.isDropItem&&window.GameEngine.MapTerrain.segmentClear(pawn.x,pawn.y,e.x,e.y,false,0)));
     if(loot&&(!pawn.plan||pawn.plan.kind!=='loot')&&this.lootPriority(pawn,loot,threats)>this.planPriority(pawn,pawn.plan)+25)pawn.plan={kind:'loot',target:loot,until:pawn.decisionTime+4};
-    if(pawn.decisionTime>=(pawn.evaluateAt||0)&&(!pawn.plan||pawn.decisionTime>=pawn.plan.until||!this.planValid(pawn,pawn.plan))){
+    if(this.holdsTarget(pawn))this.rememberNext(pawn,enemies);
+    else if(pawn.nextTarget?.target?.isAlive&&(pawn.nextTarget.reason==='grudge'||pawn.nextTarget.target.currentHp<=pawn.nextTarget.target.maxHp*.3)){pawn.plan={kind:'duel',target:pawn.nextTarget.target,until:pawn.decisionTime+8};pawn.nextTarget=null;}
+    if(!this.holdsTarget(pawn)&&pawn.decisionTime>=(pawn.evaluateAt||0)&&(!pawn.plan||pawn.decisionTime>=pawn.plan.until||!this.planValid(pawn,pawn.plan))){
       pawn.evaluateAt=pawn.decisionTime+.3;
       const choices=[];
-      if(loot){const score=this.lootPriority(pawn,loot,threats);if(score>0)choices.push({kind:'loot',target:loot,score});}
+      if(loot){const score=this.lootPriority(pawn,loot,threats)+(pawn.style==='looter'?40:0);if(score>0)choices.push({kind:'loot',target:loot,score});}
       for(const m of G.monsters){if(!this.canHunt(pawn,m))continue;
         const dist=Math.hypot(m.x-pawn.x,m.y-pawn.y),chance=this.calculateWinRate(pawn,m);if(dist<450&&!C.canApproach(pawn,m))continue;
-        choices.push({kind:'farm',target:m,score:60+chance*55+P.caution*.25+Math.min(35,m.expReward/8)+P.greed*m.tier*2-dist/(15+P.curiosity*.2)});}
+        choices.push({kind:'farm',target:m,score:60+chance*55+P.caution*.25+(pawn.style==='farmer'?40:0)+(pawn.style==='looter'?0:0)+Math.min(35,m.expReward/8)+P.greed*m.tier*2-dist/(15+P.curiosity*.2)});}
       for(const e of enemies){if(!C.canApproach(pawn,e)||this.ignored(pawn,e)||mapTerrain.isInWater(e.x,e.y))continue;
         const chance=this.calculateWinRate(pawn,e);
         if(!this.duelEligible(pawn,e)&&!pawn.isBerserk)continue;
         const revenge=pawn.lastAttacker===e&&(G.matchTime||0)<pawn.grudgeUntil;
-        choices.push({kind:'duel',target:e,score:150+(pawn.battleWill||0)*.8+P.aggression*.9+(1-e.currentHp/e.maxHp)*P.patience*.9+(revenge?P.aggression*.4:0)+P.greed*(e.weapon? .5:0)});}
+        const finish=e.currentHp<=e.maxHp*.3&&(P.cowardice||0)<85?400:0;
+        const styleBonus=pawn.style==='hunter'?40:pawn.style==='farmer'?-25:0;
+        choices.push({kind:'duel',target:e,score:150+finish+styleBonus+(pawn.battleWill||0)*.8+P.aggression*.9+(1-e.currentHp/e.maxHp)*P.patience*.9+(revenge?P.aggression*.4:0)+P.greed*(e.weapon? .5:0)+(pawn.grudge?.target===e?180:0)});}
       const fullBattle=threats.find(e=>e.combatLease>0&&C.groupMembers(e).length>=3&&!C.canJoin(pawn,e));
       if(fullBattle&&(pawn.trait==='coward'||P.caution+P.greed-P.loyalty>90)&&pawn.decisionTime>(pawn.ambushRestUntil||0)&&!(pawn.combatLease>0)){
         const bushes=mapTerrain.bushes.filter(b=>!b.isBurned).map(b=>({x:b.x*mapTerrain.scale,y:b.y*mapTerrain.scale,bush:b}))
@@ -124,9 +146,8 @@ window.GameAI.AiBrain = {
         bushes.sort((a,b)=>Math.hypot(a.x-pawn.x,a.y-pawn.y)-Math.hypot(b.x-pawn.x,b.y-pawn.y));
         if(bushes[0])choices.push({kind:'ambush',target:{...bushes[0],battle:fullBattle},score:85+P.caution*.5+P.greed*.6+Math.random()*60});
       }
-      // A per-decision preference varies choices without jittering movement every frame.
-      for(const choice of choices)choice.score+=(Math.random()-.5)*(8+P.curiosity*.2);
-      choices.sort((a,b)=>b.score-a.score);
+      choices.sort((a,b)=>b.score-a.score||String(a.target?.id||'').localeCompare(String(b.target?.id||'')));
+      if(choices[1]&&choices[0].score-choices[1].score<8){const tie=[choices[0],choices[1]].sort((a,b)=>String(a.target?.id||'').localeCompare(String(b.target?.id||'')));choices[0]=tie[0];}
       const current=pawn.plan&&choices.find(c=>c.kind===pawn.plan.kind&&c.target===pawn.plan.target);
       const chosen=current&&current.score+30>=(choices[0]?.score||0)?current:choices[0];
       pawn.decisionReason=chosen?(chosen.kind==='duel'?'Chiến ý và lợi thế trước đối thủ':'Mục tiêu phù hợp sức mạnh và tính cách'):'Chưa có mục tiêu: khám phá';
@@ -152,18 +173,19 @@ window.GameAI.AiBrain = {
       for(const member of [p,q]){member.allyPawn=null;member.isAllied=false;member.allianceBoss=null;member.pactTarget=null;member.pactIntel=null;}
     }
     if(!p.finalDuel?.isAlive)p.finalDuel=null;
-    if((p.personality?.cowardice||0)>=85&&p.finalDuel&&((p.finalDuel.level||1)-p.level>=2||p.currentHp<p.maxHp*.2))p.finalDuel=null;
+    if(p.grudge&&(window.GameManager.matchTime||0)-p.grudge.at>45)p.grudge=null;
     // A duel is committed by reserveCombat, including missed attacks and damaging skills.
     if(p.finalDuel){
       p.plan=null;p.finalHuntTarget=p.finalDuel;
       if(C.tryReaction(p,threats))return;
       this.engageCombat(p,p.finalDuel,dt);return;
     }
-    const pursuer=threats.find(t=>t.isPawn&&(t.level||1)-p.level>=2&&(t.targetEnemy===p||t.action?.target===p||p.lastAttacker===t&&(G.matchTime||0)-(p.lastDamageTakenAt||0)<6));
-    if(pursuer&&!p.survivalTarget){p.objective='Thoát truy sát, tìm quái bắt kịp cấp';this.escapeThreat(p,pursuer,dt);return;}
+    const pursuer=threats.find(t=>t.isPawn&&(t.targetEnemy===p||t.action?.target===p||p.lastAttacker===t&&(G.matchTime||0)-(p.lastDamageTakenAt||0)<6));
+    if(pursuer&&!p.survivalTarget&&!this.hasRetreatRoute(p,pursuer)){p.survivalTarget=pursuer;this.engageCombat(p,pursuer,dt);return;}
+    if(pursuer&&!p.survivalTarget){p.plan={kind:'duel',target:pursuer,until:p.decisionTime+8};this.engageCombat(p,pursuer,dt);return;}
     this.handleCoalition(p,threats);
     if(p.pactTarget?.isAlive&&p.allyPawn?.isAlive&&this.calculateWinRate(p,p.pactTarget,true)>=.4)p.finalHuntTarget=p.pactTarget;
-    const candidates=alive.filter(e=>C.isEnemy(p,e)&&((e.level||1)-p.level<2||e===p.pactTarget)&&M.canTravel(p,e.x,e.y));
+    const candidates=alive.filter(e=>C.isEnemy(p,e)&&M.canTravel(p,e.x,e.y)&&(this.duelEligible(p,e)||e.targetEnemy===p||e.action?.target===p));
     if(!candidates.includes(p.finalHuntTarget))p.finalHuntTarget=null;
     if(!p.finalHuntTarget)p.finalHuntTarget=candidates.filter(e=>C.canApproach(p,e)).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0]||null;
     const loot=this.findBestItemToLoot(p,nearby.filter(e=>e.isDropItem));
@@ -172,18 +194,12 @@ window.GameAI.AiBrain = {
       p.plan=null;
       this.engageCombat(p,p.finalHuntTarget,dt);return;
     }
-    // Farm only to close an extreme level gap; keep one prey rather than re-picking each frame.
-    const outleveled=alive.some(e=>C.isEnemy(p,e))&&alive.filter(e=>C.isEnemy(p,e)).every(e=>(e.level||1)-p.level>=2);
-    if(outleveled){
-      if(p.plan?.kind!=='farm'||!this.planValid(p,p.plan)){
-        const prey=G.monsters.filter(m=>this.canHunt(p,m)&&C.canApproach(p,m)&&M.canTravel(p,m.x,m.y))
-          .sort((a,b)=>(b.expReward/(1+Math.hypot(b.x-p.x,b.y-p.y)/300))-(a.expReward/(1+Math.hypot(a.x-p.x,a.y-p.y)/300)))[0];
-        p.plan=prey?{kind:'farm',target:prey}:null;
-      }
-      if(p.plan){const prey=p.plan.target;this.engageCombat(p,prey,dt);p.objective='Farm bắt kịp cấp: '+prey.name;p.thought='Đối thủ hơn ít nhất 2 cấp. Săn quái vừa sức; đủ cấp sẽ quay lại tìm bot.';return;}
-    }else p.plan=null;
+    if(!p.finalHuntTarget){
+      const prey=G.monsters.filter(m=>this.canHunt(p,m)&&C.canApproach(p,m)&&M.canTravel(p,m.x,m.y)).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
+      if(prey){p.plan={kind:'farm',target:prey,until:p.decisionTime+6};this.engageCombat(p,prey,dt);p.objective='Farm khi chưa có trận vừa sức: '+prey.name;return;}
+    }
     this.wanderAround(p,dt);
-    p.objective=outleveled?'Tìm quái vừa sức để bắt kịp cấp':'Tìm đối thủ còn chỗ giao tranh';
+    p.objective='Tìm đối thủ còn chỗ giao tranh';
   },
   threatSnapshot(t){
     return {...t,passives:(t.passives||[]).map(p=>({...p})),skills:(t.skills||[]).map(s=>({...s})),weapon:t.weapon?{...t.weapon}:null,armor:t.armor?{...t.armor}:null,helmet:t.helmet?{...t.helmet}:null,action:null};
@@ -282,17 +298,76 @@ window.GameAI.AiBrain = {
   },
   chaseLimit(p){return window.GameEntities.CombatSystem.visionRange(p)*1.8;},
   abandonChase(p){
-    if(p.chase){p.ignoredTargets=p.ignoredTargets||{};p.ignoredTargets[p.chase.target.id]=(window.GameManager.matchTime||0)+20;}
-    p.chase=null;p.targetEnemy=null;p.plan=null;p.roamGoal=null;
+    if(p.chase?.target){p.ignoredTargets=p.ignoredTargets||{};p.ignoredTargets[p.chase.target.id]=(window.GameManager.matchTime||0)+20;}
+    p.chase=null;p.targetEnemy=null;p.plan=null;
   },
   duelEligible(p,t){
-    if(window.GameManager.finalShowdown&&t?.isPawn)return t.isAlive&&(p.finalDuel===t||(t.level||1)-(p.level||1)<2);
-    const gap=(t.level||1)-(p.level||1),chance=this.calculateWinRate(p,t),P=p.personality||window.GameData.PersonalityProfiles[p.trait];
-    if(gap>=2)return p.survivalTarget===t||p.pactTarget===t;
+    if(!t?.isAlive||p.allyPawn===t)return false;
+    if(window.GameManager.finalShowdown&&t.isPawn)return p.finalDuel===t||p.survivalTarget===t||(t.level||1)-(p.level||1)<2||this.willingToFight(p,this.calculateWinRate(p,t),true);
+    if(p.survivalTarget===t||p.pactTarget===t||p.grudge?.target===t)return true;
+    const chance=this.calculateWinRate(p,t),P=p.personality||window.GameData.PersonalityProfiles[p.trait];
+    if(t.isPawn&&t.currentHp<=t.maxHp*.3&&(P.cowardice||0)<85)return true;
+    const gap=(t.level||1)-(p.level||1);
     if(p.currentHp<p.maxHp*.22&&!p.isBerserk)return false;
     if(gap<=0)return (P.cowardice||0)<85||chance>=.5;
-    if(gap<2&&p.fear<85&&p.despair<85)return chance>=.35||P.aggression+(p.battleWill||0)>100;
     return this.willingToFight(p,chance,true);
+  },
+  striking(p,e){
+    if(!e?.isAlive||e===p||e===p.allyPawn)return false;
+    const now=window.GameManager.matchTime||0;
+    return e.targetEnemy===p||e.action?.target===p&&!e.action.released||p.lastAttacker===e&&now-(p.lastDamageTakenAt||0)<2.5;
+  },
+  noteStrikes(p,threats){
+    const now=window.GameManager.matchTime||0,seen=p.strikeSeen||(p.strikeSeen={}),actions=p.strikeAction||(p.strikeAction={});
+    for(const e of threats){
+      if(!e?.id||!this.striking(p,e))continue;
+      if(!seen[e.id])seen[e.id]=now;
+      if(p.lastAttacker===e&&(p.lastDamageTakenAt||0)>seen[e.id])seen[e.id]=p.lastDamageTakenAt;
+      const actionId=e.action?.target===p&&!e.action.released?e.action.id:null;
+      if(actionId!=null&&actions[e.id]!==actionId){actions[e.id]=actionId;seen[e.id]=Math.max(seen[e.id],e.action.startedAt||now);}
+    }
+  },
+  attackTarget(p){
+    const plan=p.plan;
+    if(plan?.target?.isAlive&&(plan.kind==='duel'||plan.kind==='farm'))return plan.target;
+    if(p.targetEnemy?.isAlive&&p.combatLease>0)return p.targetEnemy;
+    return null;
+  },
+  retaliationTarget(p,threats){
+    const current=this.attackTarget(p);
+    if(!current)return null;
+    const C=window.GameEntities.CombatSystem,M=window.GameEngine.MapTerrain;
+    const pool=[current,...threats].filter(e=>e&&this.striking(p,e)&&(e===current||!M.isInWater(e.x,e.y)&&C.canApproach(p,e)));
+    pool.sort((a,b)=>{
+      const delta=(p.strikeSeen?.[b.id]||0)-(p.strikeSeen?.[a.id]||0);
+      if(delta)return delta;
+      if(p.lastAttacker===a)return -1;
+      if(p.lastAttacker===b)return 1;
+      if(a===current)return -1;
+      if(b===current)return 1;
+      return 0;
+    });
+    return pool[0]&&pool[0]!==current?pool[0]:null;
+  },
+  holdsTarget(p){
+    const plan=p.plan;if(!plan?.target?.isAlive||!['duel','farm'].includes(plan.kind))return false;
+    if(!this.planValid(p,plan))return false;
+    if(this.calculateWinRate(p,plan.target)>=.5)return true;
+    const lost=p.engagement?.target===plan.target?(p.engagement.hp||p.currentHp)-p.currentHp:0;
+    return lost<p.maxHp*.25;
+  },
+  rememberNext(p,enemies=[]){
+    const wounded=(enemies||[]).filter(e=>e.isPawn&&e.isAlive&&e!==p.plan?.target&&e.currentHp<=e.maxHp*.3&&(p.personality?.cowardice||0)<85).sort((a,b)=>a.currentHp/a.maxHp-b.currentHp/b.maxHp||Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
+    if(wounded)p.nextTarget={kind:'duel',target:wounded};
+    if(p.grudge?.target?.isAlive&&p.grudge.target!==p.plan?.target)p.nextTarget={kind:'duel',target:p.grudge.target,reason:'grudge'};
+  },
+  noteGrudge(p,offender,reason){
+    if(!p?.isAlive||!offender?.isPawn||offender===p||offender===p.allyPawn)return;
+    const now=window.GameManager.matchTime||0;
+    p.grudge={target:offender,reason,at:now};
+    if(this.holdsTarget(p)&&p.plan.target!==offender){p.nextTarget={kind:'duel',target:offender,reason:'grudge'};return;}
+    const seen=window.GameEntities.CombatSystem.canSee(p,offender),chance=this.calculateWinRate(p,offender);
+    if(chance>=.4||seen)p.plan={kind:'duel',target:offender,until:(p.decisionTime||0)+8,reason:'grudge'};
   },
   willingToFight(p,chance,isDuel=false){
     if(chance<.5)return false;
@@ -304,7 +379,11 @@ window.GameAI.AiBrain = {
   planValid(p,plan){
     if(plan.kind==='loot')return this.lootValue(p,plan.target)>0&&window.GameEngine.MapTerrain.canTravel(p,plan.target.x,plan.target.y);
     if(plan.kind==='ambush')return !plan.target.bush.isBurned&&plan.target.battle?.isAlive&&!(p.combatLease>0);
-    return plan.target.isAlive&&(plan.kind==='farm'?this.canHunt(p,plan.target):this.keepChasing(p,plan.target)&&(this.duelEligible(p,plan.target)||p.targetEnemy===plan.target&&p.combatLease>0&&this.calculateWinRate(p,plan.target)>=.38&&p.currentHp>p.maxHp*.25));
+    if(!plan.target.isAlive||!this.keepChasing(p,plan.target))return false;
+    if(plan.kind==='farm')return this.canHunt(p,plan.target);
+    const lost=p.engagement?.target===plan.target?(p.engagement.hp||p.currentHp)-p.currentHp:0;
+    if(lost>=p.maxHp*.25&&this.calculateWinRate(p,plan.target)<.4&&this.hasRetreatRoute(p,plan.target))return false;
+    return this.duelEligible(p,plan.target)||p.targetEnemy===plan.target;
   },
   ambush(p,site,enemies,dt){
     const M=window.GameEngine.MapTerrain,C=window.GameEntities.CombatSystem,battle=site.battle;
@@ -436,6 +515,7 @@ window.GameAI.AiBrain = {
   // Nhặt và trang bị đồ
   lootItem: function(pawn, item) {
     if(!item||item.isCollected)return false;
+    if(this.lootValue(pawn,item)>0)for(const other of window.GameManager.pawns||[])if(other!==pawn&&other.isAlive&&(other.plan?.target===item||other.combatLoot?.item===item))this.noteGrudge(other,pawn,'loot');
     if(this.lootValue(pawn,item)<=0){if(item.tier!=='ancient')return false;pawn.keptRelics=pawn.keptRelics||[];pawn.keptRelics.push(item.data);item.isCollected=true;return true;}
     if (item.slot === 'potion') { window.GameEngine.Audio?.play('loot',pawn);if(item.data?.fullHeal)pawn.fullHealthPotions=(pawn.fullHealthPotions||0)+1;else pawn.healthPotions = (pawn.healthPotions || 0) + 1; item.isCollected = true; return true; }
     window.GameEngine.Audio?.play('loot',pawn);
@@ -583,7 +663,9 @@ window.GameAI.AiBrain = {
     if (!target || !target.isAlive || pawn.allyPawn === target) return;
     const M=window.GameEngine.MapTerrain,C=window.GameEntities.CombatSystem,G=window.GameManager,P=pawn.personality,now=G.matchTime||0;
     const focus=pawn.combatFocus,held=focus?.target;
-    const urgent=target===pawn.survivalTarget||target.action?.target===pawn&&!target.action.released&&held?.action?.target!==pawn;
+    const seenAt=e=>pawn.strikeSeen?.[e?.id]||0;
+    const incoming=e=>!!e&&(e.targetEnemy===pawn||e.action?.target===pawn&&!e.action.released||pawn.lastAttacker===e&&now-(pawn.lastDamageTakenAt||0)<2.5);
+    const urgent=target===pawn.survivalTarget||incoming(target)&&(!incoming(held)||seenAt(target)>seenAt(held)||seenAt(target)===seenAt(held)&&pawn.lastAttacker===target&&pawn.lastAttacker!==held);
     if(held!==target&&focus?.until>now&&!urgent&&C.isEnemy(pawn,held)&&C.canSee(pawn,held)&&C.canApproach(pawn,held)&&!M.isInWater(held.x,held.y)&&this.keepChasing(pawn,held))target=held;
     const finalDuel=(G.finalShowdown&&target.isPawn)||pawn.survivalTarget===target||G.battleRoyaleResolved&&(target.isAncient||target.isAncientClone);
     if(finalDuel&&!C.canSee(pawn,target)&&C.canApproach(pawn,target)){
@@ -615,19 +697,22 @@ window.GameAI.AiBrain = {
     pawn.aimAngle=Math.atan2(dy,dx);
     const chance=this.calculateWinRate(pawn,target,!!pawn.allyPawn?.isAlive&&Math.hypot(pawn.x-pawn.allyPawn.x,pawn.y-pawn.allyPawn.y)<240);
     const opening=target.stunTimer>0||target.currentStamina<18||target.action?.released&&target.action.duration-target.action.elapsed>.15||pawn.counterTarget===target&&pawn.counterUntil>now;
-    if(!pawn.tactic||pawn.tactic.target!==target){pawn.tactic={target,mode:'probe',until:now+1.2,started:now};}
+    if(!pawn.tactic||pawn.tactic.target!==target){pawn.tactic={target,mode:'probe',until:now+2.5,started:now};}
     const tactic=pawn.tactic;
-    const defiant=window.GameEntities.RelicSystem.has(pawn,'core')&&range<=90||pawn.defiantTarget===target&&pawn.defiantUntil>now||!this.hasRetreatRoute(pawn,target);
-    if(opening&&pawn.currentStamina>=18&&tactic.mode!=='counter'&&now>=(tactic.holdUntil||0)){tactic.mode='counter';tactic.until=now+1;tactic.holdUntil=now+.8;}
+    if(pawn.engagement?.target!==target)pawn.engagement={target,hp:pawn.currentHp,at:now};
+    const lost=pawn.engagement.hp-pawn.currentHp,route=this.hasRetreatRoute(pawn,target);
+    const defiant=window.GameEntities.RelicSystem.has(pawn,'core')&&range<=90||pawn.defiantTarget===target&&pawn.defiantUntil>now||!route;
+    if(!route){pawn.survivalTarget=target.isPawn?target:pawn.survivalTarget;tactic.mode='counter';}
+    else if(!finalDuel&&(tactic.escapeUntil>now||lost>=pawn.maxHp*.25&&chance<.4)){
+      if(!(tactic.escapeUntil>now))tactic.escapeUntil=now+2;
+      tactic.mode='escape';pawn.objective='Rút sau khi mất một phần tư máu';pawn.thought='Đã thử sức. Đối thủ quá mạnh và vẫn còn đường lui.';this.escapeThreat(pawn,target,dt);return;
+    }
+    else if(opening&&pawn.currentStamina>=18&&tactic.mode!=='counter'&&now>=(tactic.holdUntil||0)){tactic.mode='counter';tactic.until=now+1;tactic.holdUntil=now+.8;}
     else if(now>=tactic.until){
-      tactic.mode=!defiant&&(pawn.anger||0)<55&&(pawn.currentStamina<25||!finalDuel&&chance<.48&&tactic.mode!=='retreat')?'retreat':!finalDuel&&P.caution+P.greed>P.aggression+100&&chance<.65&&now-tactic.started<6?'bait':'pressure';
-      tactic.until=now+1+P.patience/100;tactic.holdUntil=now+.8;
+      tactic.mode=pawn.currentStamina<18?'retreat':'pressure';
+      tactic.until=now+2.5+P.patience/80;tactic.holdUntil=now+1;
     }
     if(pawn.allyPawn?.isAlive&&P.loyalty>65&&pawn.allyPawn.currentHp<pawn.allyPawn.maxHp*.35&&pawn.currentHp>pawn.maxHp*.5)tactic.mode='pressure';
-    if(!finalDuel&&(tactic.escapeUntil>now||pawn.currentHp<pawn.maxHp*.18||chance<.25&&!(G.battleRoyaleResolved&&target.tier>=5)&&(!target.isPawn||(target.level||1)-(pawn.level||1)>=2))&&this.hasRetreatRoute(pawn,target)){
-      if(!(tactic.escapeUntil>now))tactic.escapeUntil=now+1.5;
-      tactic.mode='escape';pawn.objective='Thoát khỏi giao tranh';pawn.thought='Máu hoặc lợi thế đã xuống quá thấp; thoát thân thay vì đổi mạng.';this.escapeThreat(pawn,target,dt);return;
-    }
     if(dist>C.visionRange(target)&&!opening)tactic.mode='pressure';
     if(range>90&&dist<range*.4&&!opening&&!defiant&&now>=(tactic.holdUntil||0)){tactic.mode='retreat';tactic.until=now+1;tactic.holdUntil=now+1;}
     if(defiant&&pawn.currentHp>pawn.maxHp*.12){tactic.mode='counter';pawn.thought='Bị ép hoặc cấu rỉa liên tục: giữ đòn phòng thủ và phản kháng!';}

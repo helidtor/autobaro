@@ -416,6 +416,8 @@ window.GameManager = {
       if (m.action || m.stunTimer > 0 || m.relicInterrupt>0 || m.isSplit) return;
       const M=window.GameEngine.MapTerrain;
       const targets = this.spatialGrid.queryCircle(m.x,m.y,C.visionRange(m)).filter(e=>e.isPawn&&C.canSee(m,e)&&C.canJoin(m,e)&&!M.isInWater(e.x,e.y)&&M.templeAccess(m,e.x,e.y)&&M.monsterCanTarget(m,e));
+      const alert=m.packAlert?.until>(this.matchTime||0)&&m.packAlert.target?.isAlive?m.packAlert.target:null;
+      if(alert&&!targets.includes(alert)&&C.isEnemy(m,alert)&&C.canJoin(m,alert)&&!M.isInWater(alert.x,alert.y)&&M.monsterCanTarget(m,alert))targets.unshift(alert);
       if(m.tier>=3&&window.GameAI.BossBrain.update(m,targets,dt))return;
       targets.sort((a,b)=>Math.hypot(a.x-m.x,a.y-m.y)-Math.hypot(b.x-m.x,b.y-m.y));
       const target=targets[0];m.targetEnemy=target||null;
@@ -429,7 +431,7 @@ window.GameManager = {
         }
         if(m.defId==='ancient_rock_crab'&&m.attackCooldown>.6&&m.defenseCooldown<=0&&dist<90){C.defend(m,'block',m.aimAngle);return;}
         if(dist<=range&&C.canEngage(m,target))C.executeAttack(m,target);
-        else M.navigate(m,target.x,target.y,dt);
+        else{if(m.tier<=3)m.objective='Tấn công '+target.name;M.navigate(m,target.x,target.y,dt);}
       }else{
         m.wanderTimer=(m.wanderTimer||0)-dt;
         if(m.wanderTimer<=0){m.wanderTimer=4;m.wanderAngle=Math.random()*Math.PI*2;}

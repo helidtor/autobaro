@@ -45,6 +45,7 @@ window.GameAI.EmotionEngine = {
     p.fear=Math.min(100,(p.fear||0)+Math.min(9,fraction*35)*(1+(P.cowardice||0)/100)/(1+(P.composure||50)/100));
     p.anger=Math.min(100,(p.anger||0)+fraction*65+(distinct?P.aggression*.08+(repeated?9:0):0));
     if(p.pokeHistory?.attacker===a&&p.pokeHistory.hits>=3){p.defiantTarget=a;p.defiantUntil=now+6;p.battleWill=Math.min(100,(p.battleWill||0)+12);p.fear=Math.max(0,p.fear-6);}
+    if(a?.isPawn&&p.targetEnemy!==a&&a.targetEnemy!==p)window.GameAI.AIBrain.noteGrudge(p,a,'sneak');
     const protectedChannel=p.progression?.protectedUntil>now&&Math.cos(Math.atan2(a.y-p.y,a.x-p.x)-p.aimAngle)>.25;if(protectedChannel)p.progression.protectedUntil=0;
     if(!protectedChannel&&p.action?.skillId==='a_snipe'&&!p.action.released){p.action=null;p.attackState=null;}
     if(!protectedChannel&&p.healInterruptibleTimer>0){p.healTimer=0;p.healInterruptibleTimer=0;p.healCompleteRank=0;}

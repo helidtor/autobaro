@@ -181,7 +181,14 @@ window.GameEngine.MapTerrain = {
   const dry=search(false);return dry.length?dry:search(true);
  },
  navigate(e,tx,ty,dt){
-  const r=e.collisionRadius||9,avoidWater=!this.isInWater(e.x,e.y);
+  const r=e.collisionRadius||9;
+  // A rebuilt obstacle can cover an actor; a blocked start cannot produce any path.
+  if(!this.canStand(e.x,e.y,r)){
+   const pos=this.nearestFree(e.x,e.y,r),C=window.GameEntities.CombatSystem;
+   if(!this.canStand(pos.x,pos.y,r)||!this.canTravel(e,pos.x,pos.y)||!C.validMembers(C.crowdAt(e,pos.x,pos.y)))return 0;
+   Object.assign(e,pos);e.navPath=[];e.navTimer=0;e.navDetour=null;e.navProgress=null;
+  }
+  const avoidWater=!this.isInWater(e.x,e.y);
   const now=window.GameManager.matchTime||e.decisionTime||0;
   if(e.navDetour&&e.navDetour.until>now&&Math.hypot(e.x-e.navDetour.x,e.y-e.navDetour.y)>15){tx=e.navDetour.x;ty=e.navDetour.y;}else e.navDetour=null;
   const goal=this.safeGoal(e,tx,ty,r);
@@ -260,8 +267,15 @@ window.GameEngine.MapTerrain = {
  monsterCanOccupy(e,x,y){
   if(this.ancientArena)return this.canStand(x,y,e.collisionRadius||9);
   if(!e.territory)return true;
-  const a=e.territory;if(Math.hypot(x-a.x,y-a.y)>a.radius-12 || this.isInWater(x,y))return false;
-  const domain=this.bossDomain(x,y);return !domain || domain.id===a.id || (e.isAncient||e.isAncientClone)&&domain.id==='temple';
+  if(this.isInWater(x,y))return false;
+  const a=e.territory,domain=this.bossDomain(x,y);
+  if(domain&&domain.id!==a.id&&!((e.isAncient||e.isAncientClone)&&domain.id==='temple'))return false;
+  if(Math.hypot(x-a.x,y-a.y)<=a.radius-12)return true;
+  const now=window.GameManager?.matchTime||0,C=window.GameEntities.CombatSystem,vision=C.visionRange(e);
+  const alert=e.packAlert?.until>now&&e.packAlert.target?.isAlive?e.packAlert.target:null;
+  if(alert)return Math.hypot(x-a.x,y-a.y)<=a.radius+vision;
+  const prey=e.tier<=3&&e.targetEnemy?.isAlive?e.targetEnemy:null;
+  return !!prey&&C.canSee(e,prey)&&Math.hypot(x-prey.x,y-prey.y)<=vision;
  },
  makeGuardHabitat(def,index,lair){
   const radius=135*this.scale/2,base=Math.atan2(this.MAP_HEIGHT/2-lair.y,this.MAP_WIDTH/2-lair.x)+(index>=4?.75:-.15);
@@ -278,7 +292,7 @@ window.GameEngine.MapTerrain = {
   const distance=[0,2220,1640,850][def.tier]*this.scale/2;
   const radius=[0,150,145,145][def.tier]*this.scale/2;
   let site=null;
-  for(let n=0;n<80;n++){
+  for(let n=0;n<140;n++){
    const a=angle+(n%2?1:-1)*Math.ceil(n/2)*.045;
    const x=this.MAP_WIDTH/2+Math.cos(a)*distance,y=this.MAP_HEIGHT/2+Math.sin(a)*distance;
    if(!this.canStand(x,y,20)||this.isInWater(x,y)||[this.templeRuins,...this.lairs].some(b=>Math.hypot(x-b.x,y-b.y)<radius+b.radius+65)||this.habitats.some(b=>Math.hypot(x-b.x,y-b.y)<radius+b.radius+25))continue;

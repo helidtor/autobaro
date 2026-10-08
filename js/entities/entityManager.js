@@ -1,5 +1,5 @@
 /**
- * 100 bot và 71 quái vật; loot từ quái và thưởng hạ bot.
+ * 100 bot và 131 quái vật; loot từ quái và thưởng hạ bot.
  */
 window.GameEntities = window.GameEntities || {};
 
@@ -40,6 +40,7 @@ window.GameEntities.EntityManager = {
       const secondaryTrait=traitsList.filter(t=>t!==randomTrait)[Math.floor(Math.random()*4)];
       const personality={};
       for(const axis of Object.keys(window.GameData.PersonalityAxes)) personality[axis]=Math.round(Math.max(5,Math.min(95,window.GameData.PersonalityProfiles[randomTrait][axis]*.8+window.GameData.PersonalityProfiles[secondaryTrait][axis]*.2+(Math.random()-.5)*28)));
+      const styleRank=[['hunter',personality.aggression],['farmer',personality.caution-personality.cowardice*.25],['looter',personality.greed],['skulker',Math.max(personality.cowardice,personality.patience)],['partner',personality.loyalty]].sort((a,b)=>b[1]-a[1]);
 
       const p = {
         id: 'pawn_' + i,
@@ -47,6 +48,7 @@ window.GameEntities.EntityManager = {
         isPawn: true,
         isAlive: true,
         isPlayerControlled: false,
+        style: styleRank[0][0],
         x: px,
         y: py,
         vx: 0,
@@ -99,15 +101,22 @@ window.GameEntities.EntityManager = {
     this.playerPawn.isPlayerControlled = false;
 
     const M=window.GameEngine.MapTerrain,D=window.GameData.Monsters;
-    // Sixteen same-species packs: eight groups of 3 and eight groups of 2 = 40 minions.
-    for(let i=0;i<16;i++){
-      const def=D.minions[i%D.minions.length],site=M.makeHabitat(def,i),size=i<8?3:2;
+    // Eighty minions: eight packs of 4 and sixteen packs of 3.
+    for(let i=0;i<24;i++){
+      const def=D.minions[i%D.minions.length],site=this.placeHabitat(def,i),size=i<8?4:3;
       for(let n=0;n<size;n++){
         const angle=n*Math.PI*2/size,m=this.spawnMonster(def,site.x+Math.cos(angle)*22,site.y+Math.sin(angle)*22,site);
         m.packId='pack_'+i;m.packIndex=n;
       }
     }
-    for(let i=0;i<20;i++){const def=D.beasts[i%D.beasts.length],site=M.makeHabitat(def,i);this.spawnMonster(def,site.x,site.y,site);}
+    // Forty beasts: ten pairs and twenty singles. Each species appears four times.
+    for(let i=0;i<30;i++){
+      const size=i<10?2:1,def=D.beasts[i%D.beasts.length],site=this.placeHabitat(def,i);
+      for(let n=0;n<size;n++){
+        const angle=n*Math.PI,m=this.spawnMonster(def,site.x+Math.cos(angle)*18,site.y+Math.sin(angle)*18,site);
+        if(size>1){m.packId='beast_'+i;m.packIndex=n;}
+      }
+    }
     // One or two generals guard outside each king's domain, never inside the arena.
     for(let i=0;i<6;i++){
       const def=D.generals[i%D.generals.length],lair=M.lairs[i%4],site=M.makeGuardHabitat(def,i,lair);
@@ -120,28 +129,51 @@ window.GameEntities.EntityManager = {
       M.bushes.push({x:(h.x+Math.cos(angle+.3)*h.radius*.42)/M.scale,y:(h.y+Math.sin(angle+.3)*h.radius*.42)/M.scale,radius:20,isBurned:false});
     }
     M.buildObstacles();
+    // Habitat buildings are added after pawn creation; validate against the finished map.
+    for(const p of this.pawns)Object.assign(p,M.nearestFree(p.x,p.y,p.collisionRadius||9));
     M.lairs.forEach((site,i)=>this.spawnMonster(D.lords[i],site.x,site.y,site));
+    // Monster ids no longer draw Math.random. Burn the old 71 id rolls so seeded Yêu Thần stays the same.
+    for(let i=0;i<71;i++)Math.random();
     const def=D.worldBosses[Math.floor(Math.random()*D.worldBosses.length)];
     this.worldBoss=this.spawnMonster(def,center.x,center.y,M.templeRuins);
-    for(const tier of [2,3])this.respawnWaves[tier]={timer:null,sites:this.monsters.filter(m=>m.tier===tier).map(m=>({def:D[tier===2?'beasts':'generals'].find(d=>d.id===m.defId),x:m.homeX,y:m.homeY,territory:m.territory}))};
+    for(const tier of [2,3])this.respawnWaves[tier]={timer:null,sites:this.monsters.filter(m=>m.tier===tier).map(m=>({def:D[tier===2?'beasts':'generals'].find(d=>d.id===m.defId),x:m.homeX,y:m.homeY,territory:m.territory,packId:m.packId,packIndex:m.packIndex}))};
   },
 
+  placeHabitat(def,index){
+    const M=window.GameEngine.MapTerrain;
+    try{return M.makeHabitat(def,index);}catch(error){
+      const ring=[0,2220,1640,850][def.tier]*M.scale/2;
+      const kin=M.habitats.filter(h=>h.kind===def.habitat&&Math.abs(Math.hypot(h.x-M.MAP_WIDTH/2,h.y-M.MAP_HEIGHT/2)-ring)<h.radius);
+      if(!kin.length)throw error;
+      return kin[index%kin.length];
+    }
+  },
   updateRespawns(dt){
     const G=window.GameManager;if(G.battleRoyaleResolved||G.monsters!==this.monsters)return;
     for(const tier of [2,3]){const wave=this.respawnWaves?.[tier];if(!wave)continue;
       if(this.monsters.some(m=>m.tier===tier&&m.isAlive)){wave.timer=null;continue;}
       wave.timer=(wave.timer??10)-dt;if(wave.timer>1e-8)continue;
       for(let i=this.monsters.length-1;i>=0;i--)if(this.monsters[i].tier===tier)this.monsters.splice(i,1);
-      for(const site of wave.sites)this.spawnMonster(site.def,site.x,site.y,site.territory);
+      for(const site of wave.sites){const m=this.spawnMonster(site.def,site.x,site.y,site.territory);if(site.packId){m.packId=site.packId;m.packIndex=site.packIndex;}}
       wave.timer=null;window.GameUI.CombatTicker.log('🌿 '+(tier===2?'Yêu Thú':'Yêu Tướng')+' đã hồi sinh tại sinh cảnh cũ.');
     }
   },
 
   spawnMonster: function(def, x, y, territory = null) {
-    const pos=window.GameEngine.MapTerrain.nearestFree(x,y);x=pos.x;y=pos.y;
+    const M=window.GameEngine.MapTerrain,stub={isMonster:true,tier:def.tier,territory,targetEnemy:null};
+    let pos=M.nearestFree(x,y);
+    if(territory&&!M.monsterCanOccupy(stub,pos.x,pos.y)){
+      let placed=null;
+      for(let d=8;d<territory.radius&&!placed;d+=12)for(let i=0;i<16&&!placed;i++){
+        const px=territory.x+Math.cos(i*Math.PI/8)*d,py=territory.y+Math.sin(i*Math.PI/8)*d;
+        if(M.canStand(px,py,9)&&M.monsterCanOccupy(stub,px,py))placed={x:px,y:py};
+      }
+      if(placed)pos=placed;
+    }
+    x=pos.x;y=pos.y;
     if(territory&&def.tier>=4)territory.isCleared=false;
     const m = {
-      id: 'm_' + Math.random().toString(36).substr(2, 9),
+      id: 'm_' + (this.nextMonsterId = (this.nextMonsterId || 0) + 1),
       defId: def.id,
       name: def.name,
       isMonster: true,

@@ -1,297 +1,139 @@
-DỰ ÁN: AI SANDBOX BATTLE ROYALE (RIMWORLD CARTOON STYLE - WEB BASED)
-BẢN ĐẶC TẢ TÍCH HỢP HỆ THỐNG VÀ LIÊN KẾT DỮ LIỆU ĐỒNG BỘ
+# AutoBaro — đặc tả hệ thống đang chạy
 
-======================================================================
+Tài liệu này mô tả luật đang có trong source, không phải bản thiết kế ban đầu. Dữ liệu quái, kỹ năng, trang bị và Thượng Cổ nằm ở [material-game.md](material-game.md). Số liệu chi tiết lấy từ `js/`.
 
-KIẾN TRÚC TRÍ TUỆ NHÂN TẠO (AI DECISION-MAKING ENGINE)
-======================================================================
+Game chạy trên trình duyệt bằng JavaScript thuần, Canvas 2D và Vite. Không có backend, Phaser, Pixi hay Web Worker. Mọi module gắn vào `window` qua `js/main.js`. Vòng lặp, AI, combat và vẽ đều ở main thread. Spatial hash ô 64 px. Lưới đi đường ô 40 px.
 
-AI vận hành theo mô hình 3 lớp động khép kín:
-Tính Cách Cố Định (Traits) -> Trạng Thái Cảm Xúc (Emotions) -> Quyết Định Hành Vi (Utility Behavior).
+## 1. Diễn biến một trận
 
-1.1. Hệ thống tính cách cố định (Fixed Traits)
-Mỗi bot khi sinh ra ngẫu nhiên nhận 1 tính cách chủ đạo và 1 tính cách phụ, định hình trực tiếp nhánh build kỹ năng và phong cách chọn trang bị:
+1. Sinh 100 bot cấp 1, tay không, dọc rìa bản đồ 5200×5200, và 131 quái.
+2. Bot farm, nhặt đồ và đánh nhau. Không có vòng bo.
+3. Điện thờ Yêu Thần khóa cho đến khi mọi Yêu Vương còn sống bị hạ.
+4. Khi còn 2–5 bot, chúng ưu tiên tìm nhau. Khi còn đúng 1 bot, trận pause và hiện popup.
+5. Đóng popup (hoặc Escape) bắt đầu lượt farm cuối: quái từ Yêu Vương trở xuống bị thay bằng 5 Yêu Vương. Người sống sót phải lên cấp 15 và hạ hết 5 con này rồi mới được đánh Yêu Thần.
+6. Hạ Yêu Thần mở đếm ngược 20 giây mô phỏng để loot. Hết giờ, nếu còn đúng một bot cấp 15 trở lên và không còn Yêu Vương, thế giới sụp trong 6 giây thành đấu trường 1500×1500.
+7. Chuỗi 5 boss Thượng Cổ. Trận kết thúc khi hạ đủ 5 boss, hoặc khi người sống sót chết. Nếu Yêu Thần chết khi còn nhiều bot, chuỗi chờ đến khi điều kiện trên đủ.
 
-Can đảm:
+Nút **Ván mới** xóa bot, quái, đồ rơi, đấu trường và chuỗi Thượng Cổ.
 
-Giảm 60% tốc độ tích lũy Sợ Hãi. Khi HP dưới 25%, tăng 20% sát thương thay vì bỏ chạy.
+## 2. Bot
 
-Xu hướng Build & Đồ: Ưu tiên nhánh Đấu Sĩ hoặc các trang bị đòn nặng (Rìu Gai, Búa Sắt, Giáp Gai). Sẵn sàng lao vào cướp boss Yêu Vương/Yêu Thần khi thấy đối thủ đang ăn dở.
+Chỉ số gốc: 160 HP, 16 tấn công, 5 giáp, 5% chí mạng, 95 tốc chạy, 100 thể lực, 100 mana. Mỗi cấp: +24 HP tối đa, +3 tấn công, +2 giáp, hồi đầy máu, +1 điểm kỹ năng.
 
-Visual Mote (RimWorld): Icon nắm đấm đỏ hoặc ngọn lửa cháy rực trên đầu khi bước vào combat.
+EXP tích lũy để lên cấp 2→15: 80, 180, 320, 500, 750, 1050, 1400, 1800, 2300, 2900, 3600, 4400, 5300, 6400. Từ 15 lên 16 cần thêm 1200 EXP; mỗi cấp sau cộng thêm 200 so với mức tăng của cấp trước. Không có trần cấp.
 
-Hèn nhát:
+Hồi máu nền 1 HP/giây, kể cả trong giao tranh. Bình thường hồi 35% HP tối đa, trần 220, hồi chiêu 8 giây, phải ngắt động tác để uống. Bình toàn phần chỉ rơi từ Thượng Cổ và hồi đầy máu.
 
-Tốc độ tích lũy Sợ Hãi tăng 100%. Luôn ưu tiên tránh tiếng động, nấp bụi rậm khi có giao tranh trong bán kính 15 mét.
+Mỗi bot có một tính cách chính và một tính cách phụ trong năm nhóm Can Đảm, Hèn Nhát, Khôn Ngoan, Tham Lam, Xảo Quyệt. Tám trục 5–95 được trộn từ hai nhóm rồi cộng nhiễu: hiếu chiến, thận trọng, tham vọng, trung thành, kiên nhẫn, khám phá, hèn nhát, bình tĩnh. Nhóm chính chiếm 80%, nhóm phụ 20%.
 
-Xu hướng Build & Đồ: Ưu tiên nhánh Sát Thủ hoặc Cung Thủ lấy kỹ năng cơ động (Bước Chân Không Vết, Ngụy Trang Bụi Rậm, Nhảy Lùi Thoát Cương, Bốt Lụa Gió Lướt).
+Nhặt vũ khí gán `classId` theo loại vũ khí để chọn kiểu né và màu đạn. Hệ số máu/giáp/tấn công của năm lớp trong dữ liệu chỉ để hiển thị, không nhân chỉ số. Không khóa nhánh kỹ năng.
 
-Visual Mote (RimWorld): Icon giọt mồ hôi bắn ra xung quanh khi nghe tiếng động lớn.
+### Cảm xúc
 
-Khôn ngoan:
+Cảm xúc cập nhật khoảng 10 lần mỗi giây khi có mục tiêu trong tầm nhìn.
 
-Tính toán chi tiết chỉ số trang bị (DPS vũ khí, chỉ số Giáp/Kháng phép, % Máu còn lại). Không bao giờ giao tranh nếu tỷ lệ thắng tính toán dưới 55%.
+- Sợ hãi tăng theo tỷ lệ máu mất và độ hèn nhát, giảm theo thời gian và độ bình tĩnh.
+- Giận tăng khi bị đánh. Ba đòn độc lập từ cùng kẻ trong 6 giây đặt mục tiêu phản kháng 6 giây.
+- Chiến ý tăng khi thấy đối thủ cùng cấp hoặc yếu hơn, giảm dần theo thời gian.
+- Tự tin trôi về mốc nền của tính cách. Giết hoặc nhặt đồ tốt làm tăng tự tin.
+- Tuyệt vọng tăng khi đang bị đe dọa mà mana và thể lực cùng cạn, hoặc máu dưới 20% và thể lực dưới 15.
 
-Xu hướng Build & Đồ: Ưu tiên nhánh Thuật Sĩ (Hybrid) hoặc Pháp Sư khống chế; luôn gom đủ 1 vũ khí tầm gần và 1 tầm xa để hoán đổi linh hoạt theo tầm đánh của đối thủ.
+Ngưỡng sợ 80, tự tin 85 và tuyệt vọng 90 trong dữ liệu cũ không còn là công tắc bỏ chạy. Bot hèn nhát từ 85 từ chối nhiều trận đấu. Tự tin trên 85 làm bot hiếm khi đỡ hoặc né đòn đang lấy đà. Quyền năng đạo diễn **Cuồng Nộ** ép bot gần nhất vào cuồng nộ 5 giây: hút 15% sát thương gây ra, choáng không hủy động tác đang thực hiện. Không có tỷ lệ tự động cuồng nộ hay miễn sát thương thoát thân.
 
-Visual Mote (RimWorld): Icon bóng đèn sáng hoặc kính lúp khi đang soi xét đối thủ.
+### Quyết định
 
-Tham lam:
+Mỗi khoảng khoảng 0,3 giây, bot chấm các việc nhìn thấy: nhặt đồ, farm quái, đấu bot, phục kích. Kế hoạch đang chạy được giữ nếu chưa kém phương án mới quá 30 điểm. Ước lượng thắng là thời gian sống sót tương đối, dựa trên DPS đã tính chiêu sẵn sàng, thể lực, tầm đánh, địa hình và trang bị. Đây là heuristic, không phải xác suất thống kê.
 
-Chỉ số Hưng Phấn tăng vọt khi thấy trang bị bậc Siêu Hiếm, Cực Phẩm, Thần Khí rơi ra đất.
+- Săn quái khi ước lượng từ 50% và tính cách chịu đánh. Ngưỡng cấp tối thiểu theo bậc quái là 1, 3, 6, 10, 15.
+- Chủ động tìm người vẫn cần ước lượng từ 50%. Chênh cấp không phải lệnh cấm.
+- Bị đánh, bị cướp mạng quái, bị cướp đồ đang đi nhặt, bị đánh lén, hoặc thấy bot còn từ 30% máu: vào trận dù hơn nhiều cấp. Bot hèn nhát từ 85 không chủ động lao vào người ít máu, nhưng vẫn đánh khi bị ép hoặc hết đường.
+- Đang combat và ước lượng còn từ 50%, hoặc chưa mất 25% HP tối đa của trận đó: không đổi mục tiêu. Bot ít máu và kẻ gây hận được ghi vào lượt sau. Ngoại lệ: mục tiêu khác đang tấn công mình thì đổi sang đánh trả người đó. Kẻ ra đòn sau được giữ, không nhảy mục tiêu mỗi khung hình.
+- Đã mất từ 25% HP tối đa và ước lượng dưới 40%: rút nếu còn đường lui. Hết đường thì đánh đến chết.
+- Truy đuổi có giới hạn thời gian và khoảng cách. Mất dấu chỉ tìm quanh vị trí cuối trong 3 giây, rồi bỏ và không đuổi lại cùng con mồi trong 20 giây.
+- Khi chưa có mục tiêu, bot đi các ô bản đồ và, lúc còn ít người, các ngã tư. Không đứng yên.
+- Nhặt đồ ngay dưới chân, kể cả đang ra đòn. Đuổi vũ khí mạnh hơn trong 220 px nếu đường khô thông và tới nơi trong 3 giây. Đổi mọi loại vũ khí mạnh hơn vẫn giữ kỹ năng đã học. Thượng Bảo không bị thay bằng đồ bậc thấp.
+- Trong combat, bot thăm dò, gây áp lực, giữ chiêu, lùi hoặc phản công sau đỡ, né, hoặc khi địch hồi động tác. Tối đa một kỹ năng mỗi 1,8 giây, ngoài cooldown riêng.
+- Núp bụi chỉ sau khi đã cắt tầm nhìn của kẻ truy sát và hết combat, hoặc khi rình một trận đã đủ người. Phục kích có hạn giờ.
 
-Xu hướng Build & Đồ: Bỏ qua an toàn bản thân, sẵn sàng dùng tốc biến/lướt (Hư Không Nhấp Nháy, Ám Đột) chỉ để nhặt đồ; dễ bị bẫy bởi Bẫy Thú hoặc Bẫy Dây Tơ Cắt Thịt đặt quanh bãi loot.
+### Liên minh
 
-Visual Mote (RimWorld): Icon đồng tiền vàng hoặc hai mắt hình đồng xu lóe sáng.
+Hai kiểu bắt tay, cùng tắt sát thương giữa hai bot:
 
-Xảo quyệt:
+- Trước Yêu Vương: hai bot cấp 8 trở lên, trung thành đủ, cùng không chắc ăn boss một mình, và cụm combat còn chỗ.
+- Chống bot hạ ít nhất hai bot trong 60 giây, khi có người chứng kiến, hoặc khi hai bot cùng nhìn thấy một đối thủ mạnh hơn cả hai. Cả cặp phải đạt ước lượng từ 40%. Cặp chia sẻ vị trí cuối đã thấy, không chia sẻ tọa độ toàn bản đồ. Giải tán khi mất dấu, quá hạn, máu quá thấp hoặc ước lượng dưới 35%. Không giải tán khi đang ở giữa ngoại lệ combat bốn người.
 
-Luôn di chuyển bọc sườn/sau lưng mục tiêu; chủ động bắt tay liên minh để mượn sức diệt quái lớn rồi đâm lén.
+Sau khi boss liên minh chết, bot ít trung thành có thể phản bội đồng minh còn máu. Cặp trung thành có thể giữ liên minh cho đến khi trận chỉ còn hai bot.
 
-Xu hướng Build & Đồ: Ưu tiên nhánh Sát Thủ thuần sát thương sau lưng (Đâm Lén Độc Hiểm, Cắt Cổ Đoạt Mệnh, Lưỡi Dao Hư Vô Thôn Phệ).
+### Giới hạn combat
 
-Visual Mote (RimWorld): Icon nụ cười quỷ hoặc mắt rắn hí hửng.
+Một cụm giao tranh liên thông tối đa 3 thực thể. Ngoại lệ đúng hai cặp liên minh thì được 4. Bot thứ tư không được áp vào. Hai Yêu Tướng không cùng đánh một bot. Trên sông không combat và không dùng chiêu.
 
-1.2. Hệ thống cảm xúc thay đổi (Dynamic Emotions)
-Chỉ số dao động từ 0 đến 100 theo thời gian thực (Tick-rate: 10 lần/giây):
+## 3. Quái
 
-Sợ hãi (Fear): Tăng khi mất máu đột ngột (>25% HP trong 1 giây), bị dính hiệu ứng bất lợi kéo dài (độc của Mãng Xà Đầm Lầy, cháy của Cóc Lửa Nham Thạch), hoặc gặp Yêu Vương/Yêu Thần.
+Mỗi trận có đủ các loài trong dữ liệu, không bốc một tập con.
 
-Ngưỡng 80: Kích hoạt trạng thái Hoảng Loạn (Fleeing), vứt bỏ ý định nhặt đồ, dùng toàn bộ kỹ năng lướt/chạy (Windrunner, Blink) để tháo chạy.
+| Bậc | Số lượng | Cách bố trí |
+| --- | --- | --- |
+| Lâu La | 80 | 8 bầy 4 con và 16 bầy 3 con, cùng loài trong bầy |
+| Yêu Thú | 40 | 10 cặp và 20 con đi một mình; mỗi loài bốn con |
+| Yêu Tướng | 6 | Canh ngoài bốn sào huyệt; 5 loài nên một loài lặp |
+| Yêu Vương | 4 | Mỗi con một sào huyệt: Viêm Ma Điện, Kim Cương Sơn, Thanh Xà Đầm, Vong Hồn Thành |
+| Yêu Thần | 1 | Ngẫu nhiên trong 4 loài, đứng giữa điện thờ |
 
-Tự tin (Confidence): Tăng khi tiêu diệt quái/bot khác, hoặc nhặt được vũ khí Siêu Hiếm/Cực Phẩm.
+Lâu La không có chiêu. Yêu Thú có nội tại loài. Yêu Tướng trở lên do `bossBrain` đọc đòn, chọn chiêu, bọc sườn và giữ cự ly. Nhịp chiêu chung, ngoài cooldown riêng: Yêu Tướng và Yêu Vương 3 giây, Yêu Thần 2 giây, Thượng Cổ 1 giây.
 
-Ngưỡng 85: Bot có xu hướng chủ quan, giảm 50% tần suất thực hiện động tác Lăn Né (Roll/Dodge) và Đỡ Đòn (Parry), dễ trúng đòn khống chế cứng.
+Quái nhìn qua tường và khói như bot. Tầm nhìn quái thường 220 px, Yêu Vương trở lên 300 px. Bot nhìn 230 px cộng độ khám phá. Lâu La, Yêu Thú và Yêu Tướng chủ động đuổi bot còn trong tầm nhìn, kể cả khi phải rời vòng sinh cảnh. Chúng không vào điện thờ, sào huyệt khác, hoặc dưới nước. Mất tầm nhìn thì quay về chỗ cũ. Lâu La và Yêu Thú đi cặp thì bám con đầu đàn. Một con trong bầy bị tấn công thì mọi con còn sống cùng bầy vào trận đó; chúng không tính vào giới hạn 3 người. Bot thứ tư vẫn không chen vào. Yêu Vương và Yêu Thần vẫn ở lãnh địa của mình.
 
-Tuyệt vọng (Despair): Tăng khi bị truy sát liên tục trên 6 giây, thanh Thể Lực (Stamina) hoặc Mana cạn kiệt (<10%), bị dồn vào góc cụt hoặc đường cùng sông nước.
+Yêu Thú hoặc Yêu Tướng bị diệt sạch cả bậc thì bậc đó hồi sinh sau 10 giây, đúng loài và sinh cảnh. Không hồi sinh sau khi đã có người sống sót cuối cùng.
 
-1.3. Cơ chế đột biến bản năng (Adrenaline Breakthrough - Tỷ lệ 1-2%)
-Chỉ kích hoạt trong tình cảnh Tuyệt Vọng > 90 và HP < 15%:
+Hồi máu: bot, Lâu La, Yêu Thú và Thượng Cổ hồi 1 HP/giây. Yêu Tướng, Yêu Vương, Yêu Thần ngoài giao tranh hồi 1%, 3%, 5% HP tối đa mỗi giây; trong giao tranh vẫn 1 HP/giây. Tạm dừng cũng dừng hồi.
 
-Cuồng nộ (Berserk):
+Lượt farm cuối xóa quái bậc 4 trở xuống và sinh lại bốn Yêu Vương cộng Thiết Giáp Tê Ngưu Vương. Máu và sức của năm con này được chỉnh theo người sống sót; EXP chia phần còn thiếu để lên cấp 15. Thứ tự săn đi từ con dễ hơn.
 
-Bot gầm lên (hiện icon đầu lâu đỏ rực), toàn thân hóa đỏ viền cartoon, miễn nhiễm mọi hiệu ứng khống chế trong 5 giây, tăng 50% tốc đánh và 35% hút máu.
+## 4. Phần thưởng
 
-Lao thẳng vào kẻ vừa gây sát thương lên nó, tự động spam toàn bộ kỹ năng sát thương dứt điểm (Trảm Quyết Tận Tuyệt, Đoạt Mạng Bất Ngờ).
+Chỉ bot AI kết liễu bot khác mới rơi đồ PvP: 75% món nạn nhân đang cầm, 25% một món ngẫu nhiên cao hơn một bậc, tối đa Thần Khí. Không có vũ khí thì lấy giáp hoặc mũ. Không có trang bị thì sinh món Thường hoặc Hiếm. EXP PvP bằng 60 nhân cấp nạn nhân, không tặng thêm một cấp. Quái hoặc người chơi điều khiển kết liễu không tạo món này.
 
-Sinh tồn (Clutch Escape):
+Tỷ lệ rơi khi quái chết: Lâu La 20%, Yêu Thú 30%, Yêu Tướng 40%, Yêu Vương và Yêu Thần 100%. Lâu La đến Yêu Tướng rơi một bình hoặc một món trang bị. Yêu Vương rơi một bình và một món Cực Phẩm. Yêu Thần thưởng 10.000 EXP và rơi một bình, vũ khí Thần Khí riêng của loài, giáp Thần Khí và mũ Thần Khí. Không có đồ rải sẵn trên bản đồ.
 
-Hiện icon đôi cánh thiên thần xanh lơ, bot nhận 100% tốc độ di chuyển và miễn nhiễm sát thương trong 3 giây.
+## 5. Địa hình
 
-Tự động xả các kỹ năng khói/làm chậm (Bom Khói, Rải Bụi Mù Mắt) để thoát thân về vùng rừng rậm gần nhất.
+Bản đồ 5200×5200, một mét bằng 20 px. Có Thiền Viện Trúc Lâm, Rừng Già Hoang Vu, Dãy Núi Liên Sơn, sông Hoàng Hà, Kinh Thành, Làng Trúc và Làng Hà. Nhà, tường, hàng rào, thân cây và đá chặn di chuyển. Bụi che tầm nhìn khi núp. Hai cầu bắc sông. Trong sông tốc độ còn 45% và cấm combat. Trên núi tốc độ còn 70%. Đầm lầy sinh cảnh còn 80%. Giày Phản Lực bỏ các phạt này.
 
-1.4. Cơ chế điều tiết giao tranh (Crowd Combat Limiter)
+Điện thờ có bán kính phong ấn. Còn Yêu Vương sống thì không ai đi sâu vào, trừ chính Yêu Thần. Người đã lỡ bên trong vẫn đi ra được.
 
-Giới hạn ô giao tranh (Combat Slots): Mỗi bot chỉ mở tối đa 2 ô kẻ thù trực tiếp trong hệ thống logic.
+## 6. Thượng Cổ
 
-Khóa cụm giao tranh tối đa 3 bot: Nếu tại một khu vực bán kính 8 mét đã có 3 bot đang giao tranh, hệ thống sẽ gán cờ Zone_Combat_Full = True.
+Sau 20 giây loot, đấu trường 1500×1500 mở ở phía nam tâm bản đồ. Tám tàn tích có va chạm. Nước, bụi và tường điện thờ cũ không còn tác dụng. Sấm đánh ngẫu nhiên mỗi 4 giây.
 
-Xử lý hành vi của bot tiếp cận thứ 4 trở đi:
+Năm boss theo thứ tự ngẫu nhiên, không lặp: Bàn Cổ, Phản Chiếu, Quy Khư, La Hầu, Zero Protocol. Mỗi boss có 6 nội tại, 6 chiêu và hai thanh máu. Thanh một bằng HP tối đa của người sống sót, thanh hai gấp đôi. Hạ thanh một chuyển phase, không chết. Hạ thanh hai rơi đúng một Thượng Bảo chưa rơi trong trận, cộng một bình hồi đầy. Boss kế xuất hiện sau 10 giây. Trong lúc chờ, người sống sót ưu tiên nhặt bảo vật, uống bình và đứng yên ít nhất 1,5 giây để thích ứng.
 
-Bot Hèn Nhát/Khôn Ngoan: Đổi góc di chuyển ngay lập tức, tản ra tìm bãi Lâu La hoặc Yêu Thú để farm an toàn.
+Phản Chiếu sao chép kỹ năng và nội tại đã học. Hồi máu sao chép tính trên HP gốc của bot. Phân thân phase 2 dùng chung ngân sách máu và chiêu; hai phân thân cộng bot là đủ ba chỗ combat. Thượng Cổ miễn khống chế.
 
-Bot Tham Lam/Xảo Quyệt: Dừng lại ở rìa tầm nhìn (tận dụng bụi rậm hoặc vách đá), chuyển sang vũ khí tầm xa (Cung Bão Tố, Trượng Băng) hoặc nạp sẵn chiêu ám sát (Ám Đột Sau Lưng) để chờ bot yếu máu nhất rơi xuống dưới 20% HP mới nhảy vào ăn hôi.
+Chiến thắng hiện popup riêng. Chết giữa chuỗi thì thua, không có người thắng thay thế.
 
-1.5. Cơ chế liên minh tạm thời (Pact of Two)
+## 7. Người chơi và đạo diễn
 
-Điều kiện kích hoạt: Hai bot không mang tính thù địch chạm trán nhau trước cửa hang Yêu Vương (ví dụ Viêm Ma Bạo Chúa, Cuồng Bạo Kim Cương Vương) hoặc trước mặt Yêu Thần. Cả hai đều không đủ 100% tỷ lệ tự ăn boss.
+Chế độ đạo diễn quan sát 100 bot. Chế độ người chơi điều khiển bot số 0.
 
-Hiển thị: Xuất hiện icon bắt tay cartoon trên đầu 2 bot, màu viền nhân vật chuyển sang vàng nhạt, tắt cơ chế gây sát thương lên nhau.
+| Thao tác | Đạo diễn | Người chơi |
+| --- | --- | --- |
+| Kéo chuột trái | Đổi camera | — |
+| WASD hoặc mũi tên | Đổi camera | Di chuyển |
+| Click trái | Soi bot hoặc quái | Đánh |
+| Cuộn chuột | Zoom | Zoom |
+| Q E R F | — | Bốn kỹ năng đầu đã học |
+| Shift | — | Đỡ |
+| V | — | Né |
+| Space | Tạm dừng hoặc tiếp tục | Tạm dừng hoặc tiếp tục |
+| C | Bật tắt camera tự động | — |
+| H | — | Uống bình |
+| M | Bản đồ tổng | Bản đồ tổng |
 
-Cơ chế phản bội: Sau khi boss chết, trang bị Cực Phẩm hoặc Thần Khí rơi ra đất.
+Đạo diễn có Thiên Lôi (250 sát thương trong 60 px), Hỏa Thần (đốt bụi) và Cuồng Nộ. Tốc độ 0, 1x, 2x, 5x. Tạm dừng đóng băng thời gian mô phỏng, kể cả đếm Thượng Cổ. Âm thanh Web Audio, tối đa 16 tiếng, ưu tiên gần camera, bật sau tương tác đầu tiên.
 
-Hệ thống chạy công thức: Điểm Phản Bội = (Phẩm cấp vật phẩm * Trọng số Tham Lam) - (Máu hiện tại của đồng minh).
+## 8. Hiển thị
 
-Nếu Điểm Phản Bội vượt ngưỡng an toàn: Bot phản bội hiện icon mặt quỷ cười gian, lập tức dùng đòn đánh chí mạng (Đâm Lén, Cắt Cổ, Ngắm Bắn Tử Thần) kết liễu đồng minh đang yếu máu để độc chiếm chiến lợi phẩm.
+Nhân vật, vũ khí, quái, kiến trúc và hiệu ứng vẽ bằng code. Vũ khí có lấy đà, ra đòn và hồi chiêu theo loại. Bot cấp 10 có hào quang vàng. Từ cấp 15, hào quang chuyển tím bạc, viền cyan và tia điện. Thượng Bảo có viền vàng và màu riêng.
 
-======================================================================
-2. TÍCH HỢP QUÁI VẬT - TÀI NGUYÊN VÀ CƠ CHẾ SĂN BẮT CỦA AI
-Quái vật là tài nguyên hữu hạn (không hồi sinh). Càng về cuối trận, nguồn exp và trang bị cạn dần, buộc bot phải dịch chuyển từ lối chơi PvE sang PvP sinh tồn.
-
-2.1. Phân cấp bậc quái và hành vi tương tác của Bot
-
-Lâu la (20-30 con, bầy 2-3 con, thuần vật lý):
-
-Đối tượng săn bắt bắt buộc của tất cả bot ở Level 1 (tay không).
-
-Bot dùng nắm đấm đánh thường để tiêu diệt các quái như Chuột Hầm Ngục, Goblin Cầm Gậy, Khung Xương Rỉ Sét.
-
-Mục tiêu: Lên Level 2 mở khóa kỹ năng đầu tiên và nhặt vũ khí Bậc Thường (Rìu Gỗ Gãy, Kiếm Sắt Rỉ Sét, Que Đũa Phép Tre...).
-
-Yêu thú (15-20 con, có 1 nội tại đặc thù):
-
-Bot cấp độ 3 - 6 bắt đầu tìm kiếm Yêu Thú.
-
-AI Khôn Ngoan sẽ tránh đánh Mãng Xà Đầm Lầy nếu chưa có kỹ năng giải độc (Bùa Chú Thanh Tẩy), tránh Heo Rừng Gai Bọc Sắt nếu đang chơi Sát Thủ máu mỏng vì sợ phản sát thương.
-
-Thu hoạch: Kiếm Thép Luyện Rắn, Trượng Thủy Tinh Xanh, Giáp Da Bọc Đinh Sắt (Bậc Hiếm).
-
-Yêu tướng (10 con, 1 nội tại + 2 kỹ năng chủ động):
-
-Bot cấp độ 7 - 10 mới dám đơn đấu.
-
-Bot phải đọc khung hình ra đòn (Wind-up): Khi thấy Đao Phủ Đoạt Mệnh nhấc rìu chuẩn bị "Chém Bổ Đầu", bot sẽ thực hiện Procedural Dodge (lăn né) sang bên hông.
-
-Thu hoạch: Rìu Chiến Chém Thép, Gậy Băng Trụ Vĩnh Cửu, Cung Bão Tố Tật Phong (Bậc Siêu Hiếm).
-
-Yêu Vương (Đúng 4 con trấn giữ 4 góc lãnh địa):
-
-Bot cấp 11 trở lên hoặc liên minh 2 bot mới tiếp cận.
-
-AI phải nhận diện combo: Khi Viêm Ma Bạo Chúa dựng Hỏa Trụ Tận Thế, bot phải lùi ra khỏi vệt nứt để không dính trọn cú Đập Búa Nham Thạch tiếp theo.
-
-Thu hoạch: Vũ khí Bậc Cực Phẩm (Rìu Viêm Ma, Trượng Hắc Báo Phẫn Nộ, Cung Bão Tố Ưng Vương, Dao Găm Huyết Ma Vương).
-
-Yêu Thần (1 World Boss độc nhất ngự tại đền cổ trung tâm):
-
-Đích đến cuối cùng của các bot top đầu (Level 13 - 15).
-
-Boss có hào quang phát hiện tàng hình (Ám Thị Toàn Tri) nên các bot Sát Thủ bị tước đi lợi thế nấp bóng, buộc phải hợp lực tầm xa với Cung Thủ/Pháp Sư.
-
-Rơi ra 1 món Thần Khí duy nhất của trận đấu (ví dụ Long Thương Hỗn Độn Tận Thế, Sổ Sinh Tử Diêm La). Kẻ nào nhặt được sẽ trở thành "Raid Boss" của toàn bộ các bot còn lại.
-
-======================================================================
-3. TÍCH HỢP TRANG BỊ VÀ ĐƯỜNG HƯỚNG PHÁT TRIỂN CỦA BOT
-3.1. Thuật toán tự định hình Nhánh Build (Dynamic Class Adoption)
-Mỗi bot bắt đầu vô định hình (Level 1, tay không). Quyết định chọn 1 trong 5 nhánh build dựa trên 2 yếu tố:
-Nhánh Lựa Chọn = Max(Điểm Tính Cách Tương Đồng + Hệ Số Trang Bị Nhặt Đầu Tiên)
-
-Nhặt được Rìu Gỗ/Kiếm Rỉ Sét + Tính Can Đảm -> Khóa nhánh Đấu Sĩ (Warrior).
-
-Nhặt được Que Đũa Phép Tre/Nhánh Khô -> Khóa nhánh Pháp Sư (Mage).
-
-Nhặt được Cung Dây Dừa/Nỏ Gỗ -> Khóa nhánh Cung Thủ (Archer).
-
-Nhặt được Dao Găm Rỉ/Mũi Dao Sứt + Tính Xảo Quyệt/Hèn Nhát -> Khóa nhánh Sát Thủ (Assassin).
-
-Nhặt được vũ khí hỗn hợp hoặc mang tính Khôn Ngoan -> Khóa nhánh Thuật Sĩ (All-Rounder).
-
-3.2. Cây tiến trình cấp độ (Level 1 -> 15) và phân bổ 15 điểm kỹ năng
-Mỗi khi lên 1 cấp, bot nhận 1 điểm kỹ năng để phân bổ:
-
-Cấp 1 - 5 (Early Game): Mở khóa 3 kỹ năng chủ động cơ bản và 2 nội tại cấp 1.
-
-Cấp 6 - 10 (Mid Game): Nâng cấp các kỹ năng chủ lực lên Tier 2 để giảm thời gian hồi chiêu và tiêu hao năng lượng.
-
-Cấp 11 - 15 (Late Game): Tối đa hóa 2-3 kỹ năng chủ chốt lên Tier 3 để mở khóa cơ chế Đánh Đổi (Risk vs Reward).
-
-Đấu Sĩ: Lên Tier 3 [Trảm Quyết Tận Tuyệt] để hồi chiêu liên tục khi dọn lính/bot yếu.
-
-Pháp Sư: Lên Tier 3 [Hư Không Nhấp Nháy] để để lại ảo ảnh bẫy nổ khi bị áp sát.
-
-Cung Thủ: Lên Tier 3 [Ngắm Bắn Tử Thần] để kết liễu mục tiêu từ ngoài tầm nhìn.
-
-Sát Thủ: Lên Tier 3 [Ám Đột Sau Lưng] đảm bảo 100% chí mạng khi đâm lén.
-
-Thuật Sĩ: Lên Tier 3 [Chuyển Đổi Vũ Trang] để nhận khiên chắn khi đổi sang cận chiến và làm chậm khi đổi sang tầm xa.
-
-3.3. Cơ chế trang bị trực quan (RimWorld Paperdoll System)
-
-Khi bot nhặt hoặc đổi trang bị từ bãi quái, Sprite của bot cập nhật ngay lập tức:
-
-Đầu: Hiển thị Mũ Nồi Thép, Khăn Trùm Sát Thủ, hoặc Vương Miện Viêm Đế đỏ rực.
-
-Thân: Hiển thị Giáp Tấm Thép Cường Lực hoặc Áo Choàng Hư Không bồng bềnh.
-
-Hai bên thân (Floating Weapons): Tay trái cầm Kiếm Lưỡi Răng Cưa Khổng Lồ, tay phải treo Cung Bão Tố Ưng Vương sau lưng.
-
-AI đọc trực quan đối thủ: Trước khi lao vào combat, bot dùng logic quét Paperdoll của đối thủ. Nếu thấy đối phương đang mặc Giáp Gai Bạo Chúa và cầm Kiếm Titan Băng Hà, bot máu mỏng sẽ lập tức quay đầu rút lui.
-
-======================================================================
-4. MÔI TRƯỜNG ĐỊA HÌNH VÀ TƯƠNG TÁC CHIẾN THUẬT CỦA KỸ NĂNG
-Bản đồ chia thành 4 địa hình chính, tương tác vật lý trực tiếp với bộ kỹ năng đã thiết kế:
-
-4.1. Rừng rậm (Dense Forest)
-
-Ảnh hưởng: Tầm nhìn giảm 40%, tán cây cản đường đạn thẳng.
-
-Kỹ năng tương tác:
-
-Cung thủ không thể dùng [Tên Xuyên Thấu Tinh Vân] hoặc [Ngắm Bắn Tử Thần] xuyên qua thân cây cổ thụ.
-
-Pháp sư dùng [Hỏa Cầu Thuật] hoặc [Hỏa Tiễn Bùng Nổ] sẽ thiêu rụi các bụi rậm xung quanh, xóa sạch nơi ẩn náu của kẻ địch.
-
-Sát thủ tận dụng nội tại [Rình Mồi Trong Bóng Râm] để hồi phục thể lực và áp sát bất ngờ.
-
-4.2. Sông suối, đầm lầy (Waterways & Swamps)
-
-Ảnh hưởng: Chuyển sang trạng thái bơi, giảm 50% tốc chạy, CẤM COMBAT và CẤM DÙNG CHIÊU.
-
-Kỹ năng & Trang bị khắc chế:
-
-Bot mang [Giày Thủy Thần Lướt Nước] (Bậc Cực Phẩm) hoặc kích hoạt kỹ năng [Hóa Thân Tật Phong] của Thuật Sĩ sẽ lướt trên mặt nước với tốc độ 100%, không bị cưỡng chế bơi.
-
-Cung Thủ đứng trên bờ dốc dùng [Bắn Ghim Tường] hoặc [Bắn Đôi Thần Tốc] xả đạn thẳng vào các bot đang bì bõm dưới nước mà không sợ bị đánh trả.
-
-4.3. Núi cao, vách đá (Highlands & Cliffs)
-
-Ảnh hưởng: Giảm 30% tốc độ leo dốc, tăng 50% tầm nhìn, tăng 25% tầm bắn từ trên cao xuống.
-
-Kỹ năng tương tác:
-
-Cung Thủ và Pháp Sư chiếm cứ đỉnh dốc để thả [Mưa Tên Trút Xuống] hoặc [Thiên Thạch Rơi Tự Do] với tầm bao quát cực lớn.
-
-Sát Thủ dùng chiêu [Bám Tường Nhảy Vồ] từ trên vách đá nhảy vồ xuống mục tiêu dưới chân dốc để gây choáng 1.5 giây và chí mạng 100%.
-
-4.4. Tàn tích đền cổ (Ancient Temple Ruins)
-
-Địa hình gạch đá bằng phẳng, không có bụi rậm ẩn nấp, nơi tọa lạc của Yêu Thần và 4 góc là Yêu Vương.
-
-Nơi diễn ra các pha combat tổng lực cuối game. Các kỹ năng diện rộng hạng nặng như [Hủy Diệt Ma Pháp Trận], [Bão Tuyết Vĩnh Cửu] phát huy tối đa sức mạnh do không bị chướng ngại vật che chắn.
-
-======================================================================
-5. ĐẶC TẢ HOẠT HỌA RIMWORLD & TỐI ƯU WEB ENGINE
-5.1. Khung chuyển động Procedural cho 5 Nhánh Vũ Khí
-Không dùng spritesheet frame-by-frame nặng nề, toàn bộ chuyển động vũ khí được điều khiển bằng code góc xoay (Rotation) và độ co giãn (Squash & Stretch):
-
-Vũ khí Cận Chiến (Kiếm, Rìu, Chùy):
-
-Wind-up: Vũ khí trôi nổi nghiêng góc -45 độ về phía sau trong 0.2s.
-
-Active Frame: Vũ khí vụt chém xoay 120 độ về phía trước trong 0.08s, kèm một vệt chém cartoon (Slash Arc Sprite) mỏng màu trắng sáng.
-
-Recovery: Vũ khí giật nhẹ trở về vị trí lơ lửng ban đầu bên cạnh thân hình viên nhộng.
-
-Vũ khí Tầm Xa (Cung, Nỏ):
-
-Kéo cung: Sprite cánh cung hơi co lại theo trục Y, mũi tên thò ra phía trước.
-
-Bắn: Mũi tên bay đi với vận tốc tuyến tính, cánh cung giật lùi về sau 5 pixel (Recoil) rồi đàn hồi lại.
-
-Gậy Phép & Sách Phép:
-
-Gậy xoay tròn nhẹ trên không, đỉnh gậy nhấp nháy hạt ánh sáng cartoon (Particle) theo màu nguyên tố (Đỏ của Lửa, Xanh của Băng, Vàng của Sét) trước khi bắn đạn ma thuật.
-
-5.2. Đồng bộ hiển thị cảm xúc (Emotional Feedback System)
-Tích hợp trực tiếp các Emotion Motes hiển thị lơ lửng trên đỉnh đầu Pawn:
-
-Sợ hãi > 80: Nổi icon 3 giọt mồ hôi xanh lơ bay chéo ra sau; thân mình bot nghiêng 15 độ về hướng đang chạy trốn.
-
-Tự tin > 85: Nổi icon cặp kính râm đen hoặc mặt cười nhếch mép; bot di chuyển ưỡn ngực (nghiêng về trước).
-
-Tuyệt vọng > 90: Nổi icon đám mây đen có sấm sét nhỏ trên đầu; thân bot nhấp nhô chậm chạp.
-
-Chuẩn bị phản bội đồng minh: Nổi icon con dao găm nhỏ màu tím nhấp nháy trong 1.5 giây trước khi ra tay.
-
-5.3. Tối ưu kỹ thuật chạy trên Trình Duyệt Web (Web Performance Pipeline)
-Đảm bảo 100 bot + 200 quái vật + hiệu ứng kỹ năng chạy vững vàng 60 FPS trên Canvas/WebGL:
-
-Xử lý Đồ họa (Phaser.js / Pixi.js Canvas):
-
-Sử dụng Texture Atlas duy nhất (kích thước 2048x2048): Chứa toàn bộ bộ phận cơ thể (đầu, thân viên nhộng, 50 loại vũ khí, mũ, nón). Giảm Draw Calls xuống mức tối thiểu (dưới 10 draw calls toàn màn hình).
-
-Object Pooling: Tái sử dụng tuyệt đối các đối tượng hạt đạn (Arrow, Fireball, Slash Trailing, Particle khói). Không khởi tạo mới (tránh Garbage Collection làm drop FPS).
-
-Xử lý AI & Logic (Tách luồng Web Worker):
-
-Main Thread: Chỉ làm 2 nhiệm vụ duy nhất: Lấy dữ liệu tọa độ từ Worker để vẽ Sprite lên màn hình và phát âm thanh.
-
-Web Worker (Background Thread): Chạy toàn bộ logic ngầm bao gồm:
-
-Thuật toán tìm đường A* trên lưới ô (Grid Map).
-
-Bộ đếm cảm xúc (Fear, Confidence, Despair).
-
-Cây quyết định chọn mục tiêu và cơ chế tính toán phản bội của 100 bot.
-
-Spatial Hash Grid: Bản đồ chia thành các ô vuông 64x64 pixel. Bot chỉ tính toán va chạm và tìm mục tiêu với các thực thể nằm trong ô hiện tại và 8 ô lân cận, loại bỏ hoàn toàn tình trạng nghẽn CPU khi cả trăm bot cùng hoạt động.
+Biểu cảm nổi trên đầu theo sợ, giận, chiến ý, tự tin, sinh tồn hoặc đang nhặt đồ. Khi focus một thực thể, vòng xanh là tầm nhìn và vòng vàng là tầm đánh.

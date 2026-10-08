@@ -195,7 +195,7 @@ test('a complete seeded match finishes with finite state and real loot/progressi
 
 test('exact monster counts and no random equipment at initialization', () => {
   const w=loadGame(), G=w.GameManager;
-  assert.deepEqual([1,2,3,4,5].map(t=>G.monsters.filter(m=>m.tier===t).length),[40,20,6,4,1]);
+  assert.deepEqual([1,2,3,4,5].map(t=>G.monsters.filter(m=>m.tier===t).length),[80,40,6,4,1]);
   assert.equal(G.dropItems.length,0);
   w.GameUI.DirectorControls.useGodPower('airdrop');
   assert.equal(w.GameUI.DirectorControls.activeGodPower,null);
@@ -383,6 +383,38 @@ test('world doubled, spawns are free, navigation goes around buildings and cross
  assert.equal(reached,true,'must not stall against building');
 });
 
+test('bot spawns remain free after habitat buildings are added, including Hai Yen near Lang Truc',()=>{
+ for(const seed of [5,6,12,34,61,68,80,81]){
+  const w=loadGame(seed),G=w.GameManager,M=w.GameEngine.MapTerrain;
+  assert.equal(G.pawns.length,100);
+  for(const p of G.pawns)assert.ok(M.canStand(p.x,p.y,p.collisionRadius||9),`seed ${seed}: ${p.name} spawned inside an obstacle`);
+  G.startNewMatch();
+  for(const p of G.pawns)assert.ok(M.canStand(p.x,p.y,p.collisionRadius||9),`seed ${seed}: ${p.name} restarted inside an obstacle`);
+ }
+});
+
+test('navigation recovers a bot embedded in a habitat building and the last two bots finish their duel',()=>{
+ const w=loadGame(6),G=w.GameManager,M=w.GameEngine.MapTerrain,C=w.GameEntities.CombatSystem,p=G.pawns[48],q=G.pawns[77];
+ const building=M.obstacles.find(o=>o.kind==='building'&&Math.abs(o.x-240.5)<.01&&Math.abs(o.y-2496)<.01);
+ assert.ok(building,'same village building as the reported stuck bot');
+ Object.assign(p,{x:building.x+24,y:building.y+59});
+ G.pawns.forEach(e=>e.isAlive=e===p||e===q);G.monsters.forEach(e=>e.isAlive=false);
+ Object.assign(q,M.nearestFree(p.x+70,p.y+35));
+ for(const e of [p,q]){e.skills=[];e.unspentSkillPoints=0;e.action=null;e.personality={...w.GameData.PersonalityProfiles.brave};}
+ q.level=11;q.maxHp=q.currentHp=980;q.attack=46;p.finalDuel=q;q.finalDuel=p;
+ assert.equal(M.canStand(p.x,p.y),false);assert.equal(C.canEngage(q,p),false);
+ G.matchTime+=.1;G.update(.1);
+ assert.ok(M.canStand(p.x,p.y),'recover before trying to find a path from a blocked start');
+ assert.ok(Math.hypot(p.x-(building.x+24),p.y-(building.y+59))>0);
+ let damaged=false;
+ for(let i=0;i<1200&&!G.battleRoyaleResolved;i++){
+  G.matchTime+=.1;G.update(.1);damaged=damaged||p.currentHp<160||q.currentHp<980;
+  for(const e of [p,q])if(e.isAlive){assert.ok(M.canStand(e.x,e.y));assert.ok(C.validMembers(C.crowdAt(e,e.x,e.y)));}
+ }
+ assert.equal(damaged,true,'physical cover must no longer make both bots permanently untouchable');
+ assert.equal(G.battleRoyaleResolved,true);assert.equal(G.pawns.filter(e=>e.isAlive).length,1);
+});
+
 test('river disables attacks, skills, defensive actions and incoming damage, even with water-walk buff',()=>{
  const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,M=w.GameEngine.MapTerrain,[a,b]=G.pawns;
  a.x=M.riverX(2600);a.y=2600;b.x=a.x+5;b.y=a.y;a.waterWalkTimer=10;
@@ -406,7 +438,7 @@ test('new match clears previous entities, results, effects and control state; ca
  G.matchTime=100;G.isGameOver=true;G.isPaused=true;G.isPlayerMode=true;G.selectedEntity=old;
  w.GameRenderer.VfxManager.addEffect('hit',1,1);
  G.startNewMatch();assert.equal(G.matchTime,0);assert.equal(G.isGameOver,false);assert.equal(G.isPaused,false);assert.equal(G.isPlayerMode,false);
- assert.notEqual(G.pawns[0],old);assert.equal(G.pawns.length,100);assert.equal(G.monsters.length,71);assert.equal(G.dropItems.length,0);
+ assert.notEqual(G.pawns[0],old);assert.equal(G.pawns.length,100);assert.equal(G.monsters.length,131);assert.equal(G.dropItems.length,0);
  assert.equal(w.GameRenderer.VfxManager.effects.length,0);assert.equal(G.selectedEntity,null);
  const x=C.x;C.panPixels(50,0);assert.ok(C.x<x);assert.equal(C.targetEntity,null);assert.equal(C.autoDirector,false);
  G.keys={d:true};const px=C.x;C.update(.1);assert.ok(C.x>px);
@@ -527,15 +559,32 @@ test('survivor farms real final-hunt combat to level 15 before engaging the god'
 });
 
 
-test('forty minions form packs of two or three, twenty beasts are solitary and generals guard all four lairs',()=>{
+test('eighty minions form packs of three or four, beasts form ones and twos, and generals guard all four lairs',()=>{
  const w=loadGame(),G=w.GameManager,M=w.GameEngine.MapTerrain;
  const packs=new Map();for(const m of G.monsters.filter(m=>m.tier===1)){if(!packs.has(m.packId))packs.set(m.packId,[]);packs.get(m.packId).push(m);}
- assert.equal(packs.size,16);for(const pack of packs.values()){assert.ok(pack.length===2||pack.length===3);assert.equal(new Set(pack.map(m=>m.territory.id)).size,1);}
- assert.equal(G.monsters.filter(m=>m.tier===2).length,20);assert.equal(new Set(G.monsters.filter(m=>m.tier===2).map(m=>m.territory.id)).size,20);
+ assert.equal(packs.size,24);for(const pack of packs.values()){assert.ok(pack.length===3||pack.length===4);assert.equal(new Set(pack.map(m=>m.territory.id)).size,1);}
+ const beasts=G.monsters.filter(m=>m.tier===2);assert.equal(beasts.length,40);
+ const groups=new Map();for(const m of beasts){const key=m.packId||m.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(m);}
+ for(const group of groups.values())assert.ok(group.length===1||group.length===2);
+ assert.ok([...groups.values()].some(g=>g.length===1)&&[...groups.values()].some(g=>g.length===2));
  const guards=G.monsters.filter(m=>m.tier===3);assert.equal(new Set(guards.map(m=>m.guardingLair)).size,4);
  for(const m of guards){const lair=M.lairs.find(a=>a.name===m.guardingLair);assert.ok(Math.hypot(m.x-lair.x,m.y-lair.y)>lair.radius+m.territory.radius);}
 });
 
+
+test('hitting one pack monster pulls every living packmate and still blocks a fourth bot',()=>{
+ const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,p=G.pawns[0];
+ const packId=G.monsters.find(m=>m.tier===1&&m.packId).packId;
+ const pack=G.monsters.filter(m=>m.packId===packId);
+ const leader=pack[0];p.x=leader.x+24;p.y=leader.y;p.attackCooldown=0;p.action=null;
+ pack.forEach((m,i)=>{m.x=leader.x-i*8;m.y=leader.y;m.attackCooldown=0;m.action=null;m.combatLease=0;m.combatGroup=null;});
+ G.spatialGrid.clear();[p,...pack].forEach(e=>G.spatialGrid.insert(e));
+ assert.equal(C.executeAttack(p,leader),true);
+ for(const m of pack){assert.equal(m.packAlert.target,p);assert.equal(C.reserveCombat(m,p),true);assert.equal(m.targetEnemy,p);}
+ const extras=G.pawns.slice(1,4);
+ assert.equal(C.reserveCombat(extras[0],leader),true);assert.equal(C.reserveCombat(extras[1],leader),true);assert.equal(C.canJoin(extras[2],leader),false);
+ G.updateMonsters(.1);for(const m of pack)assert.equal(m.targetEnemy,p);
+});
 
 test('generals cannot gang up on one pawn through attacks, spells or damage, but can choose different pawns',()=>{
  const w=loadGame(42,{openTemple:true}),G=w.GameManager,C=w.GameEntities.CombatSystem,[p,q]=G.pawns,[a,b]=G.monsters.filter(m=>m.tier===3);
@@ -665,14 +714,14 @@ test('a cautious bot still attacks a weaker bot instead of standing beside it fo
  G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);
  assert.equal(p.targetEnemy,q);assert.equal(p.action?.kind,'attack');
 });
-test('a real habitat monster detects the player beyond its home radius without leaving the habitat',()=>{
+test('a low-tier monster chases a visible bot beyond its habitat and still refuses another lair',()=>{
  const w=loadGame(),G=w.GameManager,M=w.GameEngine.MapTerrain,C=w.GameEntities.CombatSystem,p=G.pawns[0],m=G.monsters[0];
  G.pawns=[p];G.monsters=[m];m.x=m.homeX=m.territory.x;m.y=m.homeY=m.territory.y;
  p.x=m.x+170;p.y=m.y;p.isPlayerControlled=true;
  assert.ok(C.canSee(m,p));G.spatialGrid.clear();[p,m].forEach(e=>G.spatialGrid.insert(e));
  G.updateMonsters(.1);assert.equal(m.targetEnemy,p);
- for(let i=0;i<100;i++)G.updateMonsters(.1);
- assert.equal(M.monsterCanOccupy(m,m.x,m.y),true);
+ const start=m.x;for(let i=0;i<40;i++)G.updateMonsters(.1);
+ assert.ok(m.x>start);assert.ok(Math.hypot(m.x-p.x,m.y-p.y)<170);assert.equal(M.monsterCanOccupy(m,M.lairs[0].x,M.lairs[0].y),false);
 });
 
 test('a melee survivor completes all five final-hunt bosses with the current regeneration rule',()=>{
@@ -685,7 +734,7 @@ test('a melee survivor completes all five final-hunt bosses with the current reg
 });
 
 test('aggro monsters cannot move two separate duels together to bypass the cap',()=>{
- const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,M=w.GameEngine.MapTerrain,[a,b]=G.pawns,[m,n]=G.monsters;
+ const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,M=w.GameEngine.MapTerrain,[a,b]=G.pawns,m=G.monsters.find(e=>e.tier===1),n=G.monsters.find(e=>e.tier===1&&e.packId!==m.packId);
  G.pawns=[a,b];G.monsters=[m,n];a.x=1000;a.y=300;m.x=1020;m.y=300;b.x=1300;b.y=300;n.x=1280;n.y=300;
  m.territory=n.territory=null;m.targetEnemy=a;n.targetEnemy=b;
  C.reserveCombat(m,a);C.reserveCombat(n,b);n.targetEnemy=null;
@@ -725,7 +774,7 @@ test('an engaged slightly weaker bot fights back; extreme disadvantage still esc
  G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);
  assert.equal(p.targetEnemy,q);assert.equal(p.action?.kind,'attack');
  p.action=null;p.currentHp=10;q.attack=100;A.update(p,.1,G.spatialGrid,M);
- assert.match(p.objective,/Lẩn trốn|Thoát/);assert.equal(p.action?.kind==='attack',false);
+ assert.match(p.objective,/Lẩn trốn|Thoát|Rút/);assert.equal(p.action?.kind==='attack',false);
 });
 
 test('successful defense creates a bounded counter opportunity without a damage bonus',()=>{
@@ -806,7 +855,7 @@ test('tactical retreat is local and bounded; it never sends a bot away from a di
  const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,[p,q]=G.pawns;
  G.pawns=[p,q];G.monsters=[];p.x=1000;p.y=300;q.x=1200;q.y=300;G.matchTime=1;
  A.calculateWinRate=()=>.45;p.tactic={target:q,mode:'pressure',until:0,started:0};
- A.engageCombat(p,q,.1);assert.equal(p.tactic.mode,'retreat');
+ A.engageCombat(p,q,.1);assert.equal(p.tactic.mode,'pressure');
  G.matchTime=4;p.action=null;A.engageCombat(p,q,.1);assert.equal(p.tactic.mode,'pressure');
  const m=w.GameEntities.EntityManager.spawnMonster(w.GameData.Monsters.minions[0],1500,300);m.territory=null;
  const x=p.x;G.matchTime=6;p.action=null;p.tactic=null;A.engageCombat(p,m,.1);
@@ -838,6 +887,7 @@ test('two-level gaps prioritize farming; coalition remains a deliberate exceptio
  p.level=q.level=5;t.level=7;p.fear=p.despair=q.fear=q.despair=0;p.confidence=q.confidence=60;
  const rate=A.calculateWinRate;A.calculateWinRate=(a,b,allied)=>allied?.45:.4;
  assert.equal(A.duelEligible(p,t),false);t.level=10;assert.equal(A.duelEligible(p,t),false);
+ A.calculateWinRate=()=>.8;assert.equal(A.duelEligible(p,t),true);A.calculateWinRate=(a,b,allied)=>allied?.45:.4;
  t.level=7;w.__math.random=()=>0;A.handleCoalition(p,[q,t]);
  assert.equal(p.allyPawn,q);assert.equal(p.pactTarget,t);assert.equal(p.pactIntel.local,true);
  A.calculateWinRate=rate;
@@ -967,7 +1017,7 @@ test('respawn waves wait exactly 10s per extinct tier and stop for the final hun
  const beasts=G.monsters.filter(m=>m.tier===2),generals=G.monsters.filter(m=>m.tier===3);
  beasts.forEach(m=>m.isAlive=false);generals.slice(1).forEach(m=>m.isAlive=false);
  E.updateRespawns(9.9);assert.equal(G.monsters.filter(m=>m.tier===2&&m.isAlive).length,0);
- E.updateRespawns(.1);const wave=G.monsters.filter(m=>m.tier===2&&m.isAlive);assert.equal(wave.length,20);assert.equal(G.monsters.filter(m=>m.tier===3&&m.isAlive).length,1);
+ E.updateRespawns(.1);const wave=G.monsters.filter(m=>m.tier===2&&m.isAlive);assert.equal(wave.length,40);assert.equal(G.monsters.filter(m=>m.tier===3&&m.isAlive).length,1);
  wave.forEach((m,i)=>{assert.equal(m.territory,beasts[i].territory);assert.equal(m.homeX,beasts[i].homeX);});
  generals[0].isAlive=false;E.updateRespawns(10);assert.equal(G.monsters.filter(m=>m.tier===3&&m.isAlive).length,6);
  G.battleRoyaleResolved=true;G.monsters.filter(m=>m.tier===2).forEach(m=>m.isAlive=false);E.updateRespawns(20);assert.equal(G.monsters.filter(m=>m.tier===2&&m.isAlive).length,0);
@@ -1239,7 +1289,7 @@ test('survival counts independent attacks, ignores pulses and exempts extreme co
  p.action=null;p.fear=100;p.currentHp=10;G.matchTime=4;A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(p.targetEnemy,q);assert.equal(p.survivalTarget,q);
  const coward={...p,survivalTarget:null,personality:{...p.personality,cowardice:95}};assert.equal(E.commitSurvival(coward,q),false);
  p.survivalTarget=null;p.action=null;p.personality={...w.GameData.PersonalityProfiles.coward};p.plan=null;p.allyPawn=null;p.isClutchEscape=false;p.healthPotions=0;q.level=p.level+2;
- A.hasRetreatRoute=()=>false;let fled=false,fought=false;A.escapeThreat=()=>{fled=true;};A.engageCombat=()=>{fought=true;};A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(fled,true);assert.equal(fought,false,'extreme cowardice also bypasses the ordinary cornered counterattack path');
+ A.hasRetreatRoute=()=>false;let fled=false,fought=false;A.escapeThreat=()=>{fled=true;};A.engageCombat=()=>{fought=true;};A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(fled,false);assert.equal(fought,true);assert.equal(p.survivalTarget,q);
 });
 
 test('smoke blocks actual sight across its region but does not grant damage immunity',()=>{
@@ -1366,8 +1416,42 @@ test('roster includes dead bots, focuses the corresponding bot and rebuilds on a
 test('unreachable loot is temporarily skipped instead of reacquired every decision',()=>{
  const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,M=w.GameEngine.MapTerrain,p=G.pawns[0];G.pawns=[p];G.monsters=[];Object.assign(p,{x:1000,y:300});const item=G.spawnDropItem(1100,300,w.GameEntities.CombatSystem.potion,'potion');p.plan={kind:'loot',target:item};const navigate=M.navigate;M.navigate=()=>0;for(let i=0;i<35;i++){G.matchTime+=.1;A.seekLoot(p,item,.1);}M.navigate=navigate;assert.equal(p.plan,null);assert.equal(A.findBestItemToLoot(p,[item]),null);G.matchTime+=11;assert.equal(A.findBestItemToLoot(p,[item]),item);
 });
-test('escaping does not oscillate with HP at the eighteen-percent boundary',()=>{
- const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,[p,q]=G.pawns;G.pawns=[p,q];G.monsters=[];Object.assign(p,{x:1000,y:300,skills:[],attackCooldown:999,flankSide:1});Object.assign(q,{x:1090,y:300});A.hasRetreatRoute=()=>true;let escaped=0;A.escapeThreat=()=>escaped++;for(let i=0;i<10;i++){G.matchTime=i*.1;p.currentHp=p.maxHp*(i%2?.181:.179);A.engageCombat(p,q,.1);assert.equal(p.tactic.mode,'escape');}assert.equal(escaped,10);
+test('retreat waits until a quarter of max HP is gone and then stays retreated',()=>{
+ const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,[p,q]=G.pawns;G.pawns=[p,q];G.monsters=[];Object.assign(p,{x:1000,y:300,skills:[],attackCooldown:999,flankSide:1});Object.assign(q,{x:1090,y:300});A.hasRetreatRoute=()=>true;A.calculateWinRate=()=>.2;p.engagement={target:q,hp:p.maxHp};let escaped=0;A.escapeThreat=()=>escaped++;p.currentHp=p.maxHp*.76;A.engageCombat(p,q,.1);assert.notEqual(p.tactic.mode,'escape');p.engagement={target:q,hp:p.maxHp};p.currentHp=p.maxHp*.74;A.engageCombat(p,q,.1);assert.equal(p.tactic.mode,'escape');p.currentHp=p.maxHp*.76;A.engageCombat(p,q,.1);assert.equal(p.tactic.mode,'escape');assert.equal(escaped,2);
+});
+test('an attack from someone else pulls the bot off a winning target',()=>{
+ const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,[p,q,t]=G.pawns,m=G.monsters.find(e=>e.tier===1);
+ G.pawns=[p,q,t];G.monsters=[m];
+ Object.assign(p,{x:1000,y:300,skills:[],attackCooldown:999,personality:{...w.GameData.PersonalityProfiles.brave},strikeSeen:{[q.id]:1}});
+ Object.assign(q,{x:1080,y:300,targetEnemy:p});Object.assign(t,{x:1000,y:380,targetEnemy:p});
+ Object.assign(m,{x:940,y:300,targetEnemy:null,action:null});
+ p.plan={kind:'duel',target:q,until:100};A.calculateWinRate=()=>.8;G.matchTime=5;p.decisionTime=5;
+ G.spatialGrid.clear();[p,q,t].forEach(e=>G.spatialGrid.insert(e));
+ A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);
+ assert.equal(p.plan.target,t);assert.equal(p.targetEnemy,t);
+ p.action=null;G.matchTime=5.2;p.decisionTime=5.2;G.spatialGrid.clear();[p,q,t].forEach(e=>G.spatialGrid.insert(e));
+ A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);
+ assert.equal(p.plan.target,t,'a fight that is already being answered does not flip back');
+ p.lastAttacker=q;p.lastDamageTakenAt=6;G.matchTime=6;p.decisionTime=6;p.action=null;
+ G.spatialGrid.clear();[p,q,t].forEach(e=>G.spatialGrid.insert(e));
+ A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);
+ assert.equal(p.plan.target,q);
+ p.plan={kind:'farm',target:m,until:100};p.targetEnemy=m;p.combatFocus=null;p.action=null;t.targetEnemy=null;q.targetEnemy=null;m.targetEnemy=p;
+ G.matchTime=8;p.decisionTime=8;G.spatialGrid.clear();[p,q,m].forEach(e=>G.spatialGrid.insert(e));
+ A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);
+ assert.equal(p.plan.target,m);assert.equal(p.targetEnemy,m);
+});
+test('a winning fight keeps its target and queues a wounded bot',()=>{
+ const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,C=w.GameEntities.CombatSystem,[p,q,t]=G.pawns;G.pawns=[p,q,t];G.monsters=[];Object.assign(p,{x:1000,y:300,skills:[],attackCooldown:999,personality:{...w.GameData.PersonalityProfiles.brave}});Object.assign(q,{x:1060,y:300,currentHp:q.maxHp});Object.assign(t,{x:1120,y:300,currentHp:t.maxHp*.1});p.plan={kind:'duel',target:q,until:100};A.calculateWinRate=()=>.8;G.matchTime=5;p.decisionTime=5;A.rememberNext(p,[q,t]);assert.equal(p.nextTarget.target,t);assert.equal(A.holdsTarget(p),true);A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(p.plan.target,q);q.isAlive=false;A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(p.plan.target,t);assert.ok(C.isEnemy(p,t));
+});
+test('seeing a wounded bot starts a finish even across a level gap, except extreme cowardice',()=>{
+ const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,[p,q]=G.pawns;G.pawns=[p,q];G.monsters=[];Object.assign(p,{x:1000,y:300,level:4,personality:{...w.GameData.PersonalityProfiles.brave},fear:0,despair:0,confidence:70});Object.assign(q,{x:1100,y:300,level:12,currentHp:q.maxHp*.3});G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));A.calculateWinRate=()=>.2;assert.equal(A.duelEligible(p,q),true);p.personality={...p.personality,cowardice:90};assert.equal(A.duelEligible(p,q),false);
+});
+test('a stolen monster kill becomes a grudge and does not cancel a different winning fight',()=>{
+ const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,A=w.GameAI.AIBrain,[p,q,t]=G.pawns,m=G.monsters.find(e=>e.tier===1);G.pawns=[p,q,t];m.currentHp=1;m.x=p.x;m.y=p.y;p.targetEnemy=m;p.plan={kind:'duel',target:t,until:100};q.x=p.x+40;A.calculateWinRate=()=>.8;C.handleDeath(q,m);assert.equal(p.grudge.target,q);assert.equal(p.grudge.reason,'kill');assert.equal(p.plan.target,t);assert.equal(p.nextTarget.target,q);
+});
+test('a much stronger attacker is fought until a quarter of HP is lost',()=>{
+ const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,[p,q]=G.pawns;G.pawns=[p,q];G.monsters=[];Object.assign(p,{x:1000,y:300,level:3,skills:[],attackCooldown:999,personality:{...w.GameData.PersonalityProfiles.wise}});Object.assign(q,{x:1040,y:300,level:9,targetEnemy:p});A.calculateWinRate=()=>.15;A.hasRetreatRoute=()=>true;G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));p.engagement={target:q,hp:p.maxHp};p.currentHp=p.maxHp*.9;A.engageCombat(p,q,.1);assert.notEqual(p.tactic.mode,'escape');assert.equal(p.targetEnemy,q);p.currentHp=p.maxHp*.7;A.engageCombat(p,q,.1);assert.equal(p.tactic.mode,'escape');A.hasRetreatRoute=()=>false;p.tactic=null;A.engageCombat(p,q,.1);assert.equal(p.survivalTarget,q);assert.notEqual(p.tactic.mode,'escape');
 });
 
 
