@@ -46,7 +46,7 @@ window.GameRenderer.ProceduralPawn = {
     ];
     const attire = startingAttires[Math.floor(Math.random() * startingAttires.length)];
 
-    return {
+    const appearance = {
       isFemale: isFemale,
       ageGroup: ageGroup,
       skinColor: skinColor,
@@ -58,6 +58,7 @@ window.GameRenderer.ProceduralPawn = {
       heightScale: isFemale ? 0.94 : (ageGroup === 'elder' ? 0.96 : 1.0),
       widthScale: isFemale ? 0.92 : 1.0
     };
+    return window.GameRenderer.PawnSkins ? window.GameRenderer.PawnSkins.apply(appearance, nameSeed) : appearance;
   },
 
   // Hàm vẽ Pawn chính bằng Canvas 2D
@@ -195,6 +196,11 @@ window.GameRenderer.ProceduralPawn = {
     // 3. Thân viên nhộng (Capsule Body)
     const bodyHeight = 22;
     const bodyRadius = 12;
+    const headRadius = 13;
+    const headY = -bodyHeight - headRadius + 4;
+    const skinCtx = { y: headY, r: headRadius, t: time };
+    const Skins = window.GameRenderer.PawnSkins;
+    if (app.skin) Skins.draw(ctx, app, 'back', skinCtx);
 
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = '#1e272e'; // Viền đen hoạt họa cartoon đậm nét
@@ -229,10 +235,9 @@ window.GameRenderer.ProceduralPawn = {
       }
     }
 
-    // 4. Đầu nhân vật (Head)
-    const headRadius = 13;
-    const headY = -bodyHeight - headRadius + 4;
+    if (app.skin && !pawn.armor) Skins.draw(ctx, app, 'outfit', skinCtx);
 
+    // 4. Đầu nhân vật (Head)
     ctx.fillStyle = app.skinColor;
     ctx.beginPath();
     ctx.arc(0, headY, headRadius, 0, Math.PI * 2);
@@ -246,6 +251,7 @@ window.GameRenderer.ProceduralPawn = {
 
     // 6. Khuôn mặt & Biểu cảm động (Eyes, Mouth, Eyebrows)
     this.renderFacialExpression(ctx, pawn, app, headY, aimAngle);
+    if (app.skin) Skins.draw(ctx, app, 'face', skinCtx);
 
     // 7. Nếp nhăn lão làng (Wrinkles)
     if (app.ageGroup === 'elder') {
@@ -262,6 +268,8 @@ window.GameRenderer.ProceduralPawn = {
     // 8. Tóc phía trước hoặc Mũ (Helmet Paperdoll)
     if (pawn.helmet) {
       this.renderHelmet(ctx, pawn.helmet, headY, headRadius);
+    } else if (app.skin) {
+      Skins.draw(ctx, app, 'hair', skinCtx);
     } else {
       this.renderHair(ctx, app, headY, headRadius);
     }
