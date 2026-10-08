@@ -7,6 +7,7 @@ import './data/ancientRelicsData.js';
 import './renderer/weaponAnimations.js';
 import './renderer/proceduralPawn.js';
 import './renderer/pawnSkins.js';
+import './renderer/pawnSkinsExtra.js';
 import './renderer/bossArt.js';
 import './renderer/minionArt.js';
 import './renderer/monsterRenderer.js';

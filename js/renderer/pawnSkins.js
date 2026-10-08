@@ -238,14 +238,15 @@ window.GameRenderer = window.GameRenderer || {};
 
   window.GameRenderer.PawnSkins = {
     list: SKINS,
+    kit: K, // bộ vẽ dùng chung cho pawnSkinsExtra.js
     get: id => SKINS.find(s => s.id === id),
-    // Gán skin cho hồ sơ ngoại hình; seed 'pawn_N' → skin N % 20, seed khác → ngẫu nhiên
+    // Gán skin cho hồ sơ ngoại hình; seed 'pawn_N' → skin N % số skin, seed khác → ngẫu nhiên
     apply(app, seed) {
       const n = parseInt(String(seed).replace(/\D/g, ''), 10);
       const sk = SKINS[Number.isFinite(n) ? n % SKINS.length : Math.floor(Math.random() * SKINS.length)];
       return Object.assign(app, {
         skin: sk.id, isFemale: !!sk.female, ageGroup: sk.age || 'young', beardStyle: 'none', hairStyle: 'skin',
-        skinColor: sk.tone, hairColor: sk.hairc, eyeColor: sk.eye, heightScale: 1, widthScale: sk.female ? .94 : 1,
+        skinColor: sk.tone, hairColor: sk.hairc, eyeColor: sk.eye, heightScale: 1, widthScale: sk.w || (sk.female ? .94 : 1),
         attire: { name: sk.name, color: sk.body, accent: sk.accent, style: 'skin' }
       });
     },
