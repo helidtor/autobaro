@@ -425,8 +425,8 @@ window.GameAI.AiBrain = {
   lootItem: function(pawn, item) {
     if(!item||item.isCollected)return false;
     if(this.lootValue(pawn,item)<=0){if(item.tier!=='ancient')return false;pawn.keptRelics=pawn.keptRelics||[];pawn.keptRelics.push(item.data);item.isCollected=true;return true;}
-    if (item.slot === 'potion') { window.GameEngine.Audio?.play('loot',pawn);pawn.healthPotions = (pawn.healthPotions || 0) + 1; item.isCollected = true; return true; }
-    window.GameEngine.Audio?.play('loot',pawn);
+    if (item.slot === 'potion') { window.GameEngine.Audio?.play('loot',pawn,'potion');pawn.healthPotions = (pawn.healthPotions || 0) + 1; item.isCollected = true; return true; }
+    window.GameEngine.Audio?.play('loot',pawn,item.tier==='ancient'?'relic':item.slot);
     const eqData = item.data || item;
     const slot = { weapon: 'weapon', head: 'helmet', body: 'armor', feet:'boots' }[item.slot];
     if (!slot) return false;
