@@ -333,8 +333,52 @@ B1 cho một cơ hội dùng được; B2 mở phối hợp; B3 mở một nhán
 | **Thiết Giáp Linh Hoạt** (`p_flexible_armor`; thay Thiết Giáp) | Đỡ đúng hướng một đòn trực tiếp, không phải guard bị ép vỡ; CD 16s. | Để lại một mảnh giáp che cùng hướng cho một đòn kế. | Có thể giữ mảnh để chống ngắt một hành động né/rút hợp lệ thay hấp damage. | Mảnh vỡ tạo một bước lùi nhỏ; mất charge và vẫn chịu phần damage vượt ngân sách. | Bọc hậu, dùng nhiều nguồn đòn khác nhịp; không che mọi hướng. |
 | **Sinh Cơ** (`p_recovery_cycle`; thay Sinh Cơ) | Đứng/giữ hành động hồi 1,2s sau khi đã tạo khoảng trống; CD 24s. | Hồi chậm ngắt được; không vừa chạy vừa hồi thêm từ nội tại. | Hoàn thành giải một trạng thái nhẹ đang gây hại nhất. | Hoàn thành nạp một lần giảm chi phí né; dùng né sẽ chấm dứt cửa hồi. | Đánh ngắt/đẩy khỏi vị trí; hồi 1 HP/s mặc định vẫn là nguồn riêng. |
 | **Hộ Thể** (`p_protective_charge`; thay Hộ Thể) | Giữ một charge bảo vệ cho hành động hỗ trợ đang chuẩn bị, dựa đòn đã thấy; CD 22s. | Chặn một nhịp ngắt từ chính diện, không miễn damage của đòn. | Chọn dùng charge để giảm một debuff nhẹ thay chống ngắt. | Cho đổi hướng che một lần lúc lấy đà; không tự xoay theo mọi đòn. | Đánh sau lưng/AoE hoặc nhử tiêu charge rồi ngắt chiêu chính. |
-| **Kiên Tâm** (`p_composed_recovery`; mới) | Vừa thoát một hard CC thật; CD 20s. | Nạp một lần né/lùi tiêu stamina thấp để rời vùng nguy hiểm. | Lần rời vùng đó giảm một dấu phơi nhiễm của chính vùng đã khống chế. | Nếu đường thoát bị chặn, đổi charge thành guard một hướng ngắn thay bước lùi. | Giữ lane kế tiếp; không reset/tăng miễn CC chung 3s hay tự giải mọi trạng thái. |
+| **Huyết Thể** (`p_blood_body`; mới, thay Kiên Tâm trong plan) | Hồi bổ sung khi đang giao tranh thật; B2/B3 kích bùng phát khi HP bị sát thương địch làm đi từ trên xuống ngưỡng và bot còn sống. CD bùng phát 60s; chỉ tái nạp sau hồi >60% HP trong 8s. | Thêm 0,50% HP tối đa/giây trong giao tranh, ngoài 1 HP/s mặc định. | Thêm 0,75%/giây; HP tụt xuống ≤35% kích hồi thêm tổng 12% HP tối đa trong 4s. | Thêm 1,00%/giây; HP tụt xuống ≤40% kích hồi thêm tổng 24% HP tối đa trong 3s, thay phiên bản B2. | Dồn sát thương nhanh, hắc hỏa/hiệu ứng giảm hồi có mô tả rõ; đòn thường không tự ngắt hồi. Không miễn chết hoặc hồi sinh. |
 | **Đường Sống Cuối** (`p_last_exit`; mới) | HP đi từ >35% xuống <25%, còn stamina ≥15%; CD 60s, chỉ tái nạp sau hồi >55% trong 8s. | Khiên rất ngắn cho một đòn và một hướng thoát được chốt, không chặn đòn kết liễu đã xảy ra. | Nếu còn điểm đến hợp lệ, có một bước rút tiêu stamina; khiên kết thúc khi rút. | Chọn rút hoặc giữ vị trí bằng guard ngắn để phản công; không tăng cả khiên lẫn cơ động. | Dồn tường/cắt đường; damage vượt khiên vẫn giết, không bất tử hay hồi từ chết. |
+
+#### Huyết Thể — hồi máu trong giao tranh
+
+Thay hoàn toàn Kiên Tâm; ID dùng trong thiết kế là `p_blood_body`, không còn cơ chế kích sau hard CC. Huyết Thể là hồi tự động của cơ thể, không phải hút máu hoặc một channel cần đứng yên. Đánh/di chuyển/né hợp lệ không tắt hồi; bị đánh thường cũng không hủy đợt bùng phát.
+
+| Bậc | Hồi bổ sung thường trực trong combat | Ngưỡng bùng phát | Hồi bùng phát bổ sung |
+| --- | --- | --- | --- |
+| B1 | 0,50% HP tối đa/giây | Chưa có | — |
+| B2 | 0,75% HP tối đa/giây | Từ trên xuống ≤35% HP | Tổng 12% HP tối đa trong 4s (3%/giây) |
+| B3 | 1,00% HP tối đa/giây | Từ trên xuống ≤40% HP | Tổng 24% HP tối đa trong 3s (8%/giây), thay đợt B2 |
+
+Thông số là đề xuất để cân bằng. Công thức khi đủ điều kiện: **1 HP/s mặc định + hồi combat của bậc hiện tại + phần hồi bùng phát còn hiệu lực**. B3 kế thừa cơ chế B2 với ngưỡng/tốc độ/định lượng mới; không cộng hồi thường trực hay đợt bùng phát của cả hai bậc. Ví dụ 1.000 HP ở B3: bình thường hồi tổng 11 HP/s; khi bùng phát hồi tổng 91 HP/s trong tối đa 3s, phần bùng phát riêng là 240 HP. Luôn chặn ở maxHp thực tế; phần dư không biến thành khiên.
+
+Điều kiện và giới hạn:
+
+- Combat phải có giao tranh hợp lệ với địch và trạng thái/nhịp tấn công hoặc nhận sát thương được xác nhận trong 6s gần nhất. Chỉ đi săn/chạy tới mục tiêu hoặc tự dùng chiêu hỗ trợ không đủ để bật hồi combat. Hết combat hoặc xuống sông dừng phần hồi bổ sung/bùng phát; nguồn hồi mặc định giữ luật cũ.
+- Sát thương địch, kể cả DoT, có thể đưa HP qua ngưỡng; **giải quyết đòn trước rồi xét bot còn sống**. Đòn chí tử không được cứu hồi tố. Chỉ một lần kích từ trên xuống ngưỡng; đứng sẵn dưới ngưỡng, nâng bậc giữa trận hoặc mỗi tick DoT tiếp theo không tự mở thêm một đợt.
+- CD 60s tính từ lúc bắt đầu bùng phát, pause dừng mọi đồng hồ. Hết CD vẫn phải từng hồi >60% HP liên tục 8s để tái nạp, rồi nhận sát thương đi qua ngưỡng một lần nữa. Không tái kích chỉ vì lắc HP quanh 35%/40%; một đợt đang chạy không gia hạn/refresh bởi đòn mới.
+- Hồi thường trực không tiêu charge hay chiếm slot phản ứng mỗi giây. Kích bùng phát là một nội tại chính, chịu luật chọn proc theo sự kiện; lượng hồi được phân phối theo dt, không tạo thêm sự kiện proc trên từng nhịp hồi. Hai điều kiện sống còn trùng cùng đòn chỉ chọn một đợt mới, không bắn đồng thời Huyết Thể và Đường Sống Cuối.
+- Bùng phát là ngoại lệ có budget riêng so với trần hồi 3–5% của các proc khác; CD/tái nạp là cái giá của lượng hồi lớn. Các nguồn hồi độc lập có thể cùng hoạt động, nhưng không nhân chéo hoặc làm hồi Huyết Thể kích nội tại hồi khác. Hiệu ứng giảm hồi được chỉ định, như hắc hỏa, áp vào nguồn hồi chịu ảnh hưởng một lần; tổng giảm hồi có trần khởi điểm 50%, không nhân nhiều nguồn tới khóa hồi hoàn toàn.
+- Dùng trạng thái/đồng hồ riêng, không ghi đè healTimer của Hơi Thở Thứ Hai/Sinh Cơ. Việc ngắt channel của các chiêu đó không vô tình hủy Huyết Thể; hủy Huyết Thể chỉ theo luật combat, thời hạn, tử trận/reset.
+- Phản Chiếu/các clone tính phần trăm theo HP bot gốc đã sao chép, không theo HP boss 15×; vẫn chịu trần hồi của boss trong plan và dùng chung CD/ngân sách của chủ. Không nhận một bùng phát mới trên mỗi clone.
+
+Vai trò: bù sát thương cấu rỉa để bot còn cửa giữ thế hoặc đánh trả; B2/B3 tạo một khoảng sống còn ngắn cho phản công/chuyển vị. Địch vẫn thắng bằng burst vượt HP, giữ áp lực hoặc đặt giảm hồi đúng thời điểm. Huyết Thể không buộc mọi bot phải bỏ chạy hay xóa tính cách hèn nhát.
+
+Hiển thị: icon giọt máu có thanh cooldown/tái nạp; bảng bot ghi tốc độ hồi combat, ngưỡng và lượng/thời gian bùng phát còn lại. Bùng phát dùng vân máu đỏ sẫm và nhịp sáng hồi máu gọn quanh cơ thể, âm kích riêng; không che aura level, warning hoặc HP.
+
+#### Đối chiếu sức mạnh và điều chỉnh hồi thường trực
+
+Đánh giá lại theo source hiện tại: B1 cũ quá nhẹ cho một điểm đầu tư ở đầu game; B2/B3 có hồi bùng phát 12%/24% nên không thể kết luận toàn bộ nội tại yếu chỉ từ % hồi/giây. Điều chỉnh hồi thường trực từ **0,25/0,40/0,60% → 0,50/0,75/1,00% HP tối đa/giây**; giữ lượng bùng phát, ngưỡng và CD 60s để tách tác động khi test.
+
+Fixture tính HP và một đòn trực tiếp bằng CombatSystem của source, seed 42, cùng cấp, bỏ trang bị/skill/passive, crit=0. Hồi trong bảng là **phần Huyết Thể riêng trong 10s**, chưa cộng 1 HP/s mặc định hoặc đợt bùng phát, giả định vẫn combat và thiếu đủ HP:
+
+| Bot | HP tối đa | Một đòn ngang cấp sau giáp nền | Bậc so sánh | Hồi thường cũ/10s | Hồi thường mới/10s |
+| --- | ---: | ---: | --- | ---: | ---: |
+| Lv3 | 208 | 20 HP | B1 | 5,20 HP | 10,40 HP |
+| Lv8 | 328 | 31 HP | B2 | 13,12 HP | 24,60 HP |
+| Lv15 | 496 | 44 HP | B3 | 29,76 HP | 49,60 HP |
+
+B1 cũ chỉ bù khoảng một phần tư đòn cơ bản trong 10s; một lần né/đỡ đúng thường cứu nhiều HP và có giá trị tức thời hơn. B1 mới bù khoảng nửa đòn trong fixture đầu game, là lợi thế duy trì dễ nhận thấy. B3 mới bù khoảng một đòn trong 10s; đợt bùng phát riêng còn hồi 119,04 HP ở fixture lv15 nếu hoàn thành đủ ba giây, vì vậy bậc cao đã có cửa đổi tình thế đáng kể.
+
+So với Dưỡng Huyết, Huyết Thể không cần đánh trúng hay lấy khoảng trống, nhưng chỉ làm việc trong combat và hồi cần thời gian. So với Đường Sống Cuối/Thiết Giáp, Huyết Thể không đỡ ngay một đòn chí tử. So với Sinh Cơ, Huyết Thể không giải trạng thái hay nạp né. Các điểm này giữ bản sắc riêng; không ép mọi nội tại phải hồi cùng số HP.
+
+Đây là phép đối chiếu thông số và damage nền, **không phải kết quả duel của meta rework chưa implement**. Prototype phải đấu cùng tổng điểm đầu tư: ngắn/áp burst, dài/cấu rỉa, có cover/không cover, có/không giảm hồi và có trang bị phòng thủ. Theo dõi lượng hồi thật, phần tràn maxHp, thời gian sống, số lần bùng phát và trận không phân thắng bại. Chỉ tăng tiếp bùng phát nếu dữ liệu cho thấy nó hiếm khi cứu được một nhịp hành động; nếu tổ hợp hồi/phòng thủ kéo trận bế tắc thì điều chỉnh phần hồi duy trì hoặc stacking, không tăng thêm cả hai nguồn ngay lượt này.
 
 #### Tạo đột biến — sáu nội tại
 
@@ -352,7 +396,7 @@ B1 cho một cơ hội dùng được; B2 mở phối hợp; B3 mở một nhán
 - Một đòn nhiều hit/DoT/phản/field định kỳ chỉ tính theo hành động hoặc castId gốc đúng điều kiện; không coi mỗi tick là một cơ hội mới. Mỗi nguồn chỉ giữ một charge của cùng nội tại, không vô hạn cộng dồn khi học nhiều.
 - Mỗi sự kiện chọn tối đa **một nội tại chính gây hành động/phản ứng**; ưu tiên sống còn → bảo toàn niệm/guard → đổi vị trí → phản công, có điều chỉnh tính cách. Nội tại khác có thể ghi nhận điều kiện/charge nhưng không đồng thời bắn/dash/hồi mọi thứ. Trong một cửa 2s tối đa một dịch chuyển phụ và một bảo vệ phụ; không làm giảm cooldown từng mục. Đây là giới hạn proc, không giới hạn số kỹ năng học.
 - Bước phụ trần khởi điểm 20/30/40 px theo bậc, cửa dùng 1–2s; phải có stamina và điểm đến hợp lệ. Bậc tăng trước hết bằng nhánh sử dụng/điều kiện, không bắt buộc mọi bước đều tăng quãng đường. Không đi xuyên tường, vượt room/địa phận, chen vào nhóm combat đầy hoặc lướt/đánh trên sông. Không thưởng cho đổi hướng nhỏ hay xoay vòng tại chỗ.
-- Lượng hồi/khiên từ nội tại lấy nguồn tài nguyên/charge thật. Hồi chủ động của một proc trần khởi điểm 3–5% HP tối đa; khiên thông thường 6–10%, Đường Sống Cuối tối đa 12%, sống ≤1,2s và một đòn. Các khiên bị động cùng họ lấy lớp mạnh nhất, không chồng tổng. Hồi 1 HP/s mặc định và kỹ năng hồi chủ động giữ luật riêng.
+- Lượng hồi/khiên của nội tại dùng charge lấy từ nguồn đã nạp thật; Huyết Thể là nguồn hồi tự động riêng có ngân sách và điều kiện tái nạp. Hồi chủ động của một proc trần khởi điểm 3–5% HP tối đa, riêng Huyết Thể có budget bùng phát 12%/24% và điều kiện ở mục riêng; khiên thông thường 6–10%, Đường Sống Cuối tối đa 12%, sống ≤1,2s và một đòn. Các khiên bị động cùng họ lấy lớp mạnh nhất, không chồng tổng. Hồi 1 HP/s mặc định và kỹ năng hồi chủ động giữ luật riêng.
 - Đường Sống Cuối xét **sau đòn hiện tại đã giải quyết và bot còn sống**, chỉ che đòn tiếp theo; không chặn hồi tố cú kết liễu, không hồi sinh hay giữ HP=1. Điều kiện tái nạp HP và thời gian phải đồng thời thỏa, kể cả đã qua cooldown.
 - Hất/kéo/ngắt theo ngân sách khống chế chung. Sơ hở không đồng nghĩa stun, giảm giáp không vĩnh viễn, dấu không tự làm địch đánh hụt. Thừa Thế không nhận proc từ mỗi quỷ binh/clone cùng chủ hoặc tạo chuỗi kill-reset-heal.
 - Sinh tồn không ép bot đổi tính cách: bot hèn nhát vẫn ưu tiên thoát; Bản Năng Đường Cùng không kích khi cowardice ≥85. Nội tại chỉ mở cơ hội, AI vẫn có thể dùng sai/hết stamina và bị hạ.
@@ -364,7 +408,8 @@ B1 cho một cơ hội dùng được; B2 mở phối hợp; B3 mở một nhán
 2. Bot đang bị cấu rỉa: quan sát nhịp bắn lặp → Đọc Nhịp mở cửa né vào sườn → ngắt chiêu có cửa ngắt → Thừa Thế giúp đổi vị trí. Địch đổi nhịp thì combo mất điều kiện.
 3. Bot gần chết: còn sống sau đòn làm tụt HP → Đường Sống Cuối che một đòn kế → chọn rút hoặc đứng guard. Nếu bị dồn kín/không đủ stamina hoặc damage vượt khiên thì vẫn tử trận.
 4. Bị dồn đường cùng: ba đòn độc lập + không có đường thoát → nội tại mở cửa chống trả. Đỡ thành công mới có bước xoay/phá guard yếu; không tự buff damage/miễn chết để lật kèo.
-5. Bot đầu tư ít active B3 nhưng nhiều nội tại B1 có nhiều cách thích nghi; bot nâng sâu một nội tại B3 tận dụng đúng matchup mạnh hơn. Test trên cùng điểm đầu tư để tránh mặc định học nhiều luôn thắng.
+5. Bot có Huyết Thể B3 bị địch đánh qua 40% HP: còn sống thì hồi bùng phát trong 3s, có thể giữ thế/né hợp lệ rồi đánh trả. Địch burst đủ để hạ vẫn thắng; một nguồn hắc hỏa giảm hồi làm cửa sinh tồn yếu hơn. Trận không được tạo bùng phát liên tục do HP lắc quanh ngưỡng.
+6. Bot đầu tư ít active B3 nhưng nhiều nội tại B1 có nhiều cách thích nghi; bot nâng sâu một nội tại B3 tận dụng đúng matchup mạnh hơn. Test trên cùng điểm đầu tư để tránh mặc định học nhiều luôn thắng.
 
 #### Bổ sung đồng bộ cho quái và Thượng Cổ
 
@@ -604,7 +649,7 @@ AI tối thiểu cho prototype được làm ở chặng 2 để kiểm chứng 
 
 1. **Tăng tiến:** test đủ 32 active × 3 rank và 18 passive × 3 rank; B2/B3 chứng minh thêm effect/nhánh/cửa phối hợp cụ thể. Không pass chỉ vì damage hoặc radius lớn hơn. 45 active và 45 passive quái đều dispatch đúng ID; 30 active/30 passive Thượng Cổ thử cả phase được phép.
 2. **Effect thật:** riêng test field damage=0, khiên hấp thụ, đúng/sai hướng, hết dấu, cắt cover, hủy channel, chất lửa/lạnh/tơ, neo bị phá, chủ thể chết/pause/reset. Tooltip phải khớp outcome.
-3. **Không lạm dụng:** test hai đồng minh nối CC, Mirror copy, hai clone cùng proc, phản damage và hút máu, finisher hụt, hoàn cooldown, đổi weapon trong cast. Không có infinite heal/reflect/charge/reset hoặc boss stun-lock. Với nội tại, test riêng HP ngưỡng đi xuống/tái nạp, không sống lại sau đòn chí tử, nhiều proc cùng sự kiện, né-lướt cùng cửa 2s, charge hết hạn, bản sao dùng chung budget và không kích bởi xoay tại chỗ.
+3. **Không lạm dụng:** test hai đồng minh nối CC, Mirror copy, hai clone cùng proc, phản damage và hút máu, finisher hụt, hoàn cooldown, đổi weapon trong cast. Không có infinite heal/reflect/charge/reset hoặc boss stun-lock. Với Huyết Thể, test hồi thường trực chỉ trong combat, tổng phần trăm/giây theo từng bậc và dt, B3 thay B2, nhận DoT qua ngưỡng chỉ kích một lần, bị đánh không ngắt đợt đang chạy, pause/maxHp/tử trận/ra combat/xuống nước/reset, CD 60s + tái nạp HP 8s, giảm hồi không nhân chéo, không ghi đè channel và Mirror không hồi theo HP 15×. Với nội tại khác, test riêng HP ngưỡng đi xuống/tái nạp, không sống lại sau đòn chí tử, nhiều proc cùng sự kiện, né-lướt cùng cửa 2s, charge hết hạn, bản sao dùng chung budget và không kích bởi xoay tại chỗ.
 4. **Matchup:** mỗi role đấu cận/tầm xa, hở/cover, giàu/nghèo stamina, nhiều B1/ít B3. Kỹ năng nâng sâu mạnh rõ trong đúng tình huống, nhưng vẫn có đối thủ/cách chơi khắc chế. Mục tiêu skill thường dùng 50–70% giá trị ngân sách nếu điều kiện không được chuẩn bị, tối đa giá trị đầy đủ khi phối hợp tốt; đây là tiêu chí thiết kế, không giả vờ là win rate đo sẵn.
 5. **Farm và tiến trình:** giữ bot lv1 tay không đánh Lâu La, lv3 với đồ hợp lý có cửa thắng Yêu Thú. Bot hiểu khi cần farm và nhặt nâng cấp; không đứng đợi học đúng một hệ bắt buộc.
 6. **Gauntlet:** thử năm boss đầu khác nhau × ít nhất hai loadout, giữ 15× HP Mirror như baseline để tách nguyên nhân difficulty. Chạy thêm một nhóm bot đã đầu tư kỹ năng/nội tại cấp cao thực tế qua chuỗi năm boss; phải quan sát được tiến triển damage/utility và khả năng khai thác cửa hồi. Nếu HP 15× vẫn tạo trận bế tắc dù đã chơi đúng mechanics, báo số liệu và đề xuất retune HP riêng; không thêm cheat cho AI để tạo kết quả thắng. Không cam kết mọi bot thắng cả năm.

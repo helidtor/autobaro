@@ -45,10 +45,12 @@ window.GameAI.EmotionEngine = {
     p.fear=Math.min(100,(p.fear||0)+Math.min(9,fraction*35)*(1+(P.cowardice||0)/100)/(1+(P.composure||50)/100));
     p.anger=Math.min(100,(p.anger||0)+fraction*65+(distinct?P.aggression*.08+(repeated?9:0):0));
     if(p.pokeHistory?.attacker===a&&p.pokeHistory.hits>=3){p.defiantTarget=a;p.defiantUntil=now+6;p.battleWill=Math.min(100,(p.battleWill||0)+12);p.fear=Math.max(0,p.fear-6);}
-    if(p.action?.skillId==='a_snipe'&&!p.action.released){p.action=null;p.attackState=null;}
-    if(p.healInterruptibleTimer>0){p.healTimer=0;p.healInterruptibleTimer=0;}
+    const protectedChannel=p.progression?.protectedUntil>now&&Math.cos(Math.atan2(a.y-p.y,a.x-p.x)-p.aimAngle)>.25;if(protectedChannel)p.progression.protectedUntil=0;
+    if(!protectedChannel&&p.action?.skillId==='a_snipe'&&!p.action.released){p.action=null;p.attackState=null;}
+    if(!protectedChannel&&p.healInterruptibleTimer>0){p.healTimer=0;p.healInterruptibleTimer=0;p.healCompleteRank=0;}
   },
   commitSurvival(p,t){
+    if(!t?.isAlive||!window.GameEntities.CombatSystem.isEnemy(p,t))return false;
     if((p.personality?.cowardice??window.GameData.PersonalityProfiles[p.trait]?.cowardice??50)>=85||p.survivalTarget===t)return false;
     p.survivalTarget=t;p.finalDuel=t;p.plan=null;p.chase=null;p.isClutchEscape=false;p.invincible=false;p.battleWill=100;p.fear=Math.min(25,p.fear||0);
     p.decisionReason='Bị truy sát liên tục, không còn đường thoát';p.thought='Không chạy thoát được: giữ phòng thủ và chiến đấu tới cùng.';

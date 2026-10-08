@@ -1,22 +1,22 @@
 {
   "seed": 17,
-  "fingerprint": "ed0bcf1c63907d3157a8017052a2331757f5017cfbf2ea58f3bb7ee3113471ea",
+  "fingerprint": "f006be96626b92cfecda0b654eb1634356d763f514dc62d625457b3e8a88505c",
   "finished": true,
-  "simulatedSeconds": 533.3,
+  "simulatedSeconds": 1924.9,
   "survivors": [
     {
-      "id": "pawn_35",
-      "level": 11,
-      "hp": 740,
-      "objective": "Săn 5 Yêu Vương để đạt cấp 15",
-      "x": 3083.133124970337,
-      "y": 2576.078906535576
+      "id": "pawn_45",
+      "level": 24,
+      "hp": 2080.199999999996,
+      "objective": "Chuẩn bị đấu Yêu Thần",
+      "x": 2298.222289569231,
+      "y": 2512.4487619522793
     }
   ],
-  "ticks": 5333,
-  "peakDrops": 15,
+  "ticks": 19249,
+  "peakDrops": 31,
   "largestGroup": 3,
-  "p95Ms": 145.4067,
+  "p95Ms": 45.86460000000079,
   "invalidGroups": [],
   "suspects": [
     {
@@ -24,18 +24,137 @@
       "t": 10.1,
       "travel": 0,
       "swaps": 5,
-      "moving": 0,
+      "moving": 1,
       "blocked": null,
       "detour": null,
       "level": 1,
       "objective": "Phản công sơ hở: Phương Uyên #74",
       "goal": {
-        "x": 4852.455250261002,
-        "y": 3658.2217171102425
+        "x": 4811.036730097865,
+        "y": 3670.6532282894477
       },
       "target": "pawn_73",
-      "x": 4798.328662524471,
-      "y": 3626.9717171102425
+      "x": 4779.786730097865,
+      "y": 3616.5266405529214,
+      "samples": [
+        {
+          "t": 6.099999999999994,
+          "x": 4779.786730097865,
+          "y": 3616.5266405529214,
+          "intent": "roam",
+          "mode": "pressure",
+          "action": false,
+          "stun": false,
+          "goal": 62.49999999999902,
+          "move": 95,
+          "blocked": null,
+          "objective": "Né vùng kỹ năng rồi phản công"
+        },
+        {
+          "t": 6.5999999999999925,
+          "x": 4779.786730097865,
+          "y": 3616.5266405529214,
+          "intent": "fight:pawn_73",
+          "mode": "counter",
+          "action": true,
+          "stun": false,
+          "goal": 62.49999999999902,
+          "move": 0,
+          "blocked": null,
+          "objective": "Phản công sơ hở: Phương Uyên #74"
+        },
+        {
+          "t": 7.099999999999991,
+          "x": 4779.786730097865,
+          "y": 3616.5266405529214,
+          "intent": "fight:pawn_73",
+          "mode": "counter",
+          "action": true,
+          "stun": false,
+          "goal": 62.49999999999902,
+          "move": 0,
+          "blocked": null,
+          "objective": "Phản công sơ hở: Phương Uyên #74"
+        },
+        {
+          "t": 7.599999999999989,
+          "x": 4779.786730097865,
+          "y": 3616.5266405529214,
+          "intent": "fight:pawn_73",
+          "mode": "counter",
+          "action": false,
+          "stun": false,
+          "goal": 62.49999999999902,
+          "move": 0,
+          "blocked": null,
+          "objective": "Phản công sơ hở: Phương Uyên #74"
+        },
+        {
+          "t": 8.099999999999987,
+          "x": 4779.786730097865,
+          "y": 3616.5266405529214,
+          "intent": "fight:pawn_73",
+          "mode": "counter",
+          "action": true,
+          "stun": false,
+          "goal": 62.49999999999902,
+          "move": 0,
+          "blocked": null,
+          "objective": "Đỡ đòn"
+        },
+        {
+          "t": 8.599999999999985,
+          "x": 4779.786730097865,
+          "y": 3616.5266405529214,
+          "intent": "fight:pawn_65",
+          "mode": "counter",
+          "action": true,
+          "stun": false,
+          "goal": 62.49999999999902,
+          "move": 0,
+          "blocked": null,
+          "objective": "Phản công sơ hở: Hoàng Nam #66"
+        },
+        {
+          "t": 9.099999999999984,
+          "x": 4779.786730097865,
+          "y": 3616.5266405529214,
+          "intent": "fight:pawn_73",
+          "mode": "counter",
+          "action": false,
+          "stun": false,
+          "goal": 62.49999999999902,
+          "move": 0,
+          "blocked": null,
+          "objective": "Phản công sơ hở: Phương Uyên #74"
+        },
+        {
+          "t": 9.599999999999982,
+          "x": 4779.786730097865,
+          "y": 3616.5266405529214,
+          "intent": "fight:pawn_65",
+          "mode": "counter",
+          "action": true,
+          "stun": false,
+          "goal": 62.49999999999902,
+          "move": 0,
+          "blocked": null,
+          "objective": "Phản công sơ hở: Hoàng Nam #66"
+        },
+        {
+          "t": 10.09999999999998,
+          "x": 4779.786730097865,
+          "y": 3616.5266405529214,
+          "intent": "fight:pawn_73",
+          "mode": "counter",
+          "action": false,
+          "stun": false,
+          "goal": 62.49999999999902,
+          "move": 0,
+          "blocked": null,
+          "objective": "Phản công sơ hở: Phương Uyên #74"
+        }
+      ]
     }
   ]
 }

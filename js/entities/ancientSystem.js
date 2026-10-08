@@ -1,6 +1,6 @@
 window.GameEntities=window.GameEntities||{};
 window.GameEntities.AncientSystem={
- boss:null,awakened:false,fields:[],walls:[],clock:0,lightningAt:0,queue:[],defeated:0,total:6,usedRelics:[],nextAt:null,arena:null,god:null,original:null,victoryPending:false,pendingGod:null,wakeRemaining:null,
+ boss:null,awakened:false,fields:[],walls:[],clock:0,lightningAt:0,queue:[],defeated:0,total:5,usedRelics:[],nextAt:null,arena:null,god:null,original:null,victoryPending:false,pendingGod:null,wakeRemaining:null,
  reset(){if(window.GameEntities.CombatSystem){window.GameEntities.CombatSystem.fields=[];window.GameEntities.CombatSystem.fieldClock=0;}this.boss=null;this.awakened=false;this.fields=[];this.walls=[];this.clock=0;this.lightningAt=0;this.queue=[];this.defeated=0;this.usedRelics=[];this.nextAt=null;this.arena=null;this.god=null;this.original=null;this.victoryPending=false;this.pendingGod=null;this.wakeRemaining=null;if(window.GameEngine.MapTerrain)window.GameEngine.MapTerrain.ancientArena=null;},
  awaken(god,killer,ready=false){
   if(this.awakened)return this.boss;
@@ -10,7 +10,7 @@ window.GameEntities.AncientSystem={
   if(G.pawns.filter(p=>p.isAlive).length!==1){this.pendingGod=god;return null;}
   this.pendingGod=null;this.awakened=true;
   const original=G.winnerPawn?.isAlive?G.winnerPawn:killer?.isPawn?killer:G.pawns.find(p=>p.isAlive);
-  const first=D[Math.floor(Math.random()*D.length)];const F=window.GameData.FinalAncientBosses;this.queue=[first,...D.filter(d=>d!==first),F[Math.floor(Math.random()*F.length)]];this.god=god;this.original=original;
+  const first=D[Math.floor(Math.random()*D.length)];this.queue=[first,...D.filter(d=>d!==first)];this.god=god;this.original=original;
   this.openArena(original,god);
   return this.spawnNext();
  },
@@ -30,13 +30,14 @@ window.GameEntities.AncientSystem={
   const def=this.queue.shift();if(!def||!original?.isAlive)return null;
   this.nextAt=null;
   const angle=Math.atan2(this.arena.cy-original.y,this.arena.cx-original.x),spawn=window.GameEngine.MapTerrain.nearestFree(this.arena.cx+Math.cos(angle)*110,this.arena.cy+Math.sin(angle)*110);
-  const hp=def.kind==='mirror'?(original?.maxHp||500)*15:def.final?Math.max(god.maxHp*2,(original?.maxHp||500)*6,9000):Math.max(god.maxHp*1.5,(original?.maxHp||500)*4,6000);
-  const m=E.spawnMonster({id:def.id,name:def.name,tier:6,tierName:'Thượng Cổ',scale:def.scale,maxHp:hp,attack:def.kind==='mirror'?(original?.attack||40):Math.max(god.attack*(def.final?1.5:1.3),def.final?70:55),defense:def.kind==='mirror'?(original?.defense||20):god.defense+(def.final?20:15),speed:def.kind==='mirror'?(original?.moveSpeed||95):def.final?115:105,expReward:0,passives:[],skills:[],visual:{type:'primordial_'+def.kind,bodyColor:def.color}},spawn.x,spawn.y);
-  Object.assign(m,{homeX:m.x,homeY:m.y,gauntletRound:this.defeated+1,isAncient:true,ancientKind:def.kind,ancientDef:def,phase:1,phaseHp:hp,phaseMaxHp:hp,ccImmune:true,globalSkillCooldown:1,original,passives:def.passives.map(p=>({...p})),skills:def.skills.map((s,i)=>({id:s.id,def:{...s},tier:3,cooldownTimer:i*.35})),territory:{id:'ancient_arena',name:'Đấu trường Thượng Cổ',x:this.arena.cx,y:this.arena.cy,radius:this.arena.w/2,isCleared:false},foreseen:false,passiveClock:0,petrification:new Map(),shield:def.kind==='mecha'?hp*.12:0,maxShield:def.kind==='mecha'?hp*.12:0});
+  const profile={colossus:{hp:650,hp2:1700,atk:52,atk2:78,def:30,def2:15},mirror:{hp:450,hp2:1350,atk:44,atk2:65,def:12,def2:8},void:{hp:550,hp2:1550,atk:48,atk2:72,def:18,def2:10},chaos:{hp:450,hp2:1400,atk:56,atk2:84,def:10,def2:6},mecha:{hp:500,hp2:1500,atk:50,atk2:75,def:20,def2:10}}[def.kind];
+  const hp=profile.hp;
+  const m=E.spawnMonster({id:def.id,name:def.name,tier:6,tierName:'Thượng Cổ',scale:def.scale,maxHp:hp,attack:profile.atk,defense:profile.def,speed:def.kind==='mirror'?(original?.moveSpeed||95):105,expReward:0,passives:[],skills:[],visual:{type:'primordial_'+def.kind,bodyColor:def.color}},spawn.x,spawn.y);
+  Object.assign(m,{profile,homeX:m.x,homeY:m.y,gauntletRound:this.defeated+1,isAncient:true,ancientKind:def.kind,ancientDef:def,phase:1,phaseHp:hp,phaseMaxHp:hp,ccImmune:true,globalSkillCooldown:1,original,passives:def.passives.map(p=>({...p})),skills:def.skills.map((s,i)=>({id:s.id,def:{...s},tier:3,cooldownTimer:i*.35})),territory:{id:'ancient_arena',name:'Đấu trường Thượng Cổ',x:this.arena.cx,y:this.arena.cy,radius:this.arena.w/2,isCleared:false},foreseen:false,passiveClock:0,petrification:new Map(),shield:def.kind==='mecha'?hp*.12:0,maxShield:def.kind==='mecha'?hp*.12:0});
   if(def.kind==='mirror'&&original){
    m.maxMana=m.currentMana=original.maxMana;m.maxStamina=m.currentStamina=original.maxStamina;m.critChance=original.critChance;m.secondaryWeapon=original.secondaryWeapon?{...original.secondaryWeapon}:null;
-   m.weapon=original.weapon?{...original.weapon}:null;m.armor=original.armor?{...original.armor}:null;m.helmet=original.helmet?{...original.helmet}:null;m.boots=original.boots?{...original.boots}:null;m.appearance={...original.appearance};m.classId=original.classId;
-   m.copiedSkills=(original.skills||[]).map(s=>({...s,tier:3,cooldownTimer:0}));m.copiedPassives=(original.passives||[]).map(p=>({...p,cooldownTimer:0}));m.passiveMultiplier=2;m.recordedCombo=(original.attackHistory||[]).filter(a=>a.targetId===god.id).slice(-4);
+   m.weapon=original.weapon?{...original.weapon}:null;m.armor=null;m.helmet=null;m.boots=null;m.appearance={...original.appearance};m.classId=original.classId;
+   m.copiedSkills=(original.skills||[]).map(s=>({...s,cooldownTimer:0}));const first=m.copiedSkills[0],different=m.copiedSkills.find(s=>s.def.role!==first?.def.role);if(different)m.copiedSkills=[first,different,...m.copiedSkills.filter(s=>s!==first&&s!==different)];m.copiedPassives=(original.passives||[]).map(p=>({...p,cooldownTimer:0}));m.passiveMultiplier=1;m.recordedCombo=(original.attackHistory||[]).filter(a=>a.targetId===god.id).slice(-4);
   }
   this.boss=m;G.monsters=E.monsters;G.cataclysm=true;
   window.GameUI.CombatTicker.log('🌋 THƯỢNG CỔ THỨC TỈNH: '+m.name+' • Lượt '+m.gauntletRound+'/'+this.total+' • Đấu trường 1500×1500!');
@@ -52,11 +53,9 @@ window.GameEntities.AncientSystem={
   }
   if(!m.isAncient||m.phase!==1)return false;
   this.fields=this.fields.filter(f=>f.owner!==m);
-  m.phase=2;m.currentHp=m.phaseMaxHp;m.phaseHp=m.phaseMaxHp;m.action=null;m.attackState=null;m.stunTimer=m.slowTimer=m.silenceTimer=0;
+  m.phase=2;m.maxHp=m.phaseMaxHp=m.profile.hp2;m.attack=m.profile.atk2;m.defense=m.profile.def2;m.currentHp=m.phaseHp=m.maxHp;m.action=null;m.attackState=null;m.stunTimer=m.slowTimer=m.silenceTimer=0;
   if(['colossus','mirror'].includes(m.ancientKind))m.speed*=1.5;
   if(m.ancientKind==='mecha'){m.speed*=2;m.shield=0;}
-  if(m.ancientKind==='eternal')m.speed*=1.4;
-  if(m.ancientKind==='diva')m.speed*=1.3;
   m.skills.forEach(s=>s.cooldownTimer=s.def.phase?0:s.cooldownTimer);m.globalSkillCooldown=1;
   V.addBurstParticles(m.x,m.y,m.ancientDef.color,45);V.addEffect('impact',m.x,m.y,{radius:220,color:m.ancientDef.color,life:2});
   window.GameUI.CombatTicker.log('🔥 '+m.name+' vỡ thanh máu thứ nhất — PHASE 2!');return true;
@@ -76,23 +75,24 @@ window.GameEntities.AncientSystem={
   const G=window.GameManager,killer=this.original,m=this.boss;this.victoryPending=false;
   G.ancientDefeated=true;G.isGameOver=true;G.isPaused=true;G.resultOpen=true;
   const el=document.getElementById('story-card-modal');
-  el.innerHTML='<div class="story-card-box"><h1>🏆 CHINH PHỤC THƯỢNG CỔ</h1><div class="story-card-winner">'+(killer?.name||'Người chiến thắng')+'</div><p>Đã hạ '+m.name+' và chinh phục đủ 6 boss qua 12 thanh máu. Trận đấu hoàn tất.</p><button class="btn-restart" onclick="window.GameManager.startNewMatch()">Bắt đầu ván mới</button></div>';el.classList.remove('hidden');
+  el.innerHTML='<div class="story-card-box"><h1>🏆 CHINH PHỤC THƯỢNG CỔ</h1><div class="story-card-winner">'+(killer?.name||'Người chiến thắng')+'</div><p>Đã hạ '+m.name+' và chinh phục đủ 5 boss qua 10 thanh máu. Trận đấu hoàn tất.</p><button class="btn-restart" onclick="window.GameManager.startNewMatch()">Bắt đầu ván mới</button></div>';el.classList.remove('hidden');
  },
  config(m,s){
   const d={...s.def},owner=m.ancientOwner||m;
-  d.cooldown=owner.ancientKind==='mecha'&&owner.phase===2?0:(d.cooldown||8)*(owner.ancientKind==='mirror'&&owner.phase===2?.5:owner.ancientKind==='eternal'&&owner.phase===2?.65:owner.ancientKind==='diva'&&owner.phase===2?.7:1);
+  d.cooldown=owner.ancientKind==='mecha'&&owner.phase===2?0:(d.cooldown||8)*(owner.ancientKind==='mirror'&&owner.phase===2?.5:1);
   d.damage=window.GameEntities.CombatSystem.combatStats(m).attack*Math.min(d.effect==='nuclear'?2.5:2,d.damageScale||1.2);d.stun=d.stun||0;d.slow=0;return d;
  },
  cast(m,s,t){
   const C=window.GameEntities.CombatSystem,c=this.config(m,s),owner=m.ancientOwner||m;
-  if(!C.canAttack(m)||s.cooldownTimer>0||owner.globalSkillCooldown>0||c.phase&&m.phase<c.phase||!t?.isAlive||Math.hypot(t.x-m.x,t.y-m.y)>c.range||!C.canEngage(m,t))return false;
+  if(this.clock<(m.ventUntil||0)||!C.canAttack(m)||s.cooldownTimer>0||owner.globalSkillCooldown>0||c.phase&&m.phase<c.phase||!t?.isAlive||Math.hypot(t.x-m.x,t.y-m.y)>c.range||!C.canEngage(m,t))return false;
   const angle=Math.atan2(t.y-m.y,t.x-m.x),point={x:t.x,y:t.y};
   if(c.id==='av_dive'){const pawns=window.GameManager.pawns.filter(p=>p.isAlive&&C.canEngage(m,p));const center=pawns.sort((a,b)=>pawns.filter(p=>Math.hypot(p.x-b.x,p.y-b.y)<120).length-pawns.filter(p=>Math.hypot(p.x-a.x,p.y-a.y)<120).length)[0];if(center){point.x=center.x;point.y=center.y;}}
   const ok=C.startAction(m,'skill',t,()=>this.resolve(m,c,t,point,angle),{windup:c.windup,active:.05,recovery:.45,style:C.weaponStyle(m),color:m.ancientDef.color,skillName:c.name});
   if(!ok)return false;
   window.GameEngine.Audio?.play('boss',m);
+  m.castHeat=(m.castHeat||0)+1;
+  if(m.ancientKind==='mecha'&&m.phase===2&&m.castHeat>=3){m.castHeat=0;m.ventUntil=this.clock+c.windup+2.5;}
   s.cooldownTimer=c.cooldown;owner.globalSkillCooldown=1;m.globalSkillCooldown=1;m.skillsCast=(m.skillsCast||0)+1;
-  if(m.ancientKind==='eternal'&&(m.memStacks||0)<8){m.memStacks=(m.memStacks||0)+1;m.attack*=1.03;}
   const self=['sweep','pull','devour','spin_beam','panic','cross','spear','fissure','map_arrow','lasers','collapse','nuclear','matrix'].includes(c.effect);
   this.field(m,c,self?m.x:point.x,self?m.y:point.y,c.windup,{warningOnly:true,end:this.clock+c.windup,shape:['devour','spear','fissure','map_arrow','lasers','spin_beam'].includes(c.effect)?'line':c.effect==='sweep'?'cone':'circle',radius:['devour','spear','fissure','map_arrow','lasers','spin_beam'].includes(c.effect)?25:c.radius,arc:Math.PI/2,angle,length:c.range});return true;
  },
@@ -104,16 +104,21 @@ window.GameEntities.AncientSystem={
  resolve(m,c,t,point,angle){
   const M=window.GameEngine.MapTerrain,V=window.GameRenderer.VfxManager,C=window.GameEntities.CombatSystem;
   const area=(extra={},delay=.3,x=point.x,y=point.y)=>this.field(m,c,x,y,delay,extra);
-  if(c.effect==='collapse'){for(const side of [-1,0,1])area({shape:'line',angle,length:600,radius:32,damage:c.damage/3,trueHpPct:0},1,m.x-Math.sin(angle)*side*160,m.y+Math.cos(angle)*side*160);}
-  else if(c.effect==='meteor')for(let i=0;i<8;i++){const a=i*Math.PI/4;area({damage:c.damage/8},.5+i*.25,point.x+Math.cos(a)*(i?130:0),point.y+Math.sin(a)*(i?130:0));}
-  else if(c.effect==='sweep')area({shape:'cone',angle,arc:Math.PI/2,knockback:c.knockback},.25,m.x,m.y);
+  if(m.phase===2&&c.effect==='devour'){const f=C.fields.find(f=>f.owner===t&&Math.hypot(f.x-m.x,f.y-m.y)<c.range&&Math.abs(Math.atan2(f.y-m.y,f.x-m.x)-angle)<.4);if(f){f.life=0;c={...c,damage:c.damage*1.15};}}
+  if(m.phase===2&&c.effect==='acid')for(const f of this.fields.filter(f=>f.owner===m&&f.effect==='acid'&&!f.warningOnly&&f.end>this.clock)){f.end=this.clock;area({effect:'acid_pull',damage:0,pull:12,end:this.clock+1,tick:.4},.2,f.x,f.y);}
+  if(c.effect==='spear'&&m.phase===2&&m.spearAnchor){const neo=m.spearAnchor;this.field(m,{...c,damage:c.damage*.1,radius:12},neo.x,neo.y,.4,{shape:'line',angle:Math.atan2(point.y-neo.y,point.x-neo.x),length:Math.hypot(point.x-neo.x,point.y-neo.y),end:this.clock+1.4,tick:1,neoHp:60});c={...c,damage:c.damage*.9};}
+  if(c.effect==='wall')this.walls=this.walls.filter(w=>w.owner!==m);
+  if(c.effect==='spin_beam'&&m.phase===2&&this.walls.some(w=>w.owner===m)){const w=this.walls.find(w=>w.owner===m);area({shape:'line',angle:angle+Math.PI/2,length:220,radius:15,damage:c.damage*.15},.7,w.x,w.y);c={...c,damage:c.damage*.85};}
+  if(c.effect==='collapse'){for(const side of [-1,0,1])area({shape:'line',angle,length:600,radius:32,damage:c.damage/3,trueHpPct:0},.5+(side+1)*.4,m.x-Math.sin(angle)*side*160,m.y+Math.cos(angle)*side*160);}
+  else if(c.effect==='meteor')for(let i=0;i<8;i++){const a=i*Math.PI/4;const f=area({damage:c.damage/8},.5+i*.25,point.x+Math.cos(a)*(i?130:0),point.y+Math.sin(a)*(i?130:0));if(i<2)f.rockCover=true;}
+  else if(c.effect==='sweep'){area({shape:'cone',angle,arc:Math.PI/2,knockback:c.knockback},.25,m.x,m.y);if(m.phase===2){for(const w of this.walls.filter(w=>w.owner===m&&Math.hypot(w.x-m.x,w.y-m.y)<180)){w.hp=0;area({radius:35,damage:c.damage*.1},.7,w.x,w.y);}}}
   else if(['pull','devour'].includes(c.effect)){
    area({shape:c.effect==='devour'?'line':'circle',angle,length:c.range,pull:25,trueHpPct:0},c.effect==='collapse'?.05:1,m.x,m.y);
    if(c.effect!=='collapse')area({damage:0,pull:8,end:this.clock+1,tick:.3,shape:c.effect==='devour'?'line':'circle',angle,length:c.range},.05,m.x,m.y);
   }else if(c.effect==='wall'){
-   for(const offset of [-70,0,70]){const x=point.x+Math.cos(angle)*90-Math.sin(angle)*offset,y=point.y+Math.sin(angle)*90+Math.cos(angle)*offset;
+   for(const offset of [-70,70]){const x=point.x+Math.cos(angle)*90-Math.sin(angle)*offset,y=point.y+Math.sin(angle)*90+Math.cos(angle)*offset;
     const pos=M.nearestFree(x,y,24);
-    if(M.canStand(pos.x,pos.y,22)&&!window.GameManager.pawns.some(p=>p.isAlive&&Math.hypot(p.x-pos.x,p.y-pos.y)<35))this.walls.push({x:pos.x-16,y:pos.y-16,w:32,h:32,end:this.clock+5});}
+    if(M.canStand(pos.x,pos.y,22)&&!window.GameManager.pawns.some(p=>p.isAlive&&Math.hypot(p.x-pos.x,p.y-pos.y)<35))this.walls.push({x:pos.x-16,y:pos.y-16,w:32,h:32,end:this.clock+(m.phase===2?3:5),owner:m,hp:80});}
   }else if(c.effect==='spin_beam')for(let i=0;i<12;i++)area({shape:'line',angle:angle+i*Math.PI/6,length:360,radius:24,damage:c.damage/12},.2+i*.2,m.x,m.y);
   else if(c.effect==='lava')for(const side of [-1,1])area({shape:'line',angle:Math.PI/2,length:1250,radius:70,end:this.clock+5,tick:1,damage:c.damage/10},.8,this.arena.cx+side*260,this.arena.y+100);
   else if(['copy_first','copy_second'].includes(c.effect)){
@@ -121,6 +126,7 @@ window.GameEntities.AncientSystem={
    if(s){const original=C.getSkillConfig(m,s);C.resolveSkill(m,s,t,{...original,radius:Math.min(130,original.radius*1.2),range:Math.min(300,original.range*1.2),damage:Math.min(c.damage,original.damage*1.2),useCurrentOrigin:true,originX:m.x,originY:m.y,tx:point.x,ty:point.y,angle,attackSnapshot:C.combatStats(m).attack,castId:m.skillsCast});}
    else area({damage:c.damage},.4);
   }else if(c.effect==='leap'||c.effect==='saw'){
+   if(c.effect==='saw'&&m.phase===2)m.ventUntil=this.clock+1.5;
    if(c.effect==='saw')this.breakCover(m.x,m.y,point.x,point.y,55);
    const goal=M.safeGoal(m,point.x,point.y);M.moveEntity(m,goal.x-m.x,goal.y-m.y);
    V.addEffect('dash',m.action.originX,m.action.originY,{tx:m.x,ty:m.y,color:m.ancientDef.color,life:.7});area({stun:c.stun,knockback:c.knockback},.2,m.x,m.y);
@@ -131,30 +137,30 @@ window.GameEntities.AncientSystem={
    combo.forEach((a,i)=>area({damage:c.damage/combo.length,radius:60},.2+i*1));
   }else if(c.effect==='split')this.split(m,t);
   else if(c.effect==='acid')area({end:this.clock+3,tick:1,armorBreak:.25,damage:c.damage/3},.6);
-  else if(c.effect==='tentacles')for(let i=0;i<6;i++){const a=i*Math.PI/3;area({damage:c.damage/6,radius:45},.3+(i%3)*.5,m.x+Math.cos(a)*130,m.y+Math.sin(a)*130);}
-  else if(c.effect==='panic')area({damage:c.damage*.6,stun:.3},.2,m.x,m.y);
+  else if(c.effect==='tentacles')for(let i=0;i<6;i++){const a=i*Math.PI/3;area({damage:c.damage/6,radius:45,neoHp:m.phase===2?60:undefined},.3+(i%3)*.5,m.x+Math.cos(a)*130,m.y+Math.sin(a)*130);}
+  else if(c.effect==='panic')area({damage:c.damage*.6,stun:.3,shape:'cone',angle,arc:Math.PI/3},.2,m.x,m.y);
   else if(c.effect==='cross')for(let i=0;i<4;i++)area({shape:'line',angle:angle+i*Math.PI/2,length:300,radius:28,damage:c.damage/4},.3,m.x,m.y);
   else if(c.effect==='homing'){
    const targets=window.GameManager.pawns.filter(p=>p.isAlive&&C.canEngage(m,p));
-   for(let i=0;i<c.count;i++){const prey=targets[i%targets.length]||t;area({homing:prey,x:m.x,y:m.y,radius:c.radius,damage:c.damage/c.count,end:this.clock+3,speed:160+i%3*20},.3+i*.04,m.x,m.y);}
-  }else if(c.effect==='spear')area({shape:'line',angle,length:c.range,radius:20,stun:.65},.35,m.x,m.y);
+   for(let i=0;i<c.count;i++){const prey=targets[i%targets.length]||t;area({homing:m.phase===2&&i%2?null:prey,color:m.phase===2&&i%2?'#ffb36e':m.ancientDef.color,x:m.x,y:m.y,radius:c.radius,damage:c.damage/c.count,end:this.clock+3,speed:160+i%3*20},.3+i*.04,m.x,m.y);}
+  }else if(c.effect==='spear'){area({shape:'line',angle,length:c.range,radius:20,stun:.5},.35,m.x,m.y);m.spearAnchor={x:point.x,y:point.y,end:this.clock+4};if(m.phase===2)area({shape:'line',angle,length:c.range,radius:12,damage:0,pull:8,end:this.clock+2,tick:.5},.6,m.x,m.y);}
   else if(c.effect==='fissure')area({shape:'line',angle,length:c.range,radius:45,end:this.clock+4,tick:1,damage:c.damage/4},.5,m.x,m.y);
   else if(c.effect==='map_arrow')area({shape:'line',angle,length:1200,radius:22,damage:c.damage},.5,m.x,m.y);
   else if(c.effect==='matrix'){
-   for(let i=0;i<6;i++)area({damage:c.damage/6,radius:65},.5+i*1,m.x+Math.cos(angle+i*Math.PI/3)*130,m.y+Math.sin(angle+i*Math.PI/3)*130);
+   for(let i=0;i<6;i++)area({damage:c.damage/6,radius:65,neoHp:60},.5+i*1,m.x+Math.cos(angle+i*Math.PI/3)*130,m.y+Math.sin(angle+i*Math.PI/3)*130);
   }else if(c.effect==='lasers')for(let i=0;i<3;i++)area({shape:'line',angle:angle+(i-1)*.6,length:500,radius:25,end:this.clock+2.5,tick:.6,damage:c.damage/12},.35+i*.3,m.x,m.y);
-  else if(c.effect==='net')area({silence:.6,stun:.4,innerRadius:25},.3);
+  else if(c.effect==='net')area({silence:.6,stun:.4,innerRadius:25,neoHp:m.phase===2?70:undefined},.3);
   else if(c.effect==='nuclear')area({damage:c.damage},.05,m.x,m.y);
  },
  split(m,t){
   if(m.isSplit)return;
   this.fields=this.fields.filter(f=>f.owner!==m);
   const E=window.GameEntities.EntityManager,M=window.GameEngine.MapTerrain;
-  m.isSplit=true;m.action=null;m.attackState=null;m.combatLease=0;m.combatGroup=null;m.targetEnemy=null;
+  m.isSplit=true;this.fields=this.fields.filter(f=>f.owner!==m);window.GameEntities.CombatSystem.fields=window.GameEntities.CombatSystem.fields.filter(f=>f.owner!==m);m.action=null;m.attackState=null;m.combatLease=0;m.combatGroup=null;m.targetEnemy=null;
   m.clones=[-1,1].map(side=>{
    const pos=M.nearestFree(t.x+side*95,t.y+45);
    const c=E.spawnMonster({id:'mirror_clone',name:'Phân thân Phản Chiếu',tier:6,tierName:'Phân thân Thượng Cổ',maxHp:m.phaseMaxHp/2,attack:m.attack,defense:m.defense,speed:m.speed,scale:1,skills:[],visual:{type:'primordial_mirror'}},pos.x,pos.y);
-   Object.assign(c,{cloneRole:side===-1?'pressure':'control',isAncientClone:true,ancientOwner:m,ancientKind:'mirror',statMultiplier:.5,weapon:m.original?.weapon?{...m.original.weapon}:null,armor:m.armor,helmet:m.helmet,boots:m.boots,appearance:m.appearance,classId:m.classId,speed:m.speed*.5,maxMana:m.maxMana*.5,currentMana:m.maxMana*.5,maxStamina:m.maxStamina*.5,currentStamina:m.maxStamina*.5,critChance:m.critChance*.5,skills:m.copiedSkills.filter(s=>side===-1?!['control','defense'].includes(s.def.role):['control','defense','strike'].includes(s.def.role)).map(s=>({...s,cooldownTimer:0})),passives:m.copiedPassives.map(p=>({...p,cooldownTimer:0})),territory:m.territory,ccImmune:true,expReward:0});return c;
+   Object.assign(c,{cloneRole:side===-1?'pressure':'control',isAncientClone:true,ancientOwner:m,ancientKind:'mirror',statMultiplier:.5,weapon:m.original?.weapon?{...m.original.weapon}:null,armor:m.armor,helmet:m.helmet,boots:m.boots,appearance:m.appearance,classId:m.classId,speed:m.speed*.5,maxMana:m.maxMana*.5,currentMana:m.maxMana*.5,maxStamina:m.maxStamina*.5,currentStamina:m.maxStamina*.5,critChance:m.critChance*.5,skills:m.copiedSkills.filter(s=>side===-1?!['control','defense'].includes(s.def.role):['control','defense','strike'].includes(s.def.role)).map(s=>({...s,cooldownTimer:0})),passives:m.copiedPassives,progression:m.progression||(m.progression={}),territory:m.territory,ccImmune:true,expReward:0});return c;
   });
  },
  breakCover(x1,y1,x2,y2,r){
@@ -165,28 +171,22 @@ window.GameEntities.AncientSystem={
  },
  incoming(a,m,damage,c,weapon){
   if(!m.isAncient)return damage;
-  if(m.ancientKind==='colossus')return c.trueDamage?damage*.5:c.skill?damage:Math.max(damage*.6,damage-40);
+  if(this.clock<(m.ventUntil||0))damage*=1.25;
+  if(m.action?.skillName&&m.action?.kind==='skill'&&!m.action.released&&m.skills.find(s=>s.def.name===m.action.skillName)?.id==='az_nuclear'){m.coreDamage=(m.coreDamage||0)+damage;if(m.coreDamage>=100){m.action=null;m.attackState=null;m.coreDamage=0;m.ventUntil=this.clock+3;this.fields=this.fields.filter(f=>f.owner!==m||!f.warningOnly);}}
+  if(m.ancientKind==='colossus')return c.trueDamage?damage*.75:c.skill?damage:Math.max(damage*.8,damage-10);
   if(m.ancientKind==='mirror'){
-   if(c.skill&&!m.foreseen){m.foreseen=true;window.GameRenderer.VfxManager.addDamageNumber(m.x,m.y,'TIÊN TRI','block');return 0;}
-   if(weapon?.name&&weapon.name===m.weapon?.name)damage*=.6;
-  }
-  if(m.ancientKind==='diva'){
-   if(['poison','bleed'].includes(c.dot))return 0;
-   if((m.nextHolo||0)<=this.clock){m.nextHolo=this.clock+12;window.GameRenderer.VfxManager.addDamageNumber(m.x,m.y,'ẢO ẢNH','block');return 0;}
-  }
-  if(m.ancientKind==='eternal'){
-   if(['poison','bleed'].includes(c.dot))return 0;
-   return Math.min(damage,m.phaseMaxHp*.04);
+   if(c.skill&&!m.foreseen&&window.GameEntities.CombatSystem.canSee(m,a)){m.foreseen=true;window.GameRenderer.VfxManager.addDamageNumber(m.x,m.y,'TIÊN TRI','block');return 0;}
+   if(weapon?.name&&weapon.name===m.weapon?.name)damage*=.85;
   }
   if(m.ancientKind==='void'){
-   if(['poison','bleed'].includes(c.dot))return 0;
-   if(c.projectile)damage*=.5;
+   if(['poison','bleed'].includes(c.dot)){m.armorBreak=.12;m.armorBreakTimer=2;return 0;}
+   if(c.projectile)damage*=.8;
   }
   if(m.ancientKind==='mecha'){
    if(Math.cos(Math.atan2(a.y-m.y,a.x-m.x)-m.aimAngle)<-.3)damage*=.65;
    m.heatHits=(m.heatHits||0)+1;if(m.heatHits>=10){m.heatHits=0;this.field(m,{name:'Xả Nhiệt Quá Tải',radius:130,damage:m.attack*.6},m.x,m.y,.3);}
-   if(m.shield>0){const dealt=Math.min(m.shield,damage*.6);m.shield-=dealt;window.GameRenderer.VfxManager.addDamageNumber(m.x,m.y,Math.round(dealt),'block');return 0;}
-   damage*=.6;
+   if(m.shield>0){const dealt=Math.min(m.shield,damage);m.shield-=dealt;window.GameRenderer.VfxManager.addDamageNumber(m.x,m.y,Math.round(dealt),'block');damage-=dealt;}
+   damage*=.85;
   }
   return damage;
  },
@@ -195,22 +195,23 @@ window.GameEntities.AncientSystem={
   if(t.isAncientClone){t.ancientOwner.currentHp=t.ancientOwner.clones.reduce((sum,p)=>sum+(p.isAlive?p.currentHp:0),0);}
   if(t.isAncient){
    if(t.ancientKind==='void'&&(c.magic||c.skill&&c.magic===undefined&&a.classId==='mage'))t.currentHp=Math.min(t.maxHp,t.currentHp+damage*.2);
-   if(t.ancientKind==='chaos'&&!c.reflected){const near=window.GameManager.pawns.filter(p=>p.isAlive&&C.canEngage(t,p)).sort((p,q)=>Math.hypot(p.x-t.x,p.y-t.y)-Math.hypot(q.x-t.x,q.y-t.y))[0];if(near)C.applyDamage(t,near,null,{baseDamage:damage*.1,reflected:true});}
+   if(t.ancientKind==='chaos'&&!c.reflected&&t.weapon?.type==='sword'&&this.clock>=(t.reflectAt||0)){const near=window.GameManager.pawns.filter(p=>p.isAlive&&C.canEngage(t,p)).sort((p,q)=>Math.hypot(p.x-t.x,p.y-t.y)-Math.hypot(q.x-t.x,q.y-t.y))[0];if(near){t.reflectAt=this.clock+3;C.applyDamage(t,near,null,{baseDamage:damage*.1,reflected:true});}}
   }
-  if(a.isAncient&&a.ancientKind==='chaos'&&!c.reflected&&!c.dot)a.currentHp=Math.min(a.maxHp,a.currentHp+damage*.1);
+  if(a.isAncient&&a.ancientKind==='chaos'&&!c.reflected&&!c.dot)a.currentHp=Math.min(a.maxHp,a.currentHp+Math.min(4,damage*.05));
  },
  control(p,kind,duration,source){if(p.ccImmune||p.invincible||p.controlImmunityTimer>0)return;p[kind]=window.GameEntities.RelicSystem.control(p,kind,duration,source);p.controlImmunityTimer=3;},
  tick(dt){
   if(!this.awakened){const G=window.GameManager;if(this.pendingGod){this.wakeRemaining=Math.max(0,this.wakeRemaining-dt);if(this.wakeRemaining===0&&G.battleRoyaleResolved&&G.winnerPawn?.isAlive&&G.winnerPawn.level>=15&&!window.GameEngine.MapTerrain.remainingLords())this.awaken(this.pendingGod,G.winnerPawn,true);}return;}
-  this.clock+=dt;this.walls=this.walls.filter(w=>w.end>this.clock);
+  this.clock+=dt;this.walls=this.walls.filter(w=>w.end>this.clock&&w.hp>0);
   const C=window.GameEntities.CombatSystem,M=window.GameEngine.MapTerrain,G=window.GameManager,m=this.boss;
   if(!m?.isAlive){if(this.victoryPending&&(this.original?.relicLoot?.isCollected||this.clock-this.finalAt>=5))this.showVictory();if(this.nextAt!==null&&this.clock>=this.nextAt)this.spawnNext();return;}
   if(m.isSplit){m.currentHp=m.clones.reduce((sum,c)=>sum+(c.isAlive?c.currentHp:0),0);this.fields=this.fields.filter(f=>f.owner!==m);return;}
   if(this.clock>=this.lightningAt){this.lightningAt=this.clock+4;this.field(m,{name:'Sấm Tận Thế',radius:45,damage:25},this.arena.x+Math.random()*this.arena.w,this.arena.y+Math.random()*this.arena.h,.8);}
   this.passives(m,dt);
-  for(const f of this.fields){
+  for(const f of [...this.fields]){
+   if(f.rockCover&&this.clock>=f.at){f.rockCover=false;if(this.walls.filter(w=>w.owner===f.owner).length<2&&M.canStand(f.x,f.y,18)&&!G.pawns.some(p=>p.isAlive&&Math.hypot(p.x-f.x,p.y-f.y)<40))this.walls.push({x:f.x-12,y:f.y-12,w:24,h:24,hp:60,owner:f.owner,end:this.clock+3});}
    if(!f.owner.isAlive||f.warningOnly||this.clock<f.at||this.clock>=f.end)continue;
-   if(f.homing){const p=f.homing;if(!p.isAlive){f.end=this.clock;continue;}if(!C.canSee(f.owner,p))continue;const dx=p.x-f.x,dy=p.y-f.y,d=Math.hypot(dx,dy);f.x+=dx/Math.max(1,d)*Math.min(d,(f.speed||100)*dt);f.y+=dy/Math.max(1,d)*Math.min(d,(f.speed||100)*dt);if(d>f.radius)continue;}
+   if(f.homing){const p=f.homing;if(p.afterimageReady&&C.canSee(f.owner,p)){p.afterimageReady=0;f.homing=null;f.x=p.x+Math.cos(p.aimAngle)*25;f.y=p.y+Math.sin(p.aimAngle)*25;f.at=this.clock+.25;f.end=this.clock+.4;continue;}if(!p.isAlive){f.end=this.clock;continue;}if(!C.canSee(f.owner,p))continue;const dx=p.x-f.x,dy=p.y-f.y,d=Math.hypot(dx,dy);f.x+=dx/Math.max(1,d)*Math.min(d,(f.speed||100)*dt);f.y+=dy/Math.max(1,d)*Math.min(d,(f.speed||100)*dt);if(d>f.radius)continue;}
    if(f.nextTick>this.clock)continue;f.nextTick=this.clock+(f.tick||10);
    if(f.replaySkill){const t=f.replayTarget;if(t?.isAlive&&C.canEngage(f.owner,t))C.resolveSkill(f.owner,f.replaySkill,t,{...C.getSkillConfig(f.owner,f.replaySkill),useCurrentOrigin:true});f.end=this.clock;continue;}
    for(const p of G.pawns){
@@ -236,19 +237,18 @@ window.GameEntities.AncientSystem={
   const pawns=G.pawns.filter(p=>p.isAlive&&C.canEngage(m,p));
   for(const p of pawns){const d=Math.hypot(p.x-m.x,p.y-m.y);
    if(kind==='colossus'&&d<300||kind==='mirror'&&d<200){p.auraSlow=kind==='colossus'?.3:.2;p.auraSlowTimer=.2;}
-   if(kind==='diva'&&d<250){p.auraSlow=.15;p.auraSlowTimer=.2;}
    if(kind==='colossus'){
     const elapsed=d<85?(m.petrification.get(p.id)||0)+dt:0;m.petrification.set(p.id,elapsed);
     if(elapsed>=5){this.control(p,'stunTimer',1.5,m);m.petrification.set(p.id,0);}
     const moved=Math.hypot(m.x-(m.lastStepX??m.x),m.y-(m.lastStepY??m.y));
-    if(moved>25&&d<160){if(p.action?.kind==='skill'&&!p.action.released){p.action=null;p.attackState=null;}G.cameraShake=.25;}
+    if(moved>25&&d<160){if(p.action?.kind==='skill'&&!p.action.released&&!(p.progression?.protectedUntil>(window.GameManager.matchTime||0))){p.action=null;p.attackState=null;}G.cameraShake=.25;}
    }
    if(kind==='void'&&d<120){p.currentStamina=Math.max(0,p.currentStamina-5*dt);}
   }
   if(kind==='colossus'&&Math.hypot(m.x-(m.lastStepX??m.x),m.y-(m.lastStepY??m.y))>25){m.lastStepX=m.x;m.lastStepY=m.y;}
   if(m.lastStepX===undefined){m.lastStepX=m.x;m.lastStepY=m.y;}
   if(kind==='void'&&m.passiveClock>=4){m.passiveClock=0;const prey=pawns.sort((a,b)=>a.currentHp/a.maxHp-b.currentHp/b.maxHp)[0];if(prey)this.field(m,{name:'Bào Tử Đói Khát',radius:24,damage:m.attack*.4},m.x,m.y,.1,{homing:prey,speed:95,end:this.clock+6});}
-  if(kind==='void'&&m.phase===2)for(const item of G.dropItems)if(!item.isCollected&&Math.hypot(item.x-m.x,item.y-m.y)<650){item.isCollected=true;m.currentHp=Math.min(m.maxHp,m.currentHp+m.maxHp*.025);window.GameRenderer.VfxManager.addEffect('dash',item.x,item.y,{tx:m.x,ty:m.y,color:'#ac79ed',life:.5});}
+  if(kind==='void'&&m.phase===2&&this.clock>=(m.consumeAt||0))for(const item of G.dropItems)if(!item.isCollected&&!['god','ancient'].includes(item.tier)&&Math.hypot(item.x-m.x,item.y-m.y)<250&&M.segmentClear(m.x,m.y,item.x,item.y,false,0)){item.isCollected=true;m.consumeAt=this.clock+4;m.currentHp=Math.min(m.maxHp,m.currentHp+Math.min(15,m.maxHp*.01));window.GameRenderer.VfxManager.addEffect('dash',item.x,item.y,{tx:m.x,ty:m.y,color:'#ac79ed',life:.5});break;}
   if(kind==='chaos'){
    m.attackSpeedMultiplier=1+(1-m.currentHp/m.maxHp);
    if(m.passiveClock>=2){m.passiveClock=0;
@@ -257,15 +257,18 @@ window.GameEntities.AncientSystem={
     if(m.phase===2)for(let i=0;i<4;i++){const t=pawns[i%pawns.length];if(t)this.field(m,{name:'Linh Hồn Binh Khí',radius:28,damage:m.attack*.35},m.x+Math.cos(i*Math.PI/2)*65,m.y+Math.sin(i*Math.PI/2)*65,.2,{homing:t,speed:170,end:this.clock+4});}
    }
   }
-  if(kind==='diva'){
-   m.beatClock=(m.beatClock||0)+dt;m.fanClock=(m.fanClock||0)+dt;
-   if(m.beatClock>=(m.phase===2?2:4)){m.beatClock=0;this.field(m,{name:'Nhịp Điệu Vĩnh Cửu',radius:110,damage:m.attack*.3},m.x,m.y,.6);}
-   if(m.fanClock>=5){m.fanClock=0;m.currentHp=Math.min(m.maxHp,m.currentHp+m.phaseMaxHp*.01);}
-  }
-  if(kind==='eternal'&&m.passiveClock>=3){m.passiveClock=0;const prey=pawns[0];if(prey)this.field(m,{name:'Lửa Vĩnh Hằng',radius:60,damage:m.attack*.35,effect:'lava'},prey.x,prey.y,.8);}
-  if(kind==='mecha'&&m.passiveClock>=1.5){m.passiveClock=0;const far=pawns.filter(p=>Math.hypot(p.x-m.x,p.y-m.y)>130).sort((a,b)=>b.currentHp-a.currentHp)[0];if(far)this.field(m,{name:'Súng Phụ Tự Động',radius:20,damage:m.attack*.25},m.x,m.y,.1,{homing:far,speed:270,end:this.clock+3});}
+  if(kind==='mecha'&&this.clock>=(m.ventUntil||0)&&m.passiveClock>=1.5){m.passiveClock=0;const far=pawns.filter(p=>Math.hypot(p.x-m.x,p.y-m.y)>130).sort((a,b)=>b.currentHp-a.currentHp)[0];if(far)this.field(m,{name:'Súng Phụ Tự Động',radius:20,damage:m.attack*.25},m.x,m.y,.1,{homing:far,speed:270,end:this.clock+3});}
+ },
+
+ breakAnchor(p){
+  const C=window.GameEntities.CombatSystem,range=C.combatStats(p).range;
+  const target=this.fields.find(f=>f.neoHp>0&&f.end>this.clock&&Math.hypot(p.x-f.x,p.y-f.y)<Math.min(range,100));
+  if(!target||!C.canAttack(p)||p.attackCooldown>0)return false;
+  const ok=C.startAction(p,'attack',null,()=>{target.neoHp-=C.combatStats(p).attack;if(target.neoHp<=0){target.end=this.clock;C.progressionEvent(p,target.owner,'anchor');}window.GameRenderer.VfxManager.addEffect('hit',target.x,target.y,{radius:18,color:'#fff0ab',life:.4});},{angle:Math.atan2(target.y-p.y,target.x-p.x)});
+  if(ok){p.attackCooldown=1;p.objective='Phá neo kỹ năng để mở đường phản công';}return ok;
  },
  avoid(p,dt){
+  if(this.breakAnchor(p))return true;
   const G=window.GameManager,A=window.GameAI.AIBrain,M=window.GameEngine.MapTerrain;
   if(p.panicTimer>0)p.fear=Math.min(70,(p.fear||0)+dt*3);
   const danger=this.fields.find(f=>{
@@ -336,6 +339,7 @@ window.GameEntities.AncientSystem={
    if(f.homing){ctx.beginPath();ctx.ellipse(f.x,f.y,12,8,0,0,Math.PI*2);ctx.fill();ctx.stroke();}
    else if(f.shape==='line'){ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.angle);ctx.fillRect(0,-f.radius,f.length,f.radius*2);ctx.restore();}
    else{ctx.beginPath();ctx.arc(f.x,f.y,f.radius,0,Math.PI*2);ctx.fill();ctx.globalAlpha=.8;ctx.lineWidth=2;ctx.stroke();}
+   if(f.neoHp>0){ctx.globalAlpha=1;ctx.font='bold 13px Arial';ctx.textAlign='center';ctx.fillText('✦ NEO '+Math.ceil(f.neoHp),f.x,f.y-18);}
   }ctx.restore();
  },
  renderSky(ctx,w,h){if(!this.awakened)return;ctx.save();ctx.strokeStyle='#ffc7b8';ctx.lineWidth=2;ctx.globalAlpha=.5;

@@ -808,9 +808,8 @@ test('level 15 survivor collects useful nearby loot and uses owned potions befor
  G.battleRoyaleResolved=true;p.level=15;p.x=1000;p.y=300;p.currentHp=p.maxHp*.7;p.healthPotions=1;
  const item=G.spawnDropItem(1080,300,{id:'boost',name:'Giáp tốt',tier:'rare',slot:'body',defense:30,hp:60},'body');
  G.spatialGrid.clear();[p,item].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);
- assert.match(p.objective,/Nhặt/);assert.ok(!p.targetEnemy);
- item.isCollected=true;p.action=null;A.update(p,.1,G.spatialGrid,M);
- assert.equal(p.action?.kind,'drink');assert.match(p.objective,/Chuẩn bị/);assert.equal(p.healthPotions,0);
+ assert.equal(p.action?.kind,'drink');assert.equal(p.healthPotions,0);p.action=null;p.currentHp=p.maxHp;
+ A.update(p,.1,G.spatialGrid,M);assert.match(p.objective,/Nhặt/);assert.ok(!p.targetEnemy);
 });
 
 
@@ -874,7 +873,7 @@ test('Ancient movesets resolve all thirty skills with real timed fields, collisi
  for(const kind of ['colossus','mirror','void','chaos','mecha']){
   const {w,G,C,A,p,m}=ancientScenario(kind);p.invincible=true;
   for(const s of m.skills){
-   A.fields=[];m.action=null;m.attackState=null;m.globalSkillCooldown=0;s.cooldownTimer=0;m.phase=2;
+   A.fields=[];m.action=null;m.attackState=null;m.globalSkillCooldown=0;m.ventUntil=0;m.castHeat=0;s.cooldownTimer=0;m.phase=2;
    assert.equal(C.castSkill(m,s,p),true,kind+' '+s.id);assert.ok(A.fields.some(f=>f.warningOnly));
    C.updateStatus(m,s.def.windup+.01);A.tick(.1);G.render();assert.ok(Number.isFinite(m.x));
    if(s.def.effect==='split'){
@@ -892,13 +891,13 @@ test('Ancient movesets resolve all thirty skills with real timed fields, collisi
 
 test('Ancient defenses, copied build and warned ultimate behave as designed',()=>{
  const mirror=ancientScenario('mirror');
- assert.equal(mirror.m.maxHp,mirror.p.maxHp*15);assert.equal(mirror.m.copiedPassives.length,10);assert.equal(mirror.m.passiveMultiplier,2);
+ assert.equal(mirror.m.maxHp,450);assert.equal(mirror.m.copiedPassives.length,mirror.p.passives.length);assert.equal(mirror.m.passiveMultiplier,1);
  assert.equal(mirror.A.incoming(mirror.p,mirror.m,100,{skill:true},null),0);assert.equal(mirror.A.incoming(mirror.p,mirror.m,100,{skill:true},null),100);
- const col=ancientScenario('colossus');assert.equal(col.A.incoming(col.p,col.m,100,{},null),60);assert.equal(col.A.incoming(col.p,col.m,100,{trueDamage:true},null),50);
+ const col=ancientScenario('colossus');assert.equal(col.A.incoming(col.p,col.m,100,{},null),90);assert.equal(col.A.incoming(col.p,col.m,100,{trueDamage:true},null),75);
  const mecha=ancientScenario('mecha'),shield=mecha.m.shield;
- for(let i=0;i<10;i++)assert.equal(mecha.A.incoming(mecha.p,mecha.m,100,{},null),0);
- assert.equal(mecha.m.shield,shield-600);assert.ok(mecha.A.fields.some(f=>f.name==='Xả Nhiệt Quá Tải'));
- const v=ancientScenario('void');assert.equal(v.A.incoming(v.p,v.m,100,{dot:'poison'},null),0);assert.equal(v.A.incoming(v.p,v.m,100,{projectile:true},null),50);
+ assert.ok(mecha.A.incoming(mecha.p,mecha.m,100,{},null)>0);for(let i=1;i<10;i++)mecha.A.incoming(mecha.p,mecha.m,100,{},null);
+ assert.equal(mecha.m.shield,0);assert.ok(mecha.A.fields.some(f=>f.name==='Xả Nhiệt Quá Tải'));
+ const v=ancientScenario('void');assert.equal(v.A.incoming(v.p,v.m,100,{dot:'poison'},null),0);assert.equal(v.A.incoming(v.p,v.m,100,{projectile:true},null),80);
  v.m.phase=2;v.m.globalSkillCooldown=0;const skill=v.m.skills[5];skill.cooldownTimer=0;v.p.defense=100000;v.p.passives=[];
  assert.equal(v.C.castSkill(v.m,skill,v.p),true);const hp=v.p.currentHp;v.C.updateStatus(v.m,2.9);v.A.tick(2.9);assert.equal(v.p.currentHp,hp);
  v.C.updateStatus(v.m,.11);v.A.tick(.11);assert.ok(v.p.currentHp>=hp*.9,'warned lanes replace unavoidable 80% max-HP damage');assert.ok(v.A.fields.every(f=>!f.trueHpPct));
@@ -1142,19 +1141,19 @@ test('God rewards every top-tier equipment slot, one potion and 10000 EXP before
 });
 
 
-test('gauntlet defeats all six unique bosses (final Eternal last), waits exactly ten seconds and drops six different relics',()=>{
+test('gauntlet defeats all five unique bosses, waits exactly ten seconds and drops five different relics',()=>{
  const a=ancientScenario('colossus'),{w,G,C,A,p}=a,M=w.GameEngine.MapTerrain,seen=[];
- for(let round=1;round<=6;round++){
+ for(let round=1;round<=5;round++){
   const m=A.boss;seen.push(m.ancientKind);assert.equal(m.gauntletRound,round);assert.equal(m.isAlive,true);
   const count=G.dropItems.filter(d=>d.tier==='ancient').length;
   m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(G.dropItems.filter(d=>d.tier==='ancient').length,count);
   m.currentHp=0;C.handleDeath(p,m);assert.equal(G.dropItems.filter(d=>d.tier==='ancient').length,count+1);
   const relic=p.relicLoot;assert.equal(relic.tier,'ancient');C.handleDeath(p,m);assert.equal(A.defeated,round);
   p.action=null;p.targetEnemy=null;for(let i=0;i<60&&!relic.isCollected;i++)A.prepare(p,.1);assert.equal(relic.isCollected,true,'survivor walks to collect the relic, equipping only upgrades');
-  if(round<6){const next=A.nextAt;A.tick(9.999);assert.equal(A.boss,m);assert.equal(G.isGameOver,false);G.isPaused=true;G.update(10);assert.equal(A.nextAt,next);G.isPaused=false;A.tick(.002);assert.notEqual(A.boss,m);}
+  if(round<5){const next=A.nextAt;A.tick(9.999);assert.equal(A.boss,m);assert.equal(G.isGameOver,false);G.isPaused=true;G.update(10);assert.equal(A.nextAt,next);G.isPaused=false;A.tick(.002);assert.notEqual(A.boss,m);}
  }
- assert.equal(new Set(seen).size,6);assert.equal(seen[5],'eternal');assert.equal(new Set(A.usedRelics).size,6);assert.equal(A.queue.length,0);
- A.tick(.1);assert.equal(G.isGameOver,true);assert.equal(G.ancientDefeated,true);assert.match(w.documentText('story-card-modal'),/đủ 6 boss/);
+ assert.equal(new Set(seen).size,5);assert.deepEqual([...new Set(seen)].sort(),['chaos','colossus','mecha','mirror','void']);assert.equal(new Set(A.usedRelics).size,5);assert.equal(A.queue.length,0);
+ A.tick(.1);assert.equal(G.isGameOver,true);assert.equal(G.ancientDefeated,true);assert.match(w.documentText('story-card-modal'),/đủ 5 boss/);
  G.startNewMatch();assert.equal(A.arena,null);assert.equal(M.ancientArena,null);assert.equal(A.usedRelics.length,0);assert.equal(A.defeated,0);
  assert.ok(M.canStand(1000,300));assert.equal(M.navBlocked[Math.floor(300/M.cell)*M.cols+Math.floor(1000/M.cell)],0);
 });
@@ -1280,24 +1279,64 @@ test('a swimming bot escapes low progress at the river and restricted lair bound
  assert.ok(Math.hypot(p.x-3868.1466,p.y-3699.999)>30,'must leave the repeated short-step loop');assert.ok(p.navRecoveries>0);assert.ok(M.canStand(p.x,p.y));
 });
 
-test('final Eternal boss: capped hits, poison immunity, stacking attack, Red Flare phase 2, renders both phases',()=>{
- const {w,G,C,A,p}=ancientScenario('colossus');
- A.queue=[w.GameData.FinalAncientBoss];A.boss.isAlive=false;A.spawnNext();
- const m=A.boss;assert.equal(m.ancientKind,'eternal');assert.equal(m.skills.length,6);assert.equal(m.passives.length,6);
- assert.equal(A.incoming(p,m,1e9,{}),m.phaseMaxHp*.04);assert.equal(A.incoming(p,m,50,{dot:'poison'}),0);
- p.x=m.x+60;p.y=m.y;m.globalSkillCooldown=0;m.skills[0].cooldownTimer=0;const atk=m.attack;A.cast(m,m.skills[0],p);assert.equal(m.memStacks,1);assert.ok(m.attack>atk);
- const speed=m.speed;m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(m.speed,speed*1.4);
- assert.equal(A.config(m,m.skills[0]).cooldown,m.skills[0].def.cooldown*.65);G.monsters=[m];G.render();
+test('progression passives open at three and spend shared points without granting a full level-15 build',()=>{
+ const w=loadGame(),p=w.GameManager.pawns[0],A=w.GameAI.AIBrain;p.level=3;p.skills=[];p.passives=[];p.unspentSkillPoints=30;A.handleLevelingAndSkills(p);
+ assert.equal(p.passives.reduce((n,s)=>n+s.tier,0)+p.skills.reduce((n,s)=>n+s.tier,0),31);assert.equal(w.GameData.EndgamePassives.length,18);assert.ok(p.passives.every(s=>s.id&&s.tier<=3));
+ const count=p.passives.length;p.level=15;p.unspentSkillPoints=0;A.handleLevelingAndSkills(p);assert.equal(p.passives.length,count);
+});
+test('Blood Body heals in real combat, crosses once, ignores lethal hits and stops outside combat',()=>{
+ const w=loadGame(9,{openTemple:true}),G=w.GameManager,C=w.GameEntities.CombatSystem,[p,q]=G.pawns;G.pawns=[p,q];G.monsters=[];Object.assign(p,{x:2600,y:2600,maxHp:1000,currentHp:410,defense:0});Object.assign(q,{x:2640,y:2600});p.passives=[C.makePassive(w.GameData.EndgamePassives.find(d=>d.id==='p_blood_body'))];p.passives[0].tier=3;p.lastHostileAt=0;G.matchTime=0;
+ C.updateStatus(p,1);assert.equal(p.currentHp,421);C.applyDamage(q,p,null,{baseDamage:80,trueDamage:true});assert.equal(p.progression.bloodRemaining,3);assert.equal(p.passives[0].cooldownTimer,60);
+ const hp=p.currentHp;C.updateStatus(p,1);assert.equal(p.currentHp,hp+91);C.applyDamage(q,p,null,{baseDamage:50,trueDamage:true});assert.equal(p.progression.bloodRemaining,2);
+ G.matchTime=20;C.updateStatus(p,1);assert.equal(p.progression.bloodRemaining,0);p.currentHp=1;C.applyDamage(q,p,null,{baseDamage:100,trueDamage:true});assert.equal(p.isAlive,false);
+});
+test('each Ancient has distinct bounded phase HP and stronger phase-two attacks',()=>{
+ for(const kind of ['colossus','mirror','void','chaos','mecha']){const {m,p,C,A}=ancientScenario(kind),atk=m.attack;assert.ok(m.maxHp>=450&&m.maxHp<=650);m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.ok(m.maxHp>=1350&&m.maxHp<=1700);assert.equal(m.currentHp,m.maxHp);assert.ok(m.attack>atk);assert.ok(m.defense<m.profile.def);}
+});
+test('visible potion is sought outside combat, collected and consumed for healing',()=>{
+ const w=loadGame(12),G=w.GameManager,A=w.GameAI.AIBrain,M=w.GameEngine.MapTerrain,p=G.pawns[0];G.pawns=[p];G.monsters=[];Object.assign(p,{x:1000,y:300,currentHp:p.maxHp*.6,healthPotions:0});const item=G.spawnDropItem(1060,300,w.GameEntities.CombatSystem.potion,'potion');G.spatialGrid.clear();[p,item].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);assert.match(p.objective,/bình máu/);p.x=item.x;p.y=item.y;A.update(p,.1,G.spatialGrid,M);assert.equal(item.isCollected,true);assert.equal(p.action?.kind,'drink');const hp=p.currentHp;w.GameEntities.CombatSystem.updateStatus(p,1);assert.ok(p.currentHp>hp);
 });
 
-test('final Miku boss: hologram dodge, poison immunity, beat ring, fan heal, Dark Encore phase 2, renders both phases',()=>{
- const {w,G,C,A,p}=ancientScenario('colossus');
- assert.deepEqual(Array.from(w.GameData.FinalAncientBosses,d=>d.kind),['eternal','diva']);
- A.queue=[w.GameData.MikuBoss];A.boss.isAlive=false;A.spawnNext();
- const m=A.boss;assert.equal(m.ancientKind,'diva');assert.equal(m.skills.length,6);assert.equal(m.passives.length,6);
- assert.equal(A.incoming(p,m,500,{dot:'poison'}),0);assert.equal(A.incoming(p,m,500,{}),0);assert.equal(A.incoming(p,m,500,{}),500);
- p.x=m.x+60;p.y=m.y;G.pawns=[p];m.currentHp=m.phaseMaxHp*.5;const n=A.fields.length,hp=m.currentHp;A.passives(m,5);
- assert.ok(A.fields.length>n);assert.ok(m.currentHp>hp);assert.equal(p.auraSlow,.15);
- const speed=m.speed;m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(m.speed,speed*1.3);
- assert.equal(A.config(m,m.skills[0]).cooldown,m.skills[0].def.cooldown*.7);G.monsters=[m];G.render();
+test('split boss redirects survival commitments to a visible living clone',()=>{
+ const {w,G,A,C,p,m}=ancientScenario('mirror');p.survivalTarget=p.finalDuel=m;A.split(m,p);G.spatialGrid.clear();[p,...m.clones].forEach(e=>G.spatialGrid.insert(e));w.GameAI.AIBrain.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.ok(m.clones.includes(p.survivalTarget));assert.notEqual(p.finalDuel,m);
+});
+test('mecha overheat opens a recovery window after three casts and the exposed core is interruptible',()=>{
+ const {A,C,p,m}=ancientScenario('mecha');m.phase=2;const s=m.skills[0];for(let i=0;i<3;i++){m.action=null;m.attackState=null;m.globalSkillCooldown=0;s.cooldownTimer=0;assert.equal(C.castSkill(m,s,p),true);}assert.ok(m.ventUntil>A.clock);m.action=null;m.globalSkillCooldown=0;s.cooldownTimer=0;assert.equal(C.castSkill(m,s,p),false);A.clock=m.ventUntil;assert.equal(C.castSkill(m,s,p),true);
+});
+
+test('forming an alliance clears stale survival targets and never stalls against its own ally',()=>{
+ const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,A=w.GameAI.AIBrain,[p,q,t]=G.pawns;G.pawns=[p,q,t];G.monsters=[];p.allyPawn=q;q.allyPawn=p;p.survivalTarget=p.finalDuel=q;p.pactTarget=t;p.x=1000;q.x=1020;t.x=1100;p.y=q.y=t.y=300;G.spatialGrid.clear();[p,q,t].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.notEqual(p.survivalTarget,q);assert.equal(w.GameAI.EmotionEngine.commitSurvival(p,q),false);
+});
+
+test('species catalogue uses explicit identities including the final rhino, and zero-damage zones actually slow',()=>{
+ const w=loadGame(42,{openTemple:true}),C=w.GameEntities.CombatSystem,G=w.GameManager;let count=0;for(const d of [...Object.values(w.GameData.Monsters).flat(),w.GameData.FinalLord])for(const p of d.passives||[]){assert.equal(p.type,'species');assert.ok(p.id);count++;}assert.equal(count,45);const [p,q]=G.pawns;G.pawns=[p,q];G.monsters=[];p.x=2600;q.x=2640;p.y=q.y=2600;G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));C.field(p,{radius:60},q.x,q.y,{slow:.3,damage:0,life:2});C.tickFields(.1);assert.ok(q.slowTimer>0);assert.equal(q.slowPct,.3);
+});
+
+test('phase-two acid consumes only a snapshot of live puddles and cannot recursively spawn fields',()=>{const {A,m,p}=ancientScenario('void');m.phase=2;const c=A.config(m,m.skills.find(s=>s.id==='av_acid'));A.field(m,c,p.x,p.y,0,{end:A.clock+3});A.resolve(m,c,p,{x:p.x,y:p.y},0);assert.ok(A.fields.length<=3);assert.ok(A.fields.some(f=>f.effect==='acid_pull'));});
+
+test('all eighteen passives retain three ranks, explicit cooldowns and independent direct-hit tokens',()=>{
+ const w=loadGame(42,{openTemple:true}),G=w.GameManager,C=w.GameEntities.CombatSystem,[p,q]=G.pawns;G.pawns=[p,q];G.monsters=[];p.x=2600;q.x=2640;p.y=q.y=2600;G.matchTime=10;
+ for(const d of w.GameData.EndgamePassives)for(let rank=1;rank<=3;rank++){const passive=C.makePassive(d);passive.tier=rank;p.passives=[passive];p.progression={};assert.equal(d.ranks.length,3);assert.ok(d.ranks[rank-1].desc);assert.ok(d.cooldown>=12);C.progressionEvent(p,q,'strike',{actionId:1,damage:20});C.progressionEvent(p,q,'strike',{actionId:1,damage:20});assert.equal(p.progression.combo,1);C.progressionEvent(p,q,'strike',{actionId:2,damage:20});assert.equal(p.progression.combo,2);C.tickProgression(p,.1);assert.ok(Number.isFinite(p.currentHp));}
+});
+
+
+test('rank-three effects consume charges, move attacks and respect directional armor and aura budgets',()=>{
+ const w=loadGame(42,{openTemple:true}),G=w.GameManager,C=w.GameEntities.CombatSystem,M=w.GameEngine.MapTerrain,[p,q]=G.pawns;G.pawns=[p,q];G.monsters=[];Object.assign(p,{x:2600,y:2600,attack:20,critChance:0,skills:[],passives:[],currentStamina:100});Object.assign(q,{x:2640,y:2600,maxHp:1000,currentHp:1000,defense:100,critChance:0,passives:[]});G.matchTime=10;G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));
+ q.armorBreak=.5;q.armorBreakTimer=3;q.crackOwner=p;q.crackAngle=Math.PI;assert.equal(C.combatStats(q,p).defense,50);p.x=2680;assert.equal(C.combatStats(q,p).defense,100);p.x=2600;
+ p.weaponBuffTimer=4;p.magicOnHit=8;p.enchantedCharges=3;p.enchantedRank=3;p.enchantedElement='ice';for(let id=1;id<=3;id++){C.applyDamage(p,q,null,{baseDamage:10,sourceSkill:{castId:id}});C.applyDamage(p,q,null,{baseDamage:10,sourceSkill:{castId:id}});}assert.equal(p.enchantedCharges,0);assert.ok(C.fields.some(f=>f.owner===p&&f.slow));
+ q.currentHp=300;q.healingAura=C.field(q,{radius:100},q.x,q.y,{heal:20,life:3,convertible:true});const hp=q.currentHp;C.applyDamage(p,q,null,{baseDamage:30,trueDamage:true});assert.equal(q.healingAura.life,0);assert.equal(q.currentHp,hp);
+ p.weapon={type:'bow',range:130,speed:1};p.action=null;p.attackCooldown=0;p.movingShotReady=true;p.speedBuffTimer=3;const y=p.y;assert.equal(C.executeAttack(p,q),true);C.updateStatus(p,.1);assert.ok(p.y!==y);assert.equal(p.movingShotReady,false);assert.ok(M.canStand(p.x,p.y));
+});
+
+
+test('Phoenix egg allows one rebirth, can be destroyed and delays the God countdown until true death',()=>{
+ for(const destroy of [false,true]){const w=loadGame(3,{openTemple:true}),G=w.GameManager,C=w.GameEntities.CombatSystem,p=G.pawns[0],m=w.GameEntities.EntityManager.spawnMonster({...Object.values(w.GameData.Monsters).flat().find(d=>d.id==='eternal_solar_phoenix')},2600,2600);G.pawns=[p];G.monsters=[m];Object.assign(p,{x:2640,y:2600});w.GameEntities.EntityManager.worldBoss=m;m.currentHp=0;C.handleDeath(p,m);assert.equal(m.isAlive,true);assert.ok(m.phoenixEgg);assert.equal(G.ancientCountdown,undefined);
+ if(destroy){C.applyDamage(p,m,null,{baseDamage:100,trueDamage:true});assert.equal(m.isAlive,false);}else{G.matchTime=4;C.tickSpecies(m,.1);assert.equal(m.phoenixEgg,null);assert.equal(m.currentHp,m.maxHp*.3);m.currentHp=0;C.handleDeath(p,m);assert.equal(m.isAlive,false);}
+ }
+});
+
+
+test('momentum reacts to real interruptions and pattern reading waits for the third observed action',()=>{
+ const w=loadGame(),C=w.GameEntities.CombatSystem,G=w.GameManager,[p,q]=G.pawns;G.matchTime=10;p.passives=[C.makePassive(w.GameData.EndgamePassives.find(d=>d.id==='p_turning_momentum'))];p.passives[0].tier=3;p.progression={};C.progressionEvent(p,q,'opening');assert.equal(p.passives[0].cooldownTimer,0);q.action={id:1,kind:'skill',castId:8,released:false};assert.equal(C.interruptChannel(p,q),true);assert.equal(q.action,null);assert.equal(q.cancelledCastId,8);assert.ok(p.progression.strideUntil>10);
+ p.passives=[C.makePassive(w.GameData.EndgamePassives.find(d=>d.id==='p_pattern_reading'))];p.progression={};for(let i=1;i<=3;i++){q.action={id:i,kind:'skill',skillId:'m_fireball',released:false};C.progressionEvent(p,q,'observed');assert.equal(p.passives[0].cooldownTimer>0,i===3);}
 });

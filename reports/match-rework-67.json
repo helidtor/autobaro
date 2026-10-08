@@ -1,22 +1,22 @@
 {
   "seed": 67,
-  "fingerprint": "d83f24c120d3fc2b8da376c53b5a20adc70bdc5beccf677dc595745550afae78",
+  "fingerprint": "ddd12e5006d8287ca4ff22bd2fb3d1cf9318ca263affcf92db8c2c2101f616b7",
   "finished": true,
-  "simulatedSeconds": 650.6,
+  "simulatedSeconds": 830.5,
   "survivors": [
     {
-      "id": "pawn_24",
-      "level": 12,
-      "hp": 704,
-      "objective": "Săn 5 Yêu Vương để đạt cấp 15",
-      "x": 1079.8302317031378,
-      "y": 3179.2864358641878
+      "id": "pawn_93",
+      "level": 16,
+      "hp": 1130,
+      "objective": "Chuẩn bị đấu Yêu Thần",
+      "x": 4844.441886895644,
+      "y": 1616.6187194558354
     }
   ],
-  "ticks": 6506,
-  "peakDrops": 6,
-  "largestGroup": 4,
-  "p95Ms": 141.6484000000055,
+  "ticks": 8305,
+  "peakDrops": 28,
+  "largestGroup": 3,
+  "p95Ms": 146.42810000000463,
   "invalidGroups": [],
   "suspects": []
 }

@@ -38,7 +38,7 @@ for(let run=0;run<10;run++){
  const w=loadGame(71+run,{openTemple:true}),G=w.GameManager,C=w.GameEntities.CombatSystem,E=w.GameEntities.EntityManager,A=w.GameEntities.AncientSystem,p=G.pawns[0],god=E.worldBoss;
  G.pawns.forEach(q=>q.isAlive=q===p);G.pawns=[p];G.winnerPawn=p;G.battleRoyaleResolved=true;G.isPaused=false;G.resultOpen=false;
  for(let i=1;i<15+(run%2)*5;i++)C.grantLevel(p);p.healthPotions=3;p.personality={...w.GameData.PersonalityProfiles[run%2?'brave':'wise']};
- const pos=w.GameEngine.MapTerrain.nearestFree(god.x-45,god.y);Object.assign(p,pos);C.handleDeath(p,god);G.monsters.forEach(m=>m.isAlive=false);
+ const pos=w.GameEngine.MapTerrain.nearestFree(god.x-45,god.y);Object.assign(p,pos);C.handleDeath(p,god);if(god.phoenixEgg)C.applyDamage(p,god,null,{baseDamage:100,trueDamage:true});G.monsters.forEach(m=>m.isAlive=false);
  const kind=w.GameData.AncientBosses[run%5].kind,originalRandom=w.__math.random;w.__math.random=()=> (run%5+.1)/5;
  let ticks=0,stalls=0,last={x:p.x,y:p.y,t:0},maxFields=0;const history=[];const stallDetails=[];const modes=new Set();
  for(;ticks<9000&&!G.isGameOver;ticks++){

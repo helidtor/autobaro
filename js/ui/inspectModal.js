@@ -123,11 +123,20 @@ window.GameUI.InspectModal = {
       <div class="inspect-section">
         <div class="section-title">Kỹ năng tự chọn • không giới hạn nhánh</div>
         ${skillsHtml}
-        ${(p.passives||[]).map(s=>'<div class="inspect-skill-item"><b>'+s.name+' (Nội tại)</b><div class="skill-desc">'+s.desc+'</div></div>').join('')}
+        ${p.lastSkillInvestment?'<div class="skill-desc">'+p.lastSkillInvestment+'</div>':''}
+        ${p.skillCombo?'<div class="skill-desc">Combo: '+(p.skills.find(s=>s.id===p.skillCombo.setupId)?.def.name||'Tạo thế')+' → '+(p.skills.find(s=>s.id===p.skillCombo.followupId)?.def.name||'Đòn nối')+'</div>':''}
+        ${(p.passives||[]).map(s=>'<div class="inspect-skill-item"><b>'+s.name+' (Nội tại B'+(s.tier||1)+')</b><div class="skill-desc">'+(s.ranks?.[(s.tier||1)-1]?.desc||s.desc)+'<br>'+this.passiveStatus(p,s)+'</div></div>').join('')}
       </div>
     `;
   },
 
+  passiveStatus(e,s){
+    const now=window.GameManager.matchTime||0,state=e.progression||{};
+    if(s.id==='p_blood_body')return (state.bloodRemaining>0?'Bùng hồi: '+state.bloodRemaining.toFixed(1)+'s':now-(e.lastHostileAt??-Infinity)<6?'Hồi bổ sung đang hoạt động':'Ngoài giao tranh: chưa hồi bổ sung')+(s.cooldownTimer>0?' • Bùng hồi CD '+s.cooldownTimer.toFixed(1)+'s':'');
+    if(state.strideUntil>now&&s.role==='mobility')return 'Có cửa đổi vị trí';
+    if(s.id==='p_last_exit'&&state.exitLocked)return 'Tái nạp khi HP >55% liên tục 8s và hết CD';
+    return s.cooldownTimer>0?'Hồi chiêu '+s.cooldownTimer.toFixed(1)+'s':'Chờ điều kiện kích hoạt';
+  },
   skillDescription(e,s) {
     const c=window.GameEntities.CombatSystem.getSkillConfig(e,s);
     const status=s.cooldownTimer>0 ? "Hồi chiêu "+s.cooldownTimer.toFixed(1)+"s" : "Sẵn sàng";
@@ -152,7 +161,7 @@ window.GameUI.InspectModal = {
       </div>
 
       <div class="inspect-section">
-        ${m.isAncient?'<div>Thanh HP 1: '+(m.phase===1?Math.round(m.currentHp):0)+' / '+m.phaseMaxHp+'</div><div>Thanh HP 2: '+(m.phase===1?m.phaseMaxHp:Math.round(m.currentHp))+' / '+m.phaseMaxHp+'</div><div>Miễn khống chế: 100% • Lá chắn: '+Math.round(m.shield||0)+'</div>':''}
+        ${m.isAncient?'<div>Thanh HP 1: '+(m.phase===1?Math.round(m.currentHp):0)+' / '+(m.profile?.hp||m.phaseMaxHp)+'</div><div>Thanh HP 2: '+(m.phase===1?(m.profile?.hp2||m.phaseMaxHp):Math.round(m.currentHp))+' / '+(m.profile?.hp2||m.phaseMaxHp)+'</div><div>Miễn khống chế: 100% • Lá chắn: '+Math.round(m.shield||0)+'</div>':''}
         <div class="section-title">Chỉ Số Thực Chiến</div>
         <div>Tấn công: <b>${m.attack}</b></div>
         <div>Phòng ngự: <b>${m.defense}</b></div>
