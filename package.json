@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test tests/game.test.cjs",
+    "test": "node --test tests/game.test.cjs tests/map.test.cjs",
     "preview": "vite preview"
   },
   "keywords": [

@@ -87,8 +87,8 @@ window.GameEntities.EntityManager = {
       };
 
       const M=window.GameEngine.MapTerrain;
-      let pos=M.nearestFree(p.x,p.y);
-      if(M.isInWater(pos.x,pos.y))pos=M.nearestFree(pos.x+(edge===1?180:-180),pos.y);
+      let pos=M.nearestFree(p.x,p.y,14);
+      if(M.isInWater(pos.x,pos.y))for(const d of [180,300,420]){const q=M.nearestFree(pos.x+(edge===1?d:-d),pos.y,14);if(!M.isInWater(q.x,q.y)){pos=q;break;}}
       Object.assign(p,pos);
       this.pawns.push(p);
     }
@@ -120,6 +120,8 @@ window.GameEntities.EntityManager = {
       M.bushes.push({x:(h.x+Math.cos(angle+.3)*h.radius*.42)/M.scale,y:(h.y+Math.sin(angle+.3)*h.radius*.42)/M.scale,radius:20,isBurned:false});
     }
     M.buildObstacles();
+    // Habitat trees were added after the first placement: nudge anyone a new trunk landed on.
+    for(const e of [...this.pawns,...this.monsters])if(!M.canStand(e.x,e.y,12))Object.assign(e,M.nearestFree(e.x,e.y,14));
     M.lairs.forEach((site,i)=>this.spawnMonster(D.lords[i],site.x,site.y,site));
     const def=D.worldBosses[Math.floor(Math.random()*D.worldBosses.length)];
     this.worldBoss=this.spawnMonster(def,center.x,center.y,M.templeRuins);
@@ -138,7 +140,7 @@ window.GameEntities.EntityManager = {
   },
 
   spawnMonster: function(def, x, y, territory = null) {
-    const pos=window.GameEngine.MapTerrain.nearestFree(x,y);x=pos.x;y=pos.y;
+    const pos=window.GameEngine.MapTerrain.nearestFree(x,y,14);x=pos.x;y=pos.y;
     if(territory&&def.tier>=4)territory.isCleared=false;
     const m = {
       id: 'm_' + Math.random().toString(36).substr(2, 9),

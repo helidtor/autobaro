@@ -4,7 +4,7 @@ Game mô phỏng sinh tồn Battle Royale trên trình duyệt, lấy cảm hứ
 
 Dự án dùng **JavaScript thuần, Canvas 2D và Vite**. Nhân vật, địa hình, kiến trúc và hiệu ứng được vẽ bằng code, không cần backend để chạy.
 
-![Bản đồ AutoBaro](reports/habitat-map-2026-10-07.png)
+![Bản đồ AutoBaro](reports/map-rework-2026-10-08.png)
 
 ## Các tính năng hiện có
 
@@ -19,7 +19,7 @@ Dự án dùng **JavaScript thuần, Canvas 2D và Vite**. Nhân vật, địa h
 - Nhiều kiểu đánh theo vũ khí, với động tác chuẩn bị, ra đòn, hồi chiêu, đỡ và né. Kỹ năng có giới hạn tài nguyên, cooldown và hiệu ứng cảnh báo. Quái dùng chung nhịp phép: Yêu Tướng/Yêu Vương tối đa một phép mỗi 3 giây, Yêu Thần mỗi 2 giây, Thượng Cổ mỗi 1 giây, ngoài cooldown riêng từng phép. Yêu Tướng trở lên đọc đòn, chọn chiêu theo tình huống, bọc sườn và giữ cự ly.
 - Mỗi trận có 100 bot và 71 quái: 40 Lâu La (bầy 2–3 con), 20 Yêu Thú đơn lẻ, 6 Yêu Tướng, 4 Yêu Vương, 1 Yêu Thần. Quái có sinh cảnh theo loài; bốn Yêu Vương trấn giữ bốn sào huyệt đối xứng, Yêu Tướng canh bên ngoài và không đánh hội đồng một bot.
 - Cụm giao tranh liên thông tối đa 3 thực thể; ngoại lệ đúng hai cặp liên minh với 4 thành viên. Kiểm tra di chuyển và chọn mục tiêu ngăn bot kéo tới tụ đám ở cụm đã đủ người.
-- Bản đồ 5200 × 5200 có Thiền Viện Trúc Lâm, Rừng Già Hoang Vu, Dãy Núi Liên Sơn, Sông Hoàng Hà, Kinh Thành và làng mạc. Nhà, tường, hàng rào, cây và đá có va chạm; AI ưu tiên đường khô và cầu. Trong sông chỉ bơi, tốc độ còn 45% và không thể chiến đấu.
+- Bản đồ 5200 × 5200 thiết kế theo chiến thuật: Kinh Thành có 4 cổng khác cỡ (110/64/64/48), một lỗ thủng tường kèm đống đổ nát và các ngõ hẹp quanh chợ; bốn Điện Yêu Vương nằm ở bốn góc, mỗi điện có 2–4 cổng rộng 40–110 và vật chắn tầm nhìn riêng, cùng chung bốn đại lộ có hàng rào bụi để đánh vòng. Sông Hoàng Hà chỉ qua được bằng 2 cầu (đường khô) hoặc 3 bến cạn (chậm 35%, lộ diện); trong sông chỉ bơi, tốc độ còn 45% và không thể chiến đấu. Dãy Núi Liên Sơn là lòng chảo khép kín với hẻm núi, đèo Đông, hẻm sông và các thềm đá cao; đầm lầy làm chậm 20%; phế tích, đê ruộng và đống đổ nát là các đảo che chắn. Nhà, tường, hàng rào, cây và đá có va chạm; bụi, tre, lau chỉ để ẩn nấp. Dữ liệu bố cục nằm trong `js/engine/mapLayout.js`, hình vẽ trong `js/engine/mapRender.js` (lớp nền tĩnh được cache ra canvas ngoài màn hình).
 - Giai đoạn Battle Royale không có vòng bo hoặc sát thương ngoài vùng. Điện thờ Yêu Thần có phong ấn chặn di chuyển và giao tranh, chỉ mở khi mọi Yêu Vương đang sống đã bị hạ. Lượt farm cuối khóa lại cho đến khi hạ hết cả 5 Yêu Vương mới.
 - Khi chỉ còn một bot, popup công bố kết quả. Đóng popup để tiếp tục: quái từ Yêu Vương trở xuống được thay bằng 5 Yêu Vương khác nhau ở 5 vị trí; người sống sót farm EXP đến cấp 15 và hạ hết 5 Yêu Vương rồi mới chủ động đấu Yêu Thần. Có nút **Ván mới** trên thanh công cụ.
 - Núp bụi chỉ khi vừa cắt tầm nhìn của kẻ truy sát, đã ngừng combat và không bị đối thủ nhìn thấy; hoặc rình bên cạnh một trận combat đã đủ người. Không núp khi đi săn bình thường. Phục kích có thời gian chờ hữu hạn, chỉ xuất kích khi mục tiêu rời cụm và còn chỗ giao tranh.
