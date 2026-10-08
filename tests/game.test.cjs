@@ -32,6 +32,18 @@ function loadGame(seed = 42, { openTemple = false } = {}) {
   return context.window;
 }
 
+test('all 20 pawn skins are assigned in order and render with and without gear', () => {
+  const w = loadGame(), G = w.GameManager, S = w.GameRenderer.PawnSkins;
+  assert.equal(S.list.length, 20);
+  assert.deepEqual(G.pawns.slice(0, 20).map(p => p.appearance.skin), S.list.map(s => s.id));
+  for (const s of S.list) {
+    const p = { ...G.pawns[0], appearance: S.apply(w.GameRenderer.ProceduralPawn.generateAppearance('x'), 'pawn_' + S.list.indexOf(s)) };
+    for (const gear of [{}, { armor: { tier: 'rare' }, helmet: { tier: 'rare' } }]) {
+      w.GameRenderer.ProceduralPawn.renderPawn(G.ctx, { ...p, ...gear }, 1, 0, true);
+    }
+  }
+});
+
 test('every monster definition renders, including centaur', () => {
   const w = loadGame();
   const E = w.GameEntities.EntityManager;
@@ -1276,4 +1288,16 @@ test('final Eternal boss: capped hits, poison immunity, stacking attack, Red Fla
  p.x=m.x+60;p.y=m.y;m.globalSkillCooldown=0;m.skills[0].cooldownTimer=0;const atk=m.attack;A.cast(m,m.skills[0],p);assert.equal(m.memStacks,1);assert.ok(m.attack>atk);
  const speed=m.speed;m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(m.speed,speed*1.4);
  assert.equal(A.config(m,m.skills[0]).cooldown,m.skills[0].def.cooldown*.65);G.monsters=[m];G.render();
+});
+
+test('final Miku boss: hologram dodge, poison immunity, beat ring, fan heal, Dark Encore phase 2, renders both phases',()=>{
+ const {w,G,C,A,p}=ancientScenario('colossus');
+ assert.deepEqual(Array.from(w.GameData.FinalAncientBosses,d=>d.kind),['eternal','diva']);
+ A.queue=[w.GameData.MikuBoss];A.boss.isAlive=false;A.spawnNext();
+ const m=A.boss;assert.equal(m.ancientKind,'diva');assert.equal(m.skills.length,6);assert.equal(m.passives.length,6);
+ assert.equal(A.incoming(p,m,500,{dot:'poison'}),0);assert.equal(A.incoming(p,m,500,{}),0);assert.equal(A.incoming(p,m,500,{}),500);
+ p.x=m.x+60;p.y=m.y;G.pawns=[p];m.currentHp=m.phaseMaxHp*.5;const n=A.fields.length,hp=m.currentHp;A.passives(m,5);
+ assert.ok(A.fields.length>n);assert.ok(m.currentHp>hp);assert.equal(p.auraSlow,.15);
+ const speed=m.speed;m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(m.speed,speed*1.3);
+ assert.equal(A.config(m,m.skills[0]).cooldown,m.skills[0].def.cooldown*.7);G.monsters=[m];G.render();
 });
