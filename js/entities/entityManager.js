@@ -14,6 +14,8 @@ window.GameEntities.EntityManager = {
     this.pawns = [];
     this.monsters = [];
     this.dropItems = [];
+    window.GameEntities.AncientSystem.reset();
+    window.GameEntities.CombatSystem.pendingEffects=[];this.respawnWaves={};
     this.finalHuntStarted=false;this.finalHuntMonsters=[];
 
     const center = { x: mapWidth / 2, y: mapHeight / 2 };
@@ -65,7 +67,6 @@ window.GameEntities.EntityManager = {
         critChance: 0.05,
         trait: randomTrait,
         secondaryTrait,personality,decisionInterval:.65+Math.random()*.9,flankSide:Math.random()<.5?-1:1,
-        hasLockedClass: false,
         classId: null,
         weapon: null,
         helmet: null,
@@ -74,6 +75,8 @@ window.GameEntities.EntityManager = {
         healthPotions: 0,
         thought: 'Tìm quái yếu để luyện cấp, chưa có vũ khí.',
         objective: 'Khám phá vùng ngoại ô',
+        battleWill: 0,decisionReason: 'Tìm mục tiêu phù hợp',
+        anger: 0,
         fear: 0,
         confidence: 20,
         despair: 0,
@@ -120,6 +123,18 @@ window.GameEntities.EntityManager = {
     M.lairs.forEach((site,i)=>this.spawnMonster(D.lords[i],site.x,site.y,site));
     const def=D.worldBosses[Math.floor(Math.random()*D.worldBosses.length)];
     this.worldBoss=this.spawnMonster(def,center.x,center.y,M.templeRuins);
+    for(const tier of [2,3])this.respawnWaves[tier]={timer:null,sites:this.monsters.filter(m=>m.tier===tier).map(m=>({def:D[tier===2?'beasts':'generals'].find(d=>d.id===m.defId),x:m.homeX,y:m.homeY,territory:m.territory}))};
+  },
+
+  updateRespawns(dt){
+    const G=window.GameManager;if(G.battleRoyaleResolved||G.monsters!==this.monsters)return;
+    for(const tier of [2,3]){const wave=this.respawnWaves?.[tier];if(!wave)continue;
+      if(this.monsters.some(m=>m.tier===tier&&m.isAlive)){wave.timer=null;continue;}
+      wave.timer=(wave.timer??10)-dt;if(wave.timer>1e-8)continue;
+      for(let i=this.monsters.length-1;i>=0;i--)if(this.monsters[i].tier===tier)this.monsters.splice(i,1);
+      for(const site of wave.sites)this.spawnMonster(site.def,site.x,site.y,site.territory);
+      wave.timer=null;window.GameUI.CombatTicker.log('🌿 '+(tier===2?'Yêu Thú':'Yêu Tướng')+' đã hồi sinh tại sinh cảnh cũ.');
+    }
   },
 
   spawnMonster: function(def, x, y, territory = null) {
@@ -137,12 +152,12 @@ window.GameEntities.EntityManager = {
       tierName: def.tierName,
       scale: def.scale || 1.0,
       visual: def.visual || {},
-      maxHp: Math.round(def.maxHp * [0, 0.5, 0.5, 0.7, 0.65, 0.45][def.tier]),
-      currentHp: Math.round(def.maxHp * [0, 0.5, 0.5, 0.7, 0.65, 0.45][def.tier]),
-      attack: Math.round(def.attack * [0, 0.45, 0.4, 0.65, 0.5, 0.35][def.tier]),
+      maxHp: Math.round(def.maxHp * ([0, 0.5, 0.5, 0.7, 0.65, 0.45][def.tier]??1)),
+      currentHp: Math.round(def.maxHp * ([0, 0.5, 0.5, 0.7, 0.65, 0.45][def.tier]??1)),
+      attack: Math.round(def.attack * ([0, 0.45, 0.4, 0.65, 0.5, 0.35][def.tier]??1)),
       defense: Math.round(def.defense*(def.tier<=2?.55:1)),
       speed: def.speed || 80,
-      expReward: def.expReward || 50,
+      expReward: def.tier===5?Math.max(10000,def.expReward||0):def.expReward??50,
       dropTier: def.dropTier || (def.tier===5?'god':'common'),
       godArtifactId: def.godArtifactId,
       attackCooldown: 0,

@@ -12,8 +12,8 @@ window.GameRenderer.WeaponAnimations = {
     return {a,wind,strike,recover};
   },
   drawWeapon(ctx,weapon={},draw=0){
-    const type=this.weaponType(weapon),rank=Math.max(0,['common','rare','super_rare','supreme','god'].indexOf(weapon.tier));
-    const accent=window.GameData.Equipments.TIER_COLORS[weapon.tier]||'#a68c62',wood=rank?'#73524a':'#98754d',metal=rank===4?'#ffe8a4':'#c3d5df';
+    const type=this.weaponType(weapon),rank=Math.max(0,['common','rare','super_rare','supreme','god','ancient'].indexOf(weapon.tier));
+    const accent=window.GameData.Equipments.TIER_COLORS[weapon.tier]||'#a68c62',wood=rank?'#73524a':'#98754d',metal=rank>=4?'#ffe8a4':'#c3d5df';
     const variation=[...(weapon.id||type)].reduce((v,c)=>v+c.charCodeAt(0),0)%3;
     ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
     const line=(x,y,tx,ty,color,width=1.5)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(tx,ty);ctx.stroke();};

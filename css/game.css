@@ -527,3 +527,5 @@ body, html {
 .bot-objective{color:#f5cf8b;font-weight:700;line-height:1.5}.bot-thought{color:#d1dde3;font-style:italic;line-height:1.5}.inspect-skill-item{border-left:3px solid #8bcce2;padding-left:10px}.skill-desc{line-height:1.6}#inspect-panel{max-height:calc(100vh - 160px);overflow-y:auto}.story-card-box p{color:#bdcbd3;line-height:1.6}
 
 .player-control-hint{font-size:11px;max-width:220px;color:#d8e7eb;line-height:1.6;margin:0 12px}.action-slot{font-size:13px}#director-bar{max-width:calc(100vw - 40px)}
+
+.sound-volume{display:flex;align-items:center;gap:5px;font-size:11px;color:#c9d4e5}.sound-volume input{width:65px;accent-color:#e7bd68}#director-bar{max-width:calc(100vw - 24px);flex-wrap:wrap;justify-content:center}.director-group{flex-wrap:wrap}

@@ -1,0 +1,41 @@
+{
+  "seed": 17,
+  "fingerprint": "ed0bcf1c63907d3157a8017052a2331757f5017cfbf2ea58f3bb7ee3113471ea",
+  "finished": true,
+  "simulatedSeconds": 533.3,
+  "survivors": [
+    {
+      "id": "pawn_35",
+      "level": 11,
+      "hp": 740,
+      "objective": "Săn 5 Yêu Vương để đạt cấp 15",
+      "x": 3083.133124970337,
+      "y": 2576.078906535576
+    }
+  ],
+  "ticks": 5333,
+  "peakDrops": 15,
+  "largestGroup": 3,
+  "p95Ms": 145.4067,
+  "invalidGroups": [],
+  "suspects": [
+    {
+      "id": "pawn_69",
+      "t": 10.1,
+      "travel": 0,
+      "swaps": 5,
+      "moving": 0,
+      "blocked": null,
+      "detour": null,
+      "level": 1,
+      "objective": "Phản công sơ hở: Phương Uyên #74",
+      "goal": {
+        "x": 4852.455250261002,
+        "y": 3658.2217171102425
+      },
+      "target": "pawn_73",
+      "x": 4798.328662524471,
+      "y": 3626.9717171102425
+    }
+  ]
+}

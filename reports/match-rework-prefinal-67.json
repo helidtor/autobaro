@@ -1,0 +1,40 @@
+{
+  "seed": 67,
+  "fingerprint": "ed0bcf1c63907d3157a8017052a2331757f5017cfbf2ea58f3bb7ee3113471ea",
+  "finished": true,
+  "simulatedSeconds": 799.8,
+  "survivors": [
+    {
+      "id": "pawn_58",
+      "level": 15,
+      "hp": 966,
+      "objective": "Chuẩn bị đấu Yêu Thần",
+      "x": 1772.7338108082863,
+      "y": 3177.58430775401
+    }
+  ],
+  "ticks": 7998,
+  "peakDrops": 26,
+  "largestGroup": 4,
+  "p95Ms": 115.00730000001204,
+  "invalidGroups": [],
+  "suspects": [
+    {
+      "id": "pawn_75",
+      "t": 339.1,
+      "travel": 9,
+      "swaps": 0,
+      "moving": 9,
+      "blocked": null,
+      "detour": null,
+      "level": 8,
+      "objective": "Săn Thống Lĩnh Nhân Mã",
+      "goal": {
+        "x": 4065.8020634454188,
+        "y": 3751.0293673635206
+      },
+      "x": 3868.1466268839285,
+      "y": 3699.999933028854
+    }
+  ]
+}

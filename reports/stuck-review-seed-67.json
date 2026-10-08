@@ -1,0 +1,1908 @@
+{
+  "seed": 67,
+  "pawn": "pawn_75",
+  "trace": [
+    {
+      "t": 325.1,
+      "x": 3900.0000000000005,
+      "y": 3103.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2250.561739875866,
+        "y": 3260.5783458962233
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 325.3,
+      "x": 3900.0000000000005,
+      "y": 3122.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2250.561739875866,
+        "y": 3260.5783458962233
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 325.5,
+      "x": 3900.0000000000005,
+      "y": 3141.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2250.561739875866,
+        "y": 3260.5783458962233
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 325.7,
+      "x": 3900.0000000000005,
+      "y": 3160.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2250.561739875866,
+        "y": 3260.5783458962233
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 325.9,
+      "x": 3900.0000000000005,
+      "y": 3179.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2250.561739875866,
+        "y": 3260.5783458962233
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 326.1,
+      "x": 3900.0000000000005,
+      "y": 3198.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2250.561739875866,
+        "y": 3260.5783458962233
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 326.3,
+      "x": 3900.0000000000005,
+      "y": 3217.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2250.561739875866,
+        "y": 3260.5783458962233
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 326.5,
+      "x": 3900.0000000000005,
+      "y": 3236.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2250.561739875866,
+        "y": 3260.5783458962233
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 326.7,
+      "x": 3900.0000000000005,
+      "y": 3236.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2266.3420180251287,
+        "y": 3252.07186682731
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 326.9,
+      "x": 3900.0000000000005,
+      "y": 3255.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2266.3420180251287,
+        "y": 3252.07186682731
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 327.1,
+      "x": 3900.0000000000005,
+      "y": 3274.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2266.3420180251287,
+        "y": 3252.07186682731
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 327.3,
+      "x": 3900.0000000000005,
+      "y": 3293.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2266.3420180251287,
+        "y": 3252.07186682731
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 327.5,
+      "x": 3900.0000000000005,
+      "y": 3312.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2266.3420180251287,
+        "y": 3252.07186682731
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 327.7,
+      "x": 3900.0000000000005,
+      "y": 3331.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2266.3420180251287,
+        "y": 3252.07186682731
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 327.9,
+      "x": 3900.0000000000005,
+      "y": 3350.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2266.3420180251287,
+        "y": 3252.07186682731
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 328.1,
+      "x": 3900.0000000000005,
+      "y": 3369.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2266.3420180251287,
+        "y": 3252.07186682731
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 328.3,
+      "x": 3900.0000000000005,
+      "y": 3388.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2296.4905615480575,
+        "y": 3276.6787321450206
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 328.5,
+      "x": 3900.0000000000005,
+      "y": 3407.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2296.4905615480575,
+        "y": 3276.6787321450206
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 328.7,
+      "x": 3900.0000000000005,
+      "y": 3426.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2296.4905615480575,
+        "y": 3276.6787321450206
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 328.9,
+      "x": 3900.0000000000005,
+      "y": 3445.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2296.4905615480575,
+        "y": 3276.6787321450206
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 329.1,
+      "x": 3900.0000000000005,
+      "y": 3464.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2296.4905615480575,
+        "y": 3276.6787321450206
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 329.3,
+      "x": 3900.0000000000005,
+      "y": 3483.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2296.4905615480575,
+        "y": 3276.6787321450206
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 329.5,
+      "x": 3900.0000000000005,
+      "y": 3502.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2296.4905615480575,
+        "y": 3276.6787321450206
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 329.7,
+      "x": 3900.0000000000005,
+      "y": 3521.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2296.4905615480575,
+        "y": 3276.6787321450206
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 329.9,
+      "x": 3900.0000000000005,
+      "y": 3540.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 330.1,
+      "x": 3900.0000000000005,
+      "y": 3559.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 330.3,
+      "x": 3900.0000000000005,
+      "y": 3578.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 330.5,
+      "x": 3900.0000000000005,
+      "y": 3597.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 330.7,
+      "x": 3900.0000000000005,
+      "y": 3616.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 330.9,
+      "x": 3900.0000000000005,
+      "y": 3635.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 331.1,
+      "x": 3900.0000000000005,
+      "y": 3654.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 331.3,
+      "x": 3900.0000000000005,
+      "y": 3673.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 331.5,
+      "x": 3900.0000000000005,
+      "y": 3673.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 331.7,
+      "x": 3900.0000000000005,
+      "y": 3692.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 331.9,
+      "x": 3900.0000000000005,
+      "y": 3711.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 332.1,
+      "x": 3900.0000000000005,
+      "y": 3730.9088020361332,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 332.3,
+      "x": 3887.030753259493,
+      "y": 3733.8564517751374,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Phản công sơ hở: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 332.5,
+      "x": 3874.0615065189854,
+      "y": 3736.8041015141416,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 332.7,
+      "x": 3860.9312350258465,
+      "y": 3738.518469574762,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 332.9,
+      "x": 3847.639938780076,
+      "y": 3738.999555956996,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 2309.6141615954994,
+        "y": 3296.20709639737
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 333.1,
+      "x": 3847.6188706663957,
+      "y": 3739.626085412061,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 2258.193976559824,
+        "y": 3323.039251936889
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 333.3,
+      "x": 3834.3200893611315,
+      "y": 3739.806129281049,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 2258.193976559824,
+        "y": 3323.039251936889
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 333.5,
+      "x": 3834.0978607243383,
+      "y": 3741.6032213436147,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 4020.9688044480204,
+        "y": 3791.2366061951493
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 333.7,
+      "x": 3840.525022740177,
+      "y": 3743.3102914716865,
+      "alive": true,
+      "action": "dodge",
+      "move": 0,
+      "goal": {
+        "x": 4020.9688044480204,
+        "y": 3791.2366061951493
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Né đòn"
+    },
+    {
+      "t": 333.9,
+      "x": 3840.736943691077,
+      "y": 3691.7551714722867,
+      "alive": true,
+      "action": "dodge",
+      "move": 0,
+      "goal": {
+        "x": 4020.9688044480204,
+        "y": 3791.2366061951493
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Né đòn"
+    },
+    {
+      "t": 334.1,
+      "x": 3840.7634338099406,
+      "y": 3685.310781472361,
+      "alive": true,
+      "action": "dodge",
+      "move": 0,
+      "goal": {
+        "x": 4020.9688044480204,
+        "y": 3791.2366061951493
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Né đòn"
+    },
+    {
+      "t": 334.3,
+      "x": 3844.4488935807462,
+      "y": 3687.4771173830113,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4020.9688044480204,
+        "y": 3791.2366061951493
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 334.5,
+      "x": 3851.10815937241,
+      "y": 3692.8396428250007,
+      "alive": true,
+      "move": 42.74999999999999,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 334.7,
+      "x": 3859.567916220824,
+      "y": 3694.07859967078,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 334.9,
+      "x": 3868.027673069238,
+      "y": 3695.3175565165593,
+      "alive": true,
+      "move": 42.75000000000001,
+      "goal": {
+        "x": 4057.756132882674,
+        "y": 3743.4849926107
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 335.1,
+      "x": 3876.487429917652,
+      "y": 3696.5565133623386,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 335.3,
+      "x": 3868.1180205836276,
+      "y": 3698.3045086139196,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 335.5,
+      "x": 3868.1417154595765,
+      "y": 3699.0348067321443,
+      "alive": true,
+      "move": 42.74999999999999,
+      "goal": {
+        "x": 4066.6137388468305,
+        "y": 3746.2386538329306
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 335.7,
+      "x": 3876.68779424085,
+      "y": 3699.2937226726995,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 335.9,
+      "x": 3868.1454415000735,
+      "y": 3699.65526057133,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 336.1,
+      "x": 3868.1464250815275,
+      "y": 3699.8042285280917,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4066.613663895934,
+        "y": 3747.5439222775854
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 336.3,
+      "x": 3876.696263606165,
+      "y": 3699.8567756747407,
+      "alive": true,
+      "move": 42.74999999999999,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 336.5,
+      "x": 3868.1465781688007,
+      "y": 3699.9301168100287,
+      "alive": true,
+      "move": 42.74999999999999,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 336.7,
+      "x": 3868.1466185934814,
+      "y": 3699.9603185834376,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4066.078913431019,
+        "y": 3749.9078108101157
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 336.9,
+      "x": 3876.6966119591243,
+      "y": 3699.97096975557,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 337.1,
+      "x": 3868.1466248826146,
+      "y": 3699.9858355388387,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 337.3,
+      "x": 3868.1466265433646,
+      "y": 3699.991957099505,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4066.0775228446464,
+        "y": 3749.9616599408187
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 337.5,
+      "x": 3876.696626270812,
+      "y": 3699.9941159539553,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 337.7,
+      "x": 3868.146626801734,
+      "y": 3699.9971290531134,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 337.9,
+      "x": 3868.1466268699605,
+      "y": 3699.998369811889,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4065.8021364449814,
+        "y": 3751.026706821945
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 338.1,
+      "x": 3876.696626858764,
+      "y": 3699.998807382763,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 338.3,
+      "x": 3868.1466268805752,
+      "y": 3699.999418097576,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 338.5,
+      "x": 3868.146626883378,
+      "y": 3699.999669582739,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4065.8020757608624,
+        "y": 3751.0289189869086
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 338.7,
+      "x": 3876.696626882918,
+      "y": 3699.999758272485,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 338.9,
+      "x": 3868.1466268838135,
+      "y": 3699.999882056185,
+      "alive": true,
+      "move": 42.75000000000001,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 339.1,
+      "x": 3868.1466268839285,
+      "y": 3699.999933028854,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4065.8020634454188,
+        "y": 3751.0293673635206
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 339.3,
+      "x": 3876.6966268839096,
+      "y": 3699.9999510050757,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 339.5,
+      "x": 3868.1466268839467,
+      "y": 3699.999976094371,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 339.7,
+      "x": 3868.1466268839513,
+      "y": 3699.999986425847,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 2316.8537994781923,
+        "y": 3289.514729988574
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 339.9,
+      "x": 3865.966339544377,
+      "y": 3710.7052174890655,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 2316.8537994781923,
+        "y": 3289.514729988574
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 340.1,
+      "x": 3863.3120766961997,
+      "y": 3723.7376726964617,
+      "alive": true,
+      "move": 66.50000000000001,
+      "goal": {
+        "x": 2316.8537994781923,
+        "y": 3289.514729988574
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Phản công sơ hở: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 340.3,
+      "x": 3855.507185111334,
+      "y": 3731.7576034954222,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 2316.8537994781923,
+        "y": 3289.514729988574
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 340.5,
+      "x": 3842.551664789779,
+      "y": 3734.765009885947,
+      "alive": true,
+      "move": 66.50000000000001,
+      "goal": {
+        "x": 2316.8537994781923,
+        "y": 3289.514729988574
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 340.7,
+      "x": 3855.3617482084614,
+      "y": 3738.341567281878,
+      "alive": true,
+      "move": 66.49999999999999,
+      "goal": {
+        "x": 4035.1844981534305,
+        "y": 3788.5478278698697
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 340.9,
+      "x": 3835.0347941531063,
+      "y": 3713.339836466396,
+      "alive": true,
+      "action": "dodge",
+      "move": 0,
+      "goal": {
+        "x": 4035.1844981534305,
+        "y": 3788.5478278698697
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Né đòn"
+    },
+    {
+      "t": 341.1,
+      "x": 3818.773230908824,
+      "y": 3693.338451814011,
+      "alive": true,
+      "action": "dodge",
+      "move": 0,
+      "goal": {
+        "x": 4035.1844981534305,
+        "y": 3788.5478278698697
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Né đòn"
+    },
+    {
+      "t": 341.3,
+      "x": 3818.773230908824,
+      "y": 3693.338451814011,
+      "alive": true,
+      "action": "dodge",
+      "move": 0,
+      "goal": {
+        "x": 4035.1844981534305,
+        "y": 3788.5478278698697
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Né đòn"
+    },
+    {
+      "t": 341.5,
+      "x": 3822.431197953048,
+      "y": 3699.3273670070266,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 341.7,
+      "x": 3821.9210341299754,
+      "y": 3707.8621331358454,
+      "alive": true,
+      "move": 42.75,
+      "goal": {
+        "x": 4015.286429164859,
+        "y": 3755.6371074873223
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 341.9,
+      "x": 3834.954228885132,
+      "y": 3710.512762207246,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 342.1,
+      "x": 3847.888641514032,
+      "y": 3713.5792086862866,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 342.3,
+      "x": 3860.8240020747266,
+      "y": 3716.642163611201,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 4047.4332102861595,
+        "y": 3767.2507193177416
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 342.5,
+      "x": 3873.8596311444758,
+      "y": 3719.2807948389236,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 342.7,
+      "x": 3886.7786899477474,
+      "y": 3722.4009196466704,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 342.9,
+      "x": 3899.7304693362507,
+      "y": 3725.4006671149546,
+      "alive": true,
+      "move": 66.50000000000001,
+      "goal": {
+        "x": 4086.778080269599,
+        "y": 3774.3640589922225
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Săn Thống Lĩnh Nhân Mã"
+    },
+    {
+      "t": 343.1,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "move": 95,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 343.3,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "attack",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Thăm dò, giữ chiêu: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 343.5,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "attack",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Thăm dò, giữ chiêu: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 343.7,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "attack",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Thăm dò, giữ chiêu: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 343.9,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "attack",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Thăm dò, giữ chiêu: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 344.1,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "skill",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Lùi chiến thuật: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 344.3,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "skill",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Lùi chiến thuật: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 344.5,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "skill",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Lùi chiến thuật: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 344.7,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "skill",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Lùi chiến thuật: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 344.9,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "attack",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Lùi chiến thuật: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 345.1,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "attack",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Lùi chiến thuật: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 345.3,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "attack",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Lùi chiến thuật: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 345.5,
+      "x": 3915.562576135229,
+      "y": 3728.589223889696,
+      "alive": true,
+      "action": "attack",
+      "move": 0,
+      "goal": {
+        "x": 4766.666666666667,
+        "y": 3900
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Lùi chiến thuật: Cóc Lửa Nham Thạch"
+    },
+    {
+      "t": 345.7,
+      "x": 3907.901310885553,
+      "y": 3734.206608937395,
+      "alive": true,
+      "move": 95.00000000000001,
+      "goal": {
+        "x": 3327.151836679057,
+        "y": 3987.786985079844
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 345.9,
+      "x": 3891.8681479351503,
+      "y": 3736.145728790796,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3327.151836679057,
+        "y": 3987.786985079844
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 346.1,
+      "x": 3878.6643666818777,
+      "y": 3737.74265102301,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3327.151836679057,
+        "y": 3987.786985079844
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 346.3,
+      "x": 3865.460585428605,
+      "y": 3739.3395732552235,
+      "alive": true,
+      "move": 66.50000000000001,
+      "goal": {
+        "x": 3327.151836679057,
+        "y": 3987.786985079844
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 346.5,
+      "x": 3852.161988669282,
+      "y": 3739.5327680609007,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3327.151836679057,
+        "y": 3987.786985079844
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 346.7,
+      "x": 3838.863391909959,
+      "y": 3739.725962866578,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3327.151836679057,
+        "y": 3987.786985079844
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 346.9,
+      "x": 3825.5647951506357,
+      "y": 3739.919157672255,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3327.151836679057,
+        "y": 3987.786985079844
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 347.1,
+      "x": 3812.2648160840176,
+      "y": 3739.9427548652893,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3327.151836679057,
+        "y": 3987.786985079844
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 347.3,
+      "x": 3798.9648370173995,
+      "y": 3739.9663520583226,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3391.6468795546925,
+        "y": 3958.537525356353
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 347.5,
+      "x": 3785.6648579507814,
+      "y": 3739.989949251356,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3391.6468795546925,
+        "y": 3958.537525356353
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 347.7,
+      "x": 3772.364858272929,
+      "y": 3739.9928765560653,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3391.6468795546925,
+        "y": 3958.537525356353
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 347.9,
+      "x": 3759.064858595076,
+      "y": 3739.9958038607747,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3391.6468795546925,
+        "y": 3958.537525356353
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 348.1,
+      "x": 3745.7648589172236,
+      "y": 3739.998731165484,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3391.6468795546925,
+        "y": 3958.537525356353
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 348.3,
+      "x": 3732.4648589223357,
+      "y": 3739.9990999090896,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3391.6468795546925,
+        "y": 3958.537525356353
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 348.5,
+      "x": 3719.1648589274478,
+      "y": 3739.9994686526943,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3391.6468795546925,
+        "y": 3958.537525356353
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 348.7,
+      "x": 3705.86485893256,
+      "y": 3739.999837396299,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3391.6468795546925,
+        "y": 3958.537525356353
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 348.9,
+      "x": 3692.5648589326443,
+      "y": 3739.9998845485043,
+      "alive": true,
+      "move": 66.50000000000001,
+      "goal": {
+        "x": 3390.5638286574567,
+        "y": 3970.5882591700224
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 349.1,
+      "x": 3679.2648589327287,
+      "y": 3739.9999317007096,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3390.5638286574567,
+        "y": 3970.5882591700224
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 349.3,
+      "x": 3665.964858932813,
+      "y": 3739.999978852914,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3390.5638286574567,
+        "y": 3970.5882591700224
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 349.5,
+      "x": 3652.664858932814,
+      "y": 3739.9999849718542,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3390.5638286574567,
+        "y": 3970.5882591700224
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 349.7,
+      "x": 3639.3648589328145,
+      "y": 3739.9999910907945,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3390.5638286574567,
+        "y": 3970.5882591700224
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    },
+    {
+      "t": 349.9,
+      "x": 3626.0648589328152,
+      "y": 3739.9999972097357,
+      "alive": true,
+      "move": 66.5,
+      "goal": {
+        "x": 3390.5638286574567,
+        "y": 3970.5882591700224
+      },
+      "blocked": null,
+      "detour": null,
+      "stuck": 0,
+      "objective": "Gây áp lực: Gấu Băng Bắc Địa"
+    }
+  ],
+  "classification": "confirmed swimming navigation loop, fixed",
+  "reason": "Detour candidates required dry segments even when the pawn was already swimming. At the restricted lair boundary the bot repeatedly moved about 8.6px but made almost no net progress. Water-aware physical detours now move 257px in the same 6-second fixture, with one recovery. Full seed retest follows.",
+  "finalMatchRetest": {
+    "fingerprint": "d83f24c120d3fc2b8da376c53b5a20adc70bdc5beccf677dc595745550afae78",
+    "finished": true,
+    "seconds": 650.6,
+    "suspects": [],
+    "invalidGroups": []
+  }
+}

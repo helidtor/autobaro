@@ -6,7 +6,7 @@ window.GameEngine.MapTerrain = {
  riverLocalX(y){return 1960+120*Math.sin(y/330);},
  riverX(y){return this.riverLocalX(y/this.scale)*this.scale;},
  init(w=5200,h=5200){
-  this.MAP_WIDTH=w;this.MAP_HEIGHT=h;this.bushes=[];this.trees=[];
+  this.ancientArena=null;this.MAP_WIDTH=w;this.MAP_HEIGHT=h;this.bushes=[];this.trees=[];
   this.scale=w/2600;this.habitats=[];
   this.lairs=[['VIÊM MA ĐIỆN',900,900,'#b95c43'],['KIM CƯƠNG SƠN',1700,900,'#b89c61'],['THANH XÀ ĐẦM',900,1700,'#609a79'],['VONG HỒN THÀNH',1700,1700,'#9784b1']].map(([name,x,y,color],i)=>({id:'lair_'+i,name,x:x*this.scale,y:y*this.scale,radius:125*this.scale,color}));
   this.templeRuins={id:'temple',name:'ĐIỆN THỜ YÊU THẦN',x:w/2,y:h/2,radius:160*this.scale};this.waterBodies=[{x:this.riverX(1000),y:1000,radius:54*this.scale}];this.cliffs=[{x:2010*this.scale,y:560*this.scale,radius:240*this.scale}];
@@ -17,10 +17,10 @@ window.GameEngine.MapTerrain = {
   this.buildObstacles();
  },
  inSettlement(x,y){x/=this.scale;y/=this.scale;return(Math.abs(x-1300)<265&&Math.abs(y-1300)<265)||(Math.abs(x-510)<220&&Math.abs(y-650)<210)||(Math.abs(x-560)<220&&Math.abs(y-1230)<130)||(Math.abs(x-1800)<240&&Math.abs(y-2200)<120);},
- isInBush(x,y){x/=this.scale;y/=this.scale;return this.bushes.some(b=>!b.isBurned&&Math.hypot(x-b.x,y-b.y)<=b.radius);},
- isInWater(x,y){if(this.bridges.some(by=>Math.abs(y-by)<28*this.scale&&Math.abs(x-this.riverX(by))<105*this.scale))return false;return Math.abs(x-this.riverX(y))<54*this.scale;},
- isOnCliff(x,y){return this.cliffs.some(c=>Math.hypot(x-c.x,y-c.y)<c.radius)||this.habitats.some(c=>c.kind==='mountain'&&Math.hypot(x-c.x,y-c.y)<c.radius);},
- getMoveSpeed(e){if(e.stunTimer>0)return 0;let s=e.moveSpeed||e.speed||100;if(e.isPawn&&e.currentStamina<18)s*=.6;if(e.isClutchEscape)s*=2;if(e.isSprinting)s*=1.25;if(e.speedBuffTimer>0)s*=1+(e.speedBuff||0);if(e.slowTimer>0)s*=1-(e.slowPct||0);if(this.isInWater(e.x,e.y))s*=.45;else if(this.isOnCliff(e.x,e.y))s*=.7;else if(this.habitats.some(c=>c.kind==='marsh'&&Math.hypot(e.x-c.x,e.y-c.y)<c.radius))s*=.8;return s;},
+ isInBush(x,y){if(this.ancientArena)return false;x/=this.scale;y/=this.scale;return this.bushes.some(b=>!b.isBurned&&Math.hypot(x-b.x,y-b.y)<=b.radius);},
+ isInWater(x,y){if(this.ancientArena)return false;if(this.bridges.some(by=>Math.abs(y-by)<28*this.scale&&Math.abs(x-this.riverX(by))<105*this.scale))return false;return Math.abs(x-this.riverX(y))<54*this.scale;},
+ isOnCliff(x,y){if(this.ancientArena)return false;return this.cliffs.some(c=>Math.hypot(x-c.x,y-c.y)<c.radius)||this.habitats.some(c=>c.kind==='mountain'&&Math.hypot(x-c.x,y-c.y)<c.radius);},
+ getMoveSpeed(e){if(e.stunTimer>0)return 0;let s=e.moveSpeed||e.speed||100;if(e.auraSlowTimer>0)s*=1-(e.auraSlow||0);if(e.isPawn&&e.currentStamina<18)s*=.6;if(e.isClutchEscape)s*=2;if(e.isSprinting)s*=1.25;if(e.speedBuffTimer>0)s*=1+(e.speedBuff||0);if(e.slowTimer>0)s*=1-(e.slowPct||0);if(e.relicSlowTimer>0)s*=1-(e.relicSlow||0);s*=1+(e.boots?.moveBonus||0);if(e.boots?.effect==='treads')return s;if(this.isInWater(e.x,e.y))s*=.45;else if(this.isOnCliff(e.x,e.y)&&e.ancientKind!=='mecha')s*=.7;else if(!this.ancientArena&&e.ancientKind!=='mecha'&&this.habitats.some(c=>c.kind==='marsh'&&Math.hypot(e.x-c.x,e.y-c.y)<c.radius))s*=.8;return s;},
 
  buildObstacles(){
   const s=this.scale;this.obstacles=[];this.obstacleBuckets=new Map();
@@ -75,18 +75,26 @@ window.GameEngine.MapTerrain = {
   }
  },
  canStand(x,y,r=9){
+  const a=this.ancientArena;
+  if(window.GameEntities.CombatSystem?.fields?.some(f=>f.wall&&f.life>0&&x>f.wall.x-r&&x<f.wall.x+f.wall.w+r&&y>f.wall.y-r&&y<f.wall.y+f.wall.h+r))return false;
+  if(a){
+   if(x<a.x+r||y<a.y+r||x>a.x+a.w-r||y>a.y+a.h-r)return false;
+   return ![...a.covers,...(window.GameEntities.AncientSystem?.walls||[])].some(o=>!o.destroyed&&x>o.x-r&&x<o.x+o.w+r&&y>o.y-r&&y<o.y+o.h+r);
+  }
   if(x<r||y<r||x>this.MAP_WIDTH-r||y>this.MAP_HEIGHT-r)return false;
+  if(window.GameEntities.AncientSystem?.walls.some(o=>x>o.x-r&&x<o.x+o.w+r&&y>o.y-r&&y<o.y+o.h+r))return false;
   return !(this.obstacleBuckets?.get(Math.floor(x/100)+','+Math.floor(y/100)) || []).some(o=>
-   x>o.x-r && x<o.x+o.w+r && y>o.y-r && y<o.y+o.h+r);
+   !o.destroyed && x>o.x-r && x<o.x+o.w+r && y>o.y-r && y<o.y+o.h+r);
  },
  nearestFree(x,y,r=9){
+  if(this.ancientArena){const a=this.ancientArena;x=Math.max(a.x+r,Math.min(a.x+a.w-r,x));y=Math.max(a.y+r,Math.min(a.y+a.h-r,y));}
   x=Math.max(r,Math.min(this.MAP_WIDTH-r,x));y=Math.max(r,Math.min(this.MAP_HEIGHT-r,y));
   if(this.canStand(x,y,r))return{x,y};
   for(let d=20;d<500;d+=20)for(let i=0;i<16;i++){
    const px=x+Math.cos(i*Math.PI/8)*d,py=y+Math.sin(i*Math.PI/8)*d;
    if(this.canStand(px,py,r))return{x:px,y:py};
   }
-  return{x:this.MAP_WIDTH/2,y:this.MAP_HEIGHT/2};
+  return this.ancientArena?{x:this.ancientArena.cx,y:this.ancientArena.cy}:{x:this.MAP_WIDTH/2,y:this.MAP_HEIGHT/2};
  },
  segmentClear(x1,y1,x2,y2,avoidWater=false,r=9,e=null){
   const n=Math.max(1,Math.ceil(Math.hypot(x2-x1,y2-y1)/12));
@@ -100,8 +108,9 @@ window.GameEngine.MapTerrain = {
   return this.lordActors.reduce((count,m)=>count+(m.isAlive?1:0),0);
  },
  templeAccess(e,x,y){
+  if(this.ancientArena)return true;
   if(!this.templeRuins||!this.remainingLords())return true;
-  if(e?.isMonster&&e.tier===5)return true;
+  if(e?.isMonster&&e.tier>=5)return true;
   const a=this.templeRuins,d=Math.hypot(x-a.x,y-a.y);
   if(d>=a.radius+12)return true;
   // An actor already inside can leave, but cannot move further into a locked arena.
@@ -109,6 +118,7 @@ window.GameEngine.MapTerrain = {
  },
  moveEntity(e,dx,dy){
   const r=e.collisionRadius||9,n=Math.max(1,Math.ceil(Math.hypot(dx,dy)/6));
+  e.moveBlockReason=null;
   const oldX=e.x,oldY=e.y,C=window.GameEntities.CombatSystem;
   const enforce=e.isPawn||e.isMonster&&(e.targetEnemy||e.combatLease>0);
   const wasBattleValid=!enforce||C.validMembers(new Set(C.groupMembers(e)));
@@ -122,7 +132,7 @@ window.GameEngine.MapTerrain = {
    if(active.length&&!C.validMembers(new Set([...C.groupMembers(e),...active.flatMap(p=>C.groupMembers(p))]))){blocked=true;center=active;}
    if(blocked&&center.length){const cx=center.reduce((v,p)=>v+p.x,0)/center.length,cy=center.reduce((v,p)=>v+p.y,0)/center.length;
     const currentValid=C.validMembers(C.crowdAt(e,e.x,e.y))&&C.validMembers(new Set([...C.groupMembers(e),...active.filter(p=>Math.hypot(p.x-e.x,p.y-e.y)<120).flatMap(p=>C.groupMembers(p))]));
-    if(currentValid||Math.hypot(tx-cx,ty-cy)<=Math.hypot(e.x-cx,e.y-cy))return 0;
+    if(currentValid||Math.hypot(tx-cx,ty-cy)<=Math.hypot(e.x-cx,e.y-cy)){e.moveBlockReason='crowd';e.blockingCenter={x:cx,y:cy};return 0;}
    }
   }
   for(let i=0;i<n;i++){
@@ -132,7 +142,7 @@ window.GameEngine.MapTerrain = {
    else if(free(x,e.y))e.x=x;
    else if(free(e.x,y))e.y=y;
   }
-  if(enforce&&((wasBattleValid&&!C.validMembers(new Set(C.groupMembers(e))))||(wasCrowdValid&&[...C.crowdAt(e,e.x,e.y)].some(p=>!C.validMembers(C.crowdAt(p,p.x,p.y)))))){e.x=oldX;e.y=oldY;return 0;}
+  if(enforce&&((wasBattleValid&&!C.validMembers(new Set(C.groupMembers(e))))||(wasCrowdValid&&[...C.crowdAt(e,e.x,e.y)].some(p=>!C.validMembers(C.crowdAt(p,p.x,p.y)))))){e.x=oldX;e.y=oldY;e.moveBlockReason='crowd';return 0;}
   return Math.hypot(e.x-oldX,e.y-oldY);
  },
  closestCell(x,y,e=null){
@@ -171,16 +181,18 @@ window.GameEngine.MapTerrain = {
   const dry=search(false);return dry.length?dry:search(true);
  },
  navigate(e,tx,ty,dt){
-  const r=e.collisionRadius||9;
+  const r=e.collisionRadius||9,avoidWater=!this.isInWater(e.x,e.y);
+  const now=window.GameManager.matchTime||e.decisionTime||0;
+  if(e.navDetour&&e.navDetour.until>now&&Math.hypot(e.x-e.navDetour.x,e.y-e.navDetour.y)>15){tx=e.navDetour.x;ty=e.navDetour.y;}else e.navDetour=null;
   const goal=this.safeGoal(e,tx,ty,r);
   const changed=!e.navGoal||Math.hypot(goal.x-e.navGoal.x,goal.y-e.navGoal.y)>70;
   const speed=this.getMoveSpeed(e);
   if(speed<=0)return 0;
   e.navTimer=(e.navTimer||0)-dt;
   if(changed||e.navTimer<=0){
-   e.navGoal=goal;e.navTimer=1.5;
+   e.navGoal=goal;e.navTimer=1.2+String(e.id).split('').reduce((v,c)=>v+c.charCodeAt(0),0)%61/100;
    e.navPath=this.segmentClear(e.x,e.y,goal.x,goal.y,true,r,e)?[goal]:this.findPath(e.x,e.y,goal.x,goal.y,e);
-   if(e.navPath.length && this.segmentClear(e.navPath.at(-1).x,e.navPath.at(-1).y,goal.x,goal.y,false,r,e))e.navPath.push(goal);
+   if(e.navPath.length && Math.hypot(e.navPath.at(-1).x-goal.x,e.navPath.at(-1).y-goal.y)>1 && this.segmentClear(e.navPath.at(-1).x,e.navPath.at(-1).y,goal.x,goal.y,false,r,e))e.navPath.push(goal);
    if(!e.navPath.length&&this.segmentClear(e.x,e.y,goal.x,goal.y,false,r,e))e.navPath=[goal];
   }
   while(e.navPath?.length&&Math.hypot(e.navPath[0].x-e.x,e.navPath[0].y-e.y)<12)e.navPath.shift();
@@ -188,8 +200,27 @@ window.GameEngine.MapTerrain = {
   const next=e.navPath[0],dx=next.x-e.x,dy=next.y-e.y,dist=Math.hypot(dx,dy);
   e.aimAngle=Math.atan2(dy,dx);e.vx=dx/dist*speed;e.vy=dy/dist*speed;
   const moved=this.moveEntity(e,dx/dist*Math.min(dist,speed*dt),dy/dist*Math.min(dist,speed*dt));
+  e.navProgress=e.navProgress||{x:e.x,y:e.y,time:0};e.navProgress.time+=dt;
+  if(Math.hypot(e.x-goal.x,e.y-goal.y)<30)e.navProgress=null;
+  else if(e.navProgress.time>=1.5){
+   const progress=Math.hypot(e.x-e.navProgress.x,e.y-e.navProgress.y);
+   if(progress<Math.min(20,speed*.35)&&!e.navDetour){
+    const C=window.GameEntities.CombatSystem,heading=Math.atan2(goal.y-e.y,goal.x-e.x),side=e.flankSide||1;
+    const options=[side*.8,-side*.8,side*1.6,-side*1.6,Math.PI].map(offset=>({x:e.x+Math.cos(heading+offset)*90,y:e.y+Math.sin(heading+offset)*90}));
+    const escape=options.find(g=>this.canTravel(e,g.x,g.y)&&this.segmentClear(e.x,e.y,g.x,g.y,avoidWater,r,e)&&C.validMembers(C.crowdAt(e,g.x,g.y)));
+    if(escape){e.navDetour={...escape,until:now+2};e.navRecoveries=(e.navRecoveries||0)+1;e.navTimer=0;}
+    else{e.navTimer=0;e.navPath=[];}
+   }
+   e.navProgress={x:e.x,y:e.y,time:0};
+  }
+  if(moved<speed*dt*.15&&e.moveBlockReason==='crowd'&&!e.navDetour){
+   const C=window.GameEntities.CombatSystem,center=e.blockingCenter||goal,angle=Math.atan2(e.y-center.y,e.x-center.x),side=e.flankSide||1;
+   const detour=[side*.9,-side*.9,side*1.4,0].map(offset=>({x:e.x+Math.cos(angle+offset)*100,y:e.y+Math.sin(angle+offset)*100})).find(g=>this.canTravel(e,g.x,g.y)&&this.segmentClear(e.x,e.y,g.x,g.y,avoidWater,r,e)&&C.validMembers(C.crowdAt(e,g.x,g.y)));
+   if(detour){e.navDetour={...detour,until:now+2};e.navTimer=0;}
+   e.vx=e.vy=0;
+  }
   e.stuckTime=moved<speed*dt*.15?(e.stuckTime||0)+dt:0;
-  if(e.stuckTime>.6){e.navTimer=0;e.navPath=[];e.stuckTime=0;e.roamGoal=null;}
+  if(e.stuckTime>.6){e.navTimer=0;e.navPath=[];e.stuckTime=0;}
   return moved;
  },
 
@@ -199,6 +230,7 @@ window.GameEngine.MapTerrain = {
  },
  bossDomain(x,y){return [this.templeRuins,...this.lairs].find(a=>Math.hypot(x-a.x,y-a.y)<a.radius+40)||null;},
  safeGoal(e,x,y,r=9){
+  if(this.ancientArena)return this.nearestFree(x,y,r);
   if(e.isMonster&&e.territory){const a=e.territory,d=Math.hypot(x-a.x,y-a.y),limit=a.radius-20;if(d>limit){x=a.x+(x-a.x)/d*limit;y=a.y+(y-a.y)/d*limit;}}
   if(!this.templeAccess(e,x,y)){const a=this.templeRuins,angle=Math.atan2(e.y-a.y,e.x-a.x);x=a.x+Math.cos(angle)*(a.radius+100);y=a.y+Math.sin(angle)*(a.radius+100);}
   if(e.isPawn&&!e.isPlayerControlled)for(const a of [this.templeRuins,...this.lairs]){
@@ -208,7 +240,8 @@ window.GameEngine.MapTerrain = {
   return this.nearestFree(x,y,r);
  },
  canTravel(e,x,y){
-  if(!this.templeAccess(e,x,y))return false;
+  if(this.ancientArena)return this.canStand(x,y,e.collisionRadius||9);
+  if(!this.templeAccess(e,x,y)||window.GameEntities.AncientSystem?.walls.some(o=>x>o.x-9&&x<o.x+o.w+9&&y>o.y-9&&y<o.y+o.h+9))return false;
   if(e.isMonster)return this.monsterCanOccupy(e,x,y);
   if(!e.isPawn||e.isPlayerControlled)return true;
   for(const a of [this.templeRuins,...this.lairs]){
@@ -220,13 +253,15 @@ window.GameEngine.MapTerrain = {
   return true;
  },
  monsterCanTarget(e,target){
+  if(this.ancientArena)return this.canStand(target.x,target.y,target.collisionRadius||9);
   const domain=this.bossDomain(target.x,target.y);
-  return !domain||domain===e.territory;
+  return !domain||domain===e.territory||(e.isAncient||e.isAncientClone)&&domain.id==='temple';
  },
  monsterCanOccupy(e,x,y){
+  if(this.ancientArena)return this.canStand(x,y,e.collisionRadius||9);
   if(!e.territory)return true;
   const a=e.territory;if(Math.hypot(x-a.x,y-a.y)>a.radius-12 || this.isInWater(x,y))return false;
-  const domain=this.bossDomain(x,y);return !domain || domain.id===a.id;
+  const domain=this.bossDomain(x,y);return !domain || domain.id===a.id || (e.isAncient||e.isAncientClone)&&domain.id==='temple';
  },
  makeGuardHabitat(def,index,lair){
   const radius=135*this.scale/2,base=Math.atan2(this.MAP_HEIGHT/2-lair.y,this.MAP_WIDTH/2-lair.x)+(index>=4?.75:-.15);

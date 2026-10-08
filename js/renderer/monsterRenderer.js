@@ -10,7 +10,7 @@ window.GameRenderer = window.GameRenderer || {};
 
 window.GameRenderer.MonsterRenderer = {
   render: function(ctx, monster, isSelected) {
-    if (!monster || !monster.isAlive) return;
+    if (!monster || !monster.isAlive || monster.isSplit) return;
     const time = performance.now() / 1000;
 
     if (isSelected) {
@@ -54,6 +54,8 @@ window.GameRenderer.MonsterRenderer = {
     const type = (monster.visual && monster.visual.type) || 'beast';
 
     switch (type) {
+      case 'primordial_colossus': case 'primordial_mirror': case 'primordial_void': case 'primordial_chaos': case 'primordial_mecha':
+        this.renderAncient(ctx,monster,time);break;
       case 'beast': // Thỏ gai / sói
         this.renderSpikeHare(ctx, monster, time);
         break;
@@ -113,6 +115,49 @@ window.GameRenderer.MonsterRenderer = {
     this.renderMonsterHpBar(ctx, monster);
 
     ctx.restore();
+  },
+
+  renderAncient(ctx,m,time){
+    const kind=m.ancientKind,phase=m.phase||m.ancientOwner?.phase||1,color=m.ancientDef?.color||'#bd93f9',pulse=.6+Math.sin(time*3)*.3;
+    const poly=(points,fill)=>{ctx.fillStyle=fill;ctx.strokeStyle='#201e2c';ctx.lineWidth=2;ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();ctx.stroke();};
+    const oval=(x,y,rx,ry,fill)=>{ctx.fillStyle=fill;ctx.strokeStyle='#241b30';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();ctx.stroke();};
+    const line=(x,y,tx,ty,stroke,width=2)=>{ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(tx,ty);ctx.stroke();};
+    ctx.save();ctx.globalAlpha=.2;ctx.strokeStyle=color;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,10,37,14,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+    if(kind==='mirror'){
+      for(let i=0;i<6;i++){const a=time*.3+i*Math.PI/3,x=Math.cos(a)*34,y=-23+Math.sin(a)*27;poly([[x-4,y-8],[x+5,y-2],[x+3,y+8],[x-5,y+1]],'#9d80c1');}
+      window.GameRenderer.ProceduralPawn.renderPawn(ctx,{...m,x:0,y:0,confidence:95,appearance:phase===2?{...m.appearance,skinColor:'#705a88',hairColor:'#191527',attire:{...m.appearance.attire,color:'#30263f'}}:m.appearance},time,m.aimAngle||0,!!m.vx);
+      line(-17,-45,17,-45,'#edc9ff',2);
+    }else if(kind==='colossus'){
+      for(const side of [-1,1]){
+        poly([[side*8,-8],[side*21,-6],[side*23,10],[side*5,10]],phase===2?'#402b27':'#64544a');
+        poly([[side*17,-49],[side*32,-45],[side*37,-18],[side*23,-12],[side*18,-29]],'#776859');oval(side*31,-14,9,9,'#8d7861');
+      }
+      poly([[-21,-49],[-26,-22],[-15,-6],[15,-6],[26,-22],[21,-49]],phase===2?'#472e26':'#7d7364');
+      poly([[-14,-50],[-12,-68],[0,-76],[14,-67],[15,-48],[0,-42]],'#8b806e');
+      for(const side of [-1,1])line(side*3,-59,side*9,-59,phase===2?'#fff3a3':'#ffc468',3);
+      for(const f of [[0,-43,-8,-27],[-8,-27,2,-18],[2,-18,0,-7],[-17,-38,-23,-24],[16,-39,10,-25]])line(...f,phase===2?'#ff6a35':'#dab76e',phase===2?3:1.5);
+      oval(0,-32,5,7,phase===2?'#ffefb7':'#d68a46');
+    }else if(kind==='void'){
+      for(let i=0;i<8;i++){const a=i*Math.PI/4,x=Math.cos(a)*18,y=-25+Math.sin(a)*18;ctx.strokeStyle=i%2?'#73518c':'#513669';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(x,y);ctx.bezierCurveTo(x*2,y-10,x*2.5+Math.sin(time*2+i)*7,15,Math.cos(a)*40,8+Math.sin(time*3+i)*7);ctx.stroke();}
+      oval(0,-28,24,28,'#34283f');oval(0,-26,17,20,'#160f24');
+      for(let i=0;i<12;i++){const a=i*Math.PI/6;poly([[Math.cos(a)*16,-26+Math.sin(a)*19],[Math.cos(a+.12)*13,-26+Math.sin(a+.12)*15],[Math.cos(a+.25)*16,-26+Math.sin(a+.25)*19]],'#eadbb8');}
+      oval(0,-26,6+pulse*2,7+pulse*2,phase===2?'#ff91bb':'#ad73d4');for(const side of [-1,1])oval(side*17,-48,4,2,'#e3b7ff');
+    }else if(kind==='chaos'){
+      poly([[-15,-9],[-26,12],[0,4],[26,12],[15,-9]],'#352330');poly([[-17,-43],[-22,-25],[0,-9],[22,-25],[17,-43]],'#6e334a');
+      oval(0,-51,13,14,'#ad6478');poly([[-13,-60],[-23,-77],[-8,-65],[0,-70],[8,-65],[23,-77],[13,-60]],'#322133');for(const side of [-1,1])line(side*3,-52,side*9,-52,'#ffe8b0',3);
+      for(let i=0;i<4;i++){const a=i*Math.PI/2+time*(phase===2?.5:.12),x=Math.cos(a)*32,y=-30+Math.sin(a)*26;ctx.save();ctx.translate(x,y);ctx.rotate(a);line(0,12,0,-15,'#e9bc98',2);
+        if(i===0)poly([[-3,-4],[0,-25],[3,-4]],'#d8bfdf');
+        if(i===1)poly([[-4,-13],[0,-28],[4,-13]],'#ffb3bd');
+        if(i===2)poly([[-10,-17],[10,-17],[10,-7],[-10,-7]],'#be8595');
+        if(i===3){ctx.strokeStyle='#ffd6ad';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,15,-Math.PI/2,Math.PI/2);ctx.stroke();line(0,-15,0,15,'#dcc9c5',1);}ctx.restore();
+      }
+    }else if(kind==='mecha'){
+      for(const side of [-1,1]){poly([[side*5,-4],[side*17,-4],[side*20,10],[side*3,10]],'#737d88');poly([[side*18,-50],[side*30,-44],[side*29,-16],[side*19,-16]],'#5e6b7b');ctx.fillStyle='#bec7cd';ctx.fillRect(side<0?-33:24,-25,9,19);for(let i=0;i<3;i++)line(side*20,-41+i*5,side*27,-41+i*5,phase===2?'#ff7f50':'#77d6eb',2);}
+      poly([[-20,-46],[-24,-25],[-14,-8],[14,-8],[24,-25],[20,-46]],'#858f9e');poly([[-13,-47],[-16,-65],[-8,-72],[10,-72],[16,-63],[13,-47]],'#4b576a');
+      line(-10,-59,10,-59,'#ff6a66',4);oval(0,-29,8,8,phase===2?'#fff1c0':'#7fddf5');
+      for(let i=0;i<8;i++){const a=time*2+i*Math.PI/4;line(Math.cos(a)*5,-29+Math.sin(a)*5,Math.cos(a)*8,-29+Math.sin(a)*8,'#fff4cc',1);}
+      if(m.shield>0){ctx.save();ctx.globalAlpha=.25+pulse*.1;ctx.strokeStyle='#8ae3ff';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,-30,34,45,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
+    }
   },
 
   renderSpecies(ctx,m,time){
@@ -500,42 +545,21 @@ window.GameRenderer.MonsterRenderer = {
   },
 
   // 9. Đao Phủ Đoạt Mệnh (Executioner Golem)
-  renderExecutionerGolem: function(ctx, monster, time) {
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = '#1e272e';
-
-    // Thân đá khổng lồ nứt nẻ
-    ctx.fillStyle = '#2f3542';
-    ctx.beginPath();
-    ctx.roundRect(-22, -36, 44, 40, 8);
-    ctx.fill();
-    ctx.stroke();
-
-    // Khe nứt dung nham đỏ rực
-    ctx.strokeStyle = '#ff4757';
-    ctx.lineWidth = 2.0;
-    ctx.beginPath();
-    ctx.moveTo(-12, -30);
-    ctx.lineTo(-4, -18);
-    ctx.lineTo(8, -24);
-    ctx.stroke();
-
-    // Rìu đao phủ khổng lồ kéo lê trên đất
-    ctx.fillStyle = '#ff4757';
-    ctx.beginPath();
-    ctx.moveTo(24, -45);
-    ctx.lineTo(44, -20);
-    ctx.lineTo(24, -10);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Mắt đỏ cam
-    ctx.fillStyle = '#ffa502';
-    ctx.beginPath();
-    ctx.arc(-8, -26, 3, 0, Math.PI * 2);
-    ctx.arc(8, -26, 3, 0, Math.PI * 2);
-    ctx.fill();
+  renderExecutionerGolem: function(ctx,m,time) {
+    const a=m.action,p=a?Math.min(1,a.elapsed/a.duration):0,wind=a&&!a.released,walk=Math.sin(time*7)*Math.min(3,Math.hypot(m.vx||0,m.vy||0)/35);
+    ctx.strokeStyle='#171e28';ctx.lineWidth=2;
+    const plate=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,3);ctx.fill();ctx.stroke();};
+    for(const side of [-1,1]){plate(side*12-7,-7+side*walk,14,18,'#424a58');plate(side*12-9,8+side*walk,18,7,'#242b38');}
+    plate(-21,-37,42,32,'#303745');plate(-27,-42,18,14,'#647080');plate(9,-42,18,14,'#647080');
+    ctx.fillStyle='#854542';ctx.beginPath();ctx.moveTo(-15,-8);ctx.lineTo(15,-8);ctx.lineTo(20,12);ctx.lineTo(0,7);ctx.lineTo(-20,12);ctx.closePath();ctx.fill();ctx.stroke();
+    plate(-12,-58,24,23,'#222935');plate(-16,-49,32,9,'#6e7784');
+    ctx.fillStyle='#ff8264';ctx.fillRect(-9,-48,6,3);ctx.fillRect(3,-48,6,3);
+    ctx.strokeStyle='#ff7960';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-7,-34);ctx.lineTo(1,-26);ctx.lineTo(-3,-19);ctx.lineTo(8,-12);ctx.stroke();
+    for(const side of [-1,1]){ctx.strokeStyle='#a6afbc';ctx.beginPath();ctx.moveTo(side*17,-37);ctx.lineTo(side*24,-23);ctx.lineTo(side*18,-10);ctx.stroke();}
+    ctx.save();ctx.translate(23,-24);ctx.rotate(wind?-1.15*(a.elapsed/a.windup):a?Math.sin(p*Math.PI)*1.05:.15);
+    plate(-4,-3,10,15,'#636d7e');ctx.strokeStyle='#916846';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(3,20);ctx.lineTo(3,-39);ctx.stroke();
+    ctx.fillStyle='#9ca8b5';ctx.strokeStyle='#151b25';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(2,-40);ctx.lineTo(20,-43);ctx.quadraticCurveTo(38,-28,24,-13);ctx.lineTo(4,-21);ctx.lineTo(-7,-16);ctx.lineTo(-11,-33);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.strokeStyle='#eddfc7';ctx.beginPath();ctx.moveTo(22,-40);ctx.quadraticCurveTo(34,-29,24,-17);ctx.stroke();ctx.fillStyle='#f8775c';ctx.beginPath();ctx.arc(7,-29,3,0,Math.PI*2);ctx.fill();ctx.restore();
   },
 
   renderCentaur: function(ctx, monster, time) {
@@ -678,49 +702,19 @@ window.GameRenderer.MonsterRenderer = {
   },
 
   // 13. Thái Cổ Hỗn Độn Ma Long (Chaos Void Drake - World Boss)
-  renderVoidDragon: function(ctx, monster, time) {
-    ctx.lineWidth = 3.5;
-    ctx.strokeStyle = '#1e272e';
-
-    // Đôi cánh hư không khổng lồ đập nhẹ
-    const wingFlap = Math.sin(time * 3) * 12;
-    ctx.fillStyle = '#341f97';
-    ctx.beginPath();
-    ctx.moveTo(-20, -40);
-    ctx.lineTo(-80, -90 + wingFlap);
-    ctx.lineTo(-60, -20);
-    ctx.closePath();
-    ctx.moveTo(20, -40);
-    ctx.lineTo(80, -90 + wingFlap);
-    ctx.lineTo(60, -20);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Thân rồng phủ vảy tím phát quang
-    ctx.fillStyle = '#5f27cd';
-    ctx.beginPath();
-    ctx.roundRect(-35, -60, 70, 65, 16);
-    ctx.fill();
-    ctx.stroke();
-
-    // 4 Sừng rồng hung tợn
-    ctx.fillStyle = '#ee5253';
-    ctx.beginPath();
-    ctx.moveTo(-24, -60);
-    ctx.lineTo(-44, -95);
-    ctx.lineTo(-14, -65);
-    ctx.moveTo(24, -60);
-    ctx.lineTo(44, -95);
-    ctx.lineTo(14, -65);
-    ctx.fill();
-    ctx.stroke();
-
-    // Lửa tím hư không bập bùng ở miệng
-    ctx.fillStyle = 'rgba(255, 159, 243, 0.7)';
-    ctx.beginPath();
-    ctx.arc(0, -30, 18, 0, Math.PI * 2);
-    ctx.fill();
+  renderVoidDragon: function(ctx,m,time) {
+    const a=m.action,charge=a?.kind==='skill'&&!a.released,flap=Math.sin(time*(charge?7:2.6))*8;
+    ctx.strokeStyle='#1a152b';ctx.lineWidth=2.5;
+    ctx.fillStyle='#39244f';ctx.beginPath();ctx.moveTo(8,-1);ctx.bezierCurveTo(45,10,69,-17,90,4);ctx.quadraticCurveTo(60,24,12,15);ctx.closePath();ctx.fill();ctx.stroke();
+    for(const side of [-1,1]){ctx.save();ctx.scale(side,1);ctx.fillStyle='#49306b';ctx.beginPath();ctx.moveTo(13,-39);ctx.lineTo(57,-91+flap);ctx.lineTo(83,-78+flap);ctx.lineTo(70,-50);ctx.lineTo(54,-55);ctx.lineTo(47,-23);ctx.lineTo(32,-34);ctx.lineTo(16,-13);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle='#9974bb';ctx.lineWidth=2;for(const [x,y] of [[57,-91+flap],[70,-50],[47,-23]]){ctx.beginPath();ctx.moveTo(14,-39);ctx.lineTo(x,y);ctx.stroke();}ctx.restore();}
+    ctx.fillStyle='#5a3e76';ctx.beginPath();ctx.ellipse(0,-24,25,34,-.2,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#a596b9';ctx.beginPath();ctx.ellipse(-4,-21,10,25,-.2,0,Math.PI*2);ctx.fill();
+    for(const side of [-1,1]){ctx.fillStyle='#4d345e';ctx.beginPath();ctx.moveTo(side*15,-9);ctx.lineTo(side*29,7);ctx.lineTo(side*27,17);ctx.lineTo(side*10,14);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#d9cde3';for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(side*(13+i*5),13);ctx.lineTo(side*(14+i*5),20);ctx.lineTo(side*(17+i*5),13);ctx.fill();}}
+    ctx.fillStyle='#6b4c89';ctx.beginPath();ctx.moveTo(-15,-42);ctx.bezierCurveTo(-30,-62,-20,-79,0,-81);ctx.lineTo(25,-71);ctx.lineTo(32,-59);ctx.lineTo(11,-55);ctx.lineTo(9,-37);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle='#ccbad8';for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(side*11,-74);ctx.lineTo(side*25,-98);ctx.lineTo(side*6,-82);ctx.fill();ctx.stroke();}
+    ctx.fillStyle='#88f3ed';ctx.beginPath();ctx.moveTo(3,-72);ctx.lineTo(15,-68);ctx.lineTo(6,-64);ctx.closePath();ctx.fill();ctx.strokeStyle='#f3d9ff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(12,-59);ctx.lineTo(28,-60);ctx.stroke();
+    ctx.strokeStyle='#8c68aa';for(let row=0;row<4;row++)for(let col=0;col<3;col++){const x=-18+col*12,y=-41+row*11;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+5,y+5);ctx.lineTo(x+10,y);ctx.stroke();}
+    if(charge){ctx.save();ctx.shadowColor='#ad7fff';ctx.shadowBlur=14;ctx.fillStyle='#e3c7ff';ctx.beginPath();ctx.arc(29,-57,5+Math.sin(time*15)*2,0,Math.PI*2);ctx.fill();ctx.restore();}
   },
 
   // 14. Viêm Đế Phượng Hoàng (Eternal Solar Phoenix - World Boss)
@@ -765,7 +759,11 @@ window.GameRenderer.MonsterRenderer = {
     const barWidth = monster.tier>=4?48:34;
     const barHeight = 4.5;
     const tops={beast:45,rat:29,humanoid:36,skeleton:37,beetle:47,boar:42,toad:28,serpent:42,monkey:44,spider:38,zombie:47,snake:42,wolf:43,panther:36,bear:47,bat:42,crab:46,treant:58,golem:53,centaur:75,naga:83,undead_mage:68,ape:78,floating_wraith:68,demon_lord:98,titan_ape:83,three_headed_hydra:84,void_dragon:112,solar_phoenix:84,ancient_world_tree:72,death_god:59,rhino:44};
-    const barY=-(tops[monster.visual?.type]||42);
+    const barY=-(monster.isAncient||monster.isAncientClone?82:tops[monster.visual?.type]||42);
+    if(monster.isAncient){
+      for(let i=0;i<2;i++){ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(-25,barY+i*8,50,6);ctx.fillStyle=i===0?'#ff6b65':'#bc9aff';ctx.fillRect(-24,barY+1+i*8,48*(i===0?(monster.phase===1?hpPct:0):(monster.phase===1?1:hpPct)),4);}
+      if(monster.maxShield){ctx.fillStyle='#83e1ff';ctx.fillRect(-24,barY+17,48*monster.shield/monster.maxShield,3);}return;
+    }
 
     // Nền đen
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';

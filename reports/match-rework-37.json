@@ -1,0 +1,22 @@
+{
+  "seed": 37,
+  "fingerprint": "ed0bcf1c63907d3157a8017052a2331757f5017cfbf2ea58f3bb7ee3113471ea",
+  "finished": true,
+  "simulatedSeconds": 495.6,
+  "survivors": [
+    {
+      "id": "pawn_95",
+      "level": 11,
+      "hp": 729.4000000000017,
+      "objective": "Săn 5 Yêu Vương để đạt cấp 15",
+      "x": 1538.9579372721723,
+      "y": 476.341204802766
+    }
+  ],
+  "ticks": 4956,
+  "peakDrops": 12,
+  "largestGroup": 3,
+  "p95Ms": 203.24039999999513,
+  "invalidGroups": [],
+  "suspects": []
+}

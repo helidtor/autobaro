@@ -1,0 +1,22 @@
+{
+  "seed": 71,
+  "fingerprint": "ed0bcf1c63907d3157a8017052a2331757f5017cfbf2ea58f3bb7ee3113471ea",
+  "finished": true,
+  "simulatedSeconds": 775.3,
+  "survivors": [
+    {
+      "id": "pawn_89",
+      "level": 16,
+      "hp": 1130,
+      "objective": "Chuẩn bị đấu Yêu Thần",
+      "x": 3165.344591089804,
+      "y": 1782.6761542070917
+    }
+  ],
+  "ticks": 7753,
+  "peakDrops": 23,
+  "largestGroup": 4,
+  "p95Ms": 151.2277000000031,
+  "invalidGroups": [],
+  "suspects": []
+}

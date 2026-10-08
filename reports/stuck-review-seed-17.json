@@ -1,0 +1,766 @@
+{
+  "seed": 17,
+  "pawn": "pawn_69",
+  "classification": "reactive combat, not navigation stuck",
+  "reason": "Between 5.9s and 11.7s the pawn blocks, casts and completes repeated attacks against pawn_73 while reacting to the second nearby enemy; it escapes at 11.8s. No oscillating movement or failed navigation.",
+  "trace": [
+    {
+      "t": 4.6,
+      "x": 4759.7,
+      "y": 3576.8,
+      "plan": "farm",
+      "planTarget": "m_0lpd959u0",
+      "target": "m_0lpd959u0",
+      "tactic": "pressure",
+      "hp": 160,
+      "objective": "Gây áp lực: Chuột Hầm Ngục"
+    },
+    {
+      "t": 4.7,
+      "x": 4750.4,
+      "y": 3578.3,
+      "plan": "farm",
+      "planTarget": "m_0lpd959u0",
+      "target": "m_0lpd959u0",
+      "tactic": "pressure",
+      "hp": 160,
+      "objective": "Gây áp lực: Chuột Hầm Ngục"
+    },
+    {
+      "t": 4.8,
+      "x": 4740.9,
+      "y": 3578.6,
+      "plan": "farm",
+      "planTarget": "m_0lpd959u0",
+      "target": "m_0lpd959u0",
+      "tactic": "pressure",
+      "hp": 160,
+      "objective": "Gây áp lực: Chuột Hầm Ngục"
+    },
+    {
+      "t": 4.9,
+      "x": 4749.9,
+      "y": 3581.7,
+      "tactic": "pressure",
+      "hp": 160,
+      "objective": "Săn Chuột Hầm Ngục"
+    },
+    {
+      "t": 5,
+      "x": 4756.3,
+      "y": 3574.7,
+      "tactic": "pressure",
+      "hp": 160,
+      "objective": "Săn Bọ Cánh Cứng Bọc Giáp"
+    },
+    {
+      "t": 5.1,
+      "x": 4756.6,
+      "y": 3584.2,
+      "hp": 160,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 5.2,
+      "x": 4756.9,
+      "y": 3593.7,
+      "hp": 160,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 5.3,
+      "x": 4757.2,
+      "y": 3603.2,
+      "hp": 147,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu"
+    },
+    {
+      "t": 5.4,
+      "x": 4765.4,
+      "y": 3608,
+      "hp": 146.1,
+      "objective": "Né vùng kỹ năng rồi phản công"
+    },
+    {
+      "t": 5.5,
+      "x": 4773.6,
+      "y": 3612.7,
+      "hp": 146.2,
+      "objective": "Né vùng kỹ năng rồi phản công"
+    },
+    {
+      "t": 5.6,
+      "x": 4781.9,
+      "y": 3617.5,
+      "hp": 146.3,
+      "objective": "Né vùng kỹ năng rồi phản công"
+    },
+    {
+      "t": 5.7,
+      "x": 4790.1,
+      "y": 3622.2,
+      "hp": 146.4,
+      "objective": "Né vùng kỹ năng rồi phản công"
+    },
+    {
+      "t": 5.8,
+      "x": 4798.3,
+      "y": 3627,
+      "hp": 146.5,
+      "objective": "Né vùng kỹ năng rồi phản công"
+    },
+    {
+      "t": 5.9,
+      "x": 4798.3,
+      "y": 3627,
+      "action": "block",
+      "hp": 141.6,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 6,
+      "x": 4798.3,
+      "y": 3627,
+      "action": "block",
+      "hp": 141.7,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 6.1,
+      "x": 4798.3,
+      "y": 3627,
+      "action": "block",
+      "hp": 141.8,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 6.2,
+      "x": 4798.3,
+      "y": 3627,
+      "action": "block",
+      "hp": 141.9,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 6.3,
+      "x": 4798.3,
+      "y": 3627,
+      "action": "block",
+      "hp": 142,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 6.4,
+      "x": 4798.3,
+      "y": 3627,
+      "action": "block",
+      "hp": 142.1,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 6.5,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "skill",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 142.2,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 6.6,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "skill",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 142.3,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 6.7,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "skill",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 142.4,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 6.8,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "skill",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 142.5,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 6.9,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "skill",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 142.6,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 7,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "skill",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 142.7,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 7.1,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "skill",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 127.8,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 7.2,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "skill",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 127.9,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 7.3,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "skill",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 128,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 7.4,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 128.1,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 7.5,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 128.2,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 7.6,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 128.3,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 7.7,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 113.4,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 7.8,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 113.5,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 7.9,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 113.6,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 8,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 113.7,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 8.1,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 113.8,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 8.2,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 113.9,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 8.3,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 99,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 8.4,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "tactic": "counter",
+      "hp": 99.1,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 8.5,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "tactic": "counter",
+      "hp": 99.2,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 8.6,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 99.3,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 8.7,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 99.4,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 8.8,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 99.5,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 8.9,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 84.6,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 9,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 84.7,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 9.1,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 84.8,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 9.2,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 84.9,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 9.3,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 85,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 9.4,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 85.1,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 9.5,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 64.2,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 9.6,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "tactic": "counter",
+      "hp": 64.3,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 9.7,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "tactic": "counter",
+      "hp": 64.4,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 9.8,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 64.5,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 9.9,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 64.6,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 10,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 64.7,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 10.1,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 49.8,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 10.2,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 49.9,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 10.3,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 50,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 10.4,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 50.1,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 10.5,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 50.2,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 10.6,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "tactic": "probe",
+      "hp": 50.3,
+      "objective": "Thăm dò, giữ chiêu: Hoàng Nam #66"
+    },
+    {
+      "t": 10.7,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "action": "block",
+      "tactic": "probe",
+      "hp": 45.4,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 10.8,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "action": "block",
+      "tactic": "probe",
+      "hp": 45.5,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 10.9,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "action": "block",
+      "tactic": "probe",
+      "hp": 37.6,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 11,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "action": "block",
+      "tactic": "probe",
+      "hp": 29.7,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 11.1,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "action": "block",
+      "tactic": "probe",
+      "hp": 29.8,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 11.2,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_65",
+      "action": "block",
+      "tactic": "probe",
+      "hp": 29.9,
+      "objective": "Đỡ đòn"
+    },
+    {
+      "t": 11.3,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 30,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 11.4,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 30.1,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 11.5,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 15.2,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 11.6,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 15.3,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 11.7,
+      "x": 4798.3,
+      "y": 3627,
+      "target": "pawn_73",
+      "action": "attack",
+      "actionTarget": "pawn_73",
+      "tactic": "counter",
+      "hp": 15.4,
+      "objective": "Phản công sơ hở: Phương Uyên #74"
+    },
+    {
+      "t": 11.8,
+      "x": 4789.4,
+      "y": 3623.6,
+      "tactic": "counter",
+      "hp": 15.5,
+      "objective": "Lẩn trốn Phương Uyên #74"
+    },
+    {
+      "t": 11.9,
+      "x": 4780,
+      "y": 3622.9,
+      "tactic": "counter",
+      "hp": 0.6,
+      "objective": "Lẩn trốn Phương Uyên #74"
+    },
+    {
+      "t": 12,
+      "x": 4770.5,
+      "y": 3622.2,
+      "tactic": "counter",
+      "hp": 0.7,
+      "objective": "Lẩn trốn Phương Uyên #74"
+    },
+    {
+      "t": 12.1,
+      "x": 4761,
+      "y": 3621.5,
+      "tactic": "counter",
+      "hp": 0.8,
+      "objective": "Lẩn trốn Phương Uyên #74"
+    },
+    {
+      "t": 12.2,
+      "x": 4751.5,
+      "y": 3620.8,
+      "tactic": "counter",
+      "hp": 0.9,
+      "objective": "Lẩn trốn Phương Uyên #74"
+    },
+    {
+      "t": 12.3,
+      "x": 4744.2,
+      "y": 3626.9,
+      "tactic": "counter",
+      "hp": 1,
+      "objective": "Lẩn trốn Chuột Hầm Ngục"
+    },
+    {
+      "t": 12.4,
+      "x": 4737.7,
+      "y": 3619.9,
+      "tactic": "counter",
+      "hp": 1.1,
+      "objective": "Lẩn trốn Chuột Hầm Ngục"
+    },
+    {
+      "t": 12.5,
+      "x": 4731.2,
+      "y": 3613,
+      "tactic": "counter",
+      "hp": 1.2,
+      "objective": "Lẩn trốn Chuột Hầm Ngục"
+    }
+  ]
+}

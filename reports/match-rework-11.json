@@ -1,0 +1,44 @@
+{
+  "seed": 11,
+  "fingerprint": "ed0bcf1c63907d3157a8017052a2331757f5017cfbf2ea58f3bb7ee3113471ea",
+  "finished": true,
+  "simulatedSeconds": 382.9,
+  "survivors": [
+    {
+      "id": "pawn_21",
+      "level": 11,
+      "hp": 560,
+      "objective": "Săn 5 Yêu Vương để đạt cấp 15",
+      "x": 4209.161808083747,
+      "y": 2942.9035127551097
+    }
+  ],
+  "ticks": 3829,
+  "peakDrops": 14,
+  "largestGroup": 3,
+  "p95Ms": 230.44520000000193,
+  "invalidGroups": [],
+  "suspects": [
+    {
+      "id": "pawn_48",
+      "t": 117.1,
+      "travel": 14.4,
+      "swaps": 1,
+      "moving": 8,
+      "blocked": "crowd",
+      "detour": {
+        "x": 1131.880179333052,
+        "y": 1789.82111440556,
+        "until": 118.59999999999765
+      },
+      "level": 5,
+      "objective": "Khám phá bản đồ, săn lùng mục tiêu",
+      "goal": {
+        "x": 1131.880179333052,
+        "y": 1789.82111440556
+      },
+      "x": 1136.3551396607293,
+      "y": 1718.962277764914
+    }
+  ]
+}

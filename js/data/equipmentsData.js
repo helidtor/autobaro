@@ -369,6 +369,7 @@ window.GameData.Equipments = {
     a_phoenix_cloak: { id: 'a_phoenix_cloak', slot: 'body', name: 'Áo Choàng Niết Bàn', tier: 'supreme', defense: 50, hp: 450, reviveOnce: true, desc: 'Sống lại với 20% HP khi nhận đòn chí tử (1 lần/trận)' },
 
     // Thần Khí
+    a_god_crown: { id: 'a_god_crown', slot: 'head', name: 'Thiên Miện Thần Vương', tier: 'god', defense: 60, hp: 600, desc: 'Vương miện Thần Khí, tăng 60 phòng ngự và 600 HP tối đa.' },
     a_archdemon_armor: { id: 'a_archdemon_armor', slot: 'body', name: 'Áo Giáp Hắc Ám Archdemon', tier: 'god', defense: 85, hp: 1000, desc: 'Hóa Ma Thần Khổng Lồ x2 Máu, thiêu đốt 50 HP/giây kẻ dám lại gần 6m' }
   }
 };

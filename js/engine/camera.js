@@ -53,6 +53,7 @@ window.GameEngine.Camera = {
     }
 
     const G=window.GameManager;
+    if(G)G.cameraShake=Math.max(0,(G.cameraShake||0)-dt);
     if(G&&!G.isPlayerMode){
       const k=G.keys,dx=(k.d||k.arrowright?1:0)-(k.a||k.arrowleft?1:0),dy=(k.s||k.arrowdown?1:0)-(k.w||k.arrowup?1:0);
       if(dx||dy)this.panPixels(-dx*500*dt,-dy*500*dt);
@@ -140,7 +141,8 @@ window.GameEngine.Camera = {
   // Áp dụng biến đổi camera vào Canvas Context
   applyTransform: function(ctx) {
     ctx.save();
-    ctx.translate(this.viewportWidth / 2, this.viewportHeight / 2);
+    const shake=window.GameManager.cameraShake||0;
+    ctx.translate(this.viewportWidth / 2+Math.sin(performance.now()*.06)*shake*15, this.viewportHeight / 2+Math.cos(performance.now()*.07)*shake*15);
     ctx.scale(this.zoom, this.zoom);
     ctx.translate(-this.x, -this.y);
   },

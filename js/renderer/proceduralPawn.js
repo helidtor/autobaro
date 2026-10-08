@@ -95,23 +95,47 @@ window.GameRenderer.ProceduralPawn = {
     ctx.restore();
 
     this.renderPawn(ctx, pawn, time, pawn.aimAngle || 0, isMoving);
+    const relics=window.GameEntities.RelicSystem.equipment(pawn).filter(d=>d.tier==='ancient');
+    if(relics.length){ctx.save();ctx.strokeStyle='#ffd166';ctx.lineWidth=3.5;ctx.shadowColor='#f6bf57';ctx.shadowBlur=8;ctx.beginPath();ctx.roundRect(pawn.x-16,pawn.y-38,32,46,13);ctx.stroke();
+      for(let i=0;i<6;i++){ctx.fillStyle=relics[i%relics.length].color;ctx.globalAlpha=.5+Math.sin(time*4+i)*.3;ctx.beginPath();ctx.arc(pawn.x+Math.cos(time+i)*24,pawn.y-17+Math.sin(time+i)*30,2,0,Math.PI*2);ctx.fill();}ctx.restore();}
+    if(pawn.boots){ctx.save();ctx.fillStyle='#ffbf78';ctx.strokeStyle='#ffd166';ctx.lineWidth=2;for(const side of [-1,1]){ctx.beginPath();ctx.roundRect(pawn.x+side*7-4,pawn.y+2,8,7,2);ctx.fill();ctx.stroke();}ctx.restore();}
   },
 
   renderAura(ctx,p,time){
-    const ultimate=p.level>=15,color=ultimate?'#d1b0ff':'#ffe46b';
-    ctx.save();ctx.translate(p.x,p.y-17);
-    const pulse=1+Math.sin(time*5)*.08;
-    ctx.shadowColor=color;ctx.shadowBlur=ultimate?18:12;
-    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.fillStyle=color;
-    ctx.globalAlpha=.16;ctx.beginPath();ctx.ellipse(0,0,24*pulse,37*pulse,0,0,Math.PI*2);ctx.fill();
-    ctx.globalAlpha=.75;
-    for(let i=0;i<12;i++){
-      const angle=i*Math.PI/6,r=22+Math.sin(time*7+i)*3;
-      ctx.beginPath();ctx.moveTo(Math.cos(angle)*r,Math.sin(angle)*r*1.5);
-      ctx.lineTo(Math.cos(angle+.12)*(r+6),Math.sin(angle+.12)*(r+6)*1.5);ctx.stroke();
+    const ultimate=p.level>=15,color=ultimate?'#9d78ff':'#ffc832',edge=ultimate?'#30c9ff':'#ffe96a';
+    const pulse=1+Math.sin(time*4)*.045;
+    ctx.save();ctx.translate(p.x,p.y-17);ctx.scale(pulse,pulse);
+    const glow=ctx.createRadialGradient(0,0,12,0,0,52);
+    glow.addColorStop(0,ultimate?'rgba(158,101,255,.08)':'rgba(255,215,55,.08)');
+    glow.addColorStop(.55,ultimate?'rgba(117,156,255,.22)':'rgba(255,215,55,.22)');glow.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=glow;ctx.beginPath();ctx.ellipse(0,-2,45,60,0,0,Math.PI*2);ctx.fill();
+    // Tapered curved wisps: bright cores stay outside the face/body silhouette.
+    for(let i=0;i<5;i++){
+      const angle=i*Math.PI*2/5+Math.sin(time*.8+i)*.12,flow=(time*.65+i*.17)%1;
+      ctx.save();ctx.rotate(angle);ctx.translate(32+flow*7,0);ctx.scale(1,.8+flow*.3);
+      ctx.globalAlpha=.45+Math.sin(flow*Math.PI)*.5;ctx.shadowColor=edge;ctx.shadowBlur=10;
+      ctx.beginPath();ctx.moveTo(0,19);ctx.bezierCurveTo(13,9,13,-8,0,-26);
+      ctx.bezierCurveTo(3,-9,5,0,-4,7);ctx.bezierCurveTo(-10,12,-5,18,0,19);ctx.closePath();
+      ctx.fillStyle=color;ctx.fill();ctx.lineWidth=1.3;ctx.strokeStyle=edge;ctx.stroke();
+      ctx.shadowBlur=3;ctx.fillStyle='#fffdf2';ctx.beginPath();ctx.moveTo(0,16);
+      ctx.bezierCurveTo(9,6,10,-4,2,-19);ctx.bezierCurveTo(6,-2,1,6,-3,10);ctx.quadraticCurveTo(-3,14,0,16);ctx.fill();ctx.restore();
     }
-    ctx.shadowBlur=0;ctx.globalAlpha=.9;ctx.strokeStyle=ultimate?'#f8eaff':'#fff9c4';
-    if(ultimate)for(let i=0;i<3;i++){const x=-28+i*26;ctx.beginPath();ctx.moveTo(x,-30);ctx.lineTo(x+6,-12);ctx.lineTo(x-2,-5);ctx.lineTo(x+5,12);ctx.stroke();}
+    if(ultimate){
+      // Broken jagged arcs with a white hot center and cyan/violet glow.
+      const beat=Math.floor(time*9);
+      ctx.lineJoin='miter';ctx.lineCap='round';
+      for(let i=0;i<3;i++){
+        const start=i*Math.PI*2/3+Math.sin(beat*1.7+i)*.18;
+        ctx.beginPath();
+        for(let j=0;j<9;j++){
+          const a=start+j*.12,r=36+(j%2?3+Math.sin(j*2.7+i+beat)*5:-2+Math.sin(j*1.3+i+beat)*3),x=Math.cos(a)*r,y=Math.sin(a)*r*1.4;
+          if(j===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+        }
+        ctx.globalAlpha=.8;ctx.shadowColor=color;ctx.shadowBlur=13;ctx.strokeStyle=color;ctx.lineWidth=6;ctx.stroke();
+        ctx.shadowColor=edge;ctx.shadowBlur=6;ctx.strokeStyle=edge;ctx.lineWidth=3.8;ctx.stroke();
+        ctx.shadowBlur=0;ctx.strokeStyle='#ffffff';ctx.lineWidth=2.2;ctx.stroke();
+      }
+    }
     ctx.restore();
   },
 
@@ -281,7 +305,7 @@ window.GameRenderer.ProceduralPawn = {
       ctx.ellipse(0, headY + 6, 4, 3, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-    } else if (pawn.hitFlashTimer>0 || despair>65) {
+    } else if (pawn.anger>55 || pawn.hitFlashTimer>0 || despair>65) {
       ctx.beginPath();ctx.moveTo(-8,headY-2);ctx.lineTo(-4,headY);ctx.moveTo(8,headY-2);ctx.lineTo(4,headY);ctx.stroke();
       ctx.beginPath();ctx.arc(0,headY+8,3,Math.PI,Math.PI*2);ctx.stroke();
     } else if (fear > 70) {
@@ -454,7 +478,7 @@ window.GameRenderer.ProceduralPawn = {
       ctx.lineTo(headRadius - 3, headY - 6);
       ctx.fill();
       ctx.stroke();
-    } else if (helmet.tier === 'supreme' || helmet.tier === 'god') {
+    } else if (helmet.tier === 'supreme' || helmet.tier === 'god' || helmet.tier==='ancient') {
       // Vương miện Viêm Đế đỏ rực hào quang
       ctx.fillStyle = '#f39c12';
       ctx.beginPath();
@@ -473,6 +497,7 @@ window.GameRenderer.ProceduralPawn = {
 
   getArmorColor: function(armor) {
     switch (armor.tier) {
+      case 'ancient':return armor.color||'#c6a15c';
       case 'rare': return '#34495e';
       case 'super_rare': return '#575fcf';
       case 'supreme': return '#c0392b';

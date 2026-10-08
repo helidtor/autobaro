@@ -149,32 +149,36 @@ window.GameData.Classes = {
 };
 
 window.GameData.LevelTable = {
-  MAX_LEVEL: 15,
+  expForLevel(level){
+    if(level<=15)return this.expRequirements[Math.max(0,level-1)];
+    const extra=level-15;
+    return this.expRequirements[14]+1200*extra+100*extra*(extra-1);
+  },
   // Điểm kinh nghiệm tích lũy để lên từng cấp
   expRequirements: [
     0,     // Lv 1
     80,    // Lv 2
     180,   // Lv 3
     320,   // Lv 4
-    500,   // Lv 5 (Early game cap)
+    500,   // Lv 5
     750,   // Lv 6
     1050,  // Lv 7
     1400,  // Lv 8
     1800,  // Lv 9
-    2300,  // Lv 10 (Mid game cap)
+    2300,  // Lv 10
     2900,  // Lv 11
     3600,  // Lv 12
     4400,  // Lv 13
     5300,  // Lv 14
-    6400   // Lv 15 (Max Level)
+    6400   // Lv 15; các cấp tiếp theo dùng công thức tăng dần
   ]
 };
 
-window.GameData.PersonalityAxes = {aggression:'Hiếu chiến',caution:'Thận trọng',greed:'Tham vọng',loyalty:'Trung thành',patience:'Kiên nhẫn',curiosity:'Khám phá'};
+window.GameData.PersonalityAxes = {aggression:'Hiếu chiến',caution:'Thận trọng',greed:'Tham vọng',loyalty:'Trung thành',patience:'Kiên nhẫn',curiosity:'Khám phá',cowardice:'Hèn nhát',composure:'Bình tĩnh'};
 window.GameData.PersonalityProfiles = {
- brave:{aggression:90,caution:25,greed:45,loyalty:65,patience:25,curiosity:70},
- coward:{aggression:15,caution:95,greed:30,loyalty:50,patience:80,curiosity:35},
- wise:{aggression:40,caution:85,greed:45,loyalty:70,patience:85,curiosity:65},
- greedy:{aggression:65,caution:40,greed:95,loyalty:20,patience:35,curiosity:80},
- cunning:{aggression:55,caution:65,greed:75,loyalty:15,patience:95,curiosity:60}
+ brave:{aggression:90,caution:25,greed:45,loyalty:65,patience:25,curiosity:70,cowardice:10,composure:70},
+ coward:{aggression:15,caution:95,greed:30,loyalty:50,patience:80,curiosity:35,cowardice:95,composure:25},
+ wise:{aggression:40,caution:85,greed:45,loyalty:70,patience:85,curiosity:65,cowardice:35,composure:90},
+ greedy:{aggression:65,caution:40,greed:95,loyalty:20,patience:35,curiosity:80,cowardice:45,composure:40},
+ cunning:{aggression:55,caution:65,greed:75,loyalty:15,patience:95,curiosity:60,cowardice:65,composure:75}
 };

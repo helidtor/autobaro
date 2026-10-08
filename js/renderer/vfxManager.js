@@ -182,6 +182,11 @@ window.GameRenderer.VfxManager = {
     // 3. Cập nhật Đạn bay
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i];
+      const voidBoss=window.GameEntities.AncientSystem.boss;
+      if(voidBoss?.isAlive&&voidBoss.ancientKind==='void'&&!p.voidBent&&Math.hypot(p.x-voidBoss.x,p.y-voidBoss.y)<120){
+        p.voidBent=true;const angle=.6,vx=p.vx;p.vx=vx*Math.cos(angle)-p.vy*Math.sin(angle);p.vy=vx*Math.sin(angle)+p.vy*Math.cos(angle);
+        this.addEffect('rune',p.x,p.y,{radius:18,color:'#ad87ee',life:.3});
+      }
       const moveDist = Math.hypot(p.vx * dt, p.vy * dt);
       // Swept substeps keep fast-forward projectiles from tunnelling through targets.
       const steps = Math.max(1,Math.ceil(moveDist/10));

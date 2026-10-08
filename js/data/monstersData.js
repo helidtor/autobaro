@@ -954,3 +954,393 @@ window.GameData.FinalLord = {...window.GameData.Monsters.lords[0],id:'ironhide_r
  {id:'rhino_slam',name:'Địa Chấn Thiết Đề',type:'slam',cooldown:14},
  {id:'rhino_roar',name:'Gầm Thét Sơn Hà',type:'roar',cooldown:17}
 ]};
+
+// Damage is the total budget for one cast, including every pulse.
+window.GameData.MonsterTactics={
+  "cleave_smash": [
+    "line",
+    1.5,
+    0,
+    1.1
+  ],
+  "axe_spin": [
+    "circle",
+    1.25,
+    3,
+    0.65
+  ],
+  "acid_spit": [
+    "acid",
+    1.1,
+    3,
+    0.8
+  ],
+  "tail_sweep": [
+    "cone",
+    1.1,
+    0,
+    0.75
+  ],
+  "piercing_arrow": [
+    "line",
+    1.35,
+    0,
+    1
+  ],
+  "gallop_charge": [
+    "charge",
+    1.25,
+    0,
+    0.9
+  ],
+  "dark_fireball": [
+    "projectile",
+    1.2,
+    0,
+    0.8
+  ],
+  "bone_cage": [
+    "cage",
+    0.9,
+    0,
+    1
+  ],
+  "ground_pound": [
+    "ring",
+    1.3,
+    3,
+    0.9
+  ],
+  "throw_boulder": [
+    "projectile",
+    1.4,
+    0,
+    1
+  ],
+  "fire_pillars": [
+    "pillars",
+    1.5,
+    3,
+    1
+  ],
+  "magma_hammer": [
+    "fissure",
+    1.5,
+    0,
+    1.1
+  ],
+  "destroyer_roar": [
+    "cone",
+    0.9,
+    0,
+    0.75
+  ],
+  "mega_boulder": [
+    "projectile",
+    1.6,
+    0,
+    1.1
+  ],
+  "crater_leap": [
+    "leap",
+    1.6,
+    0,
+    1.2
+  ],
+  "fury_punches": [
+    "flurry",
+    1.8,
+    8,
+    0.65
+  ],
+  "triple_spray": [
+    "fan",
+    1.4,
+    3,
+    0.9
+  ],
+  "constrict": [
+    "tether",
+    1.2,
+    0,
+    0.8
+  ],
+  "burrow_strike": [
+    "leap",
+    1.5,
+    0,
+    1.3
+  ],
+  "blizzard_storm": [
+    "storm",
+    1.5,
+    0,
+    1
+  ],
+  "soul_chains": [
+    "tether",
+    1.15,
+    0,
+    1
+  ],
+  "death_scream": [
+    "interrupt",
+    0.9,
+    0,
+    0.75
+  ],
+  "void_breath": [
+    "beam",
+    1.7,
+    3,
+    1.2
+  ],
+  "void_vortex": [
+    "vortex",
+    1.4,
+    0,
+    1.1
+  ],
+  "meteor_rain": [
+    "pillars",
+    1.8,
+    5,
+    1.1
+  ],
+  "time_freeze": [
+    "freeze",
+    0.7,
+    0,
+    1.5
+  ],
+  "wing_gale": [
+    "cone",
+    1.2,
+    0,
+    0.9
+  ],
+  "solar_sea": [
+    "sea",
+    1.7,
+    0,
+    1.2
+  ],
+  "dive_bomb": [
+    "leap",
+    1.7,
+    0,
+    1.3
+  ],
+  "scorching_song": [
+    "song",
+    1.3,
+    3,
+    1.1
+  ],
+  "wing_flare": [
+    "fan",
+    1.5,
+    3,
+    0.9
+  ],
+  "supernova": [
+    "nuke",
+    2,
+    0,
+    2.5
+  ],
+  "heart_roots": [
+    "line",
+    1.3,
+    0,
+    1
+  ],
+  "thorn_rain": [
+    "pillars",
+    1.5,
+    4,
+    1
+  ],
+  "branch_slam": [
+    "cone",
+    1.6,
+    0,
+    1.25
+  ],
+  "sleep_spores": [
+    "spores",
+    1,
+    0,
+    1.1
+  ],
+  "drain_vitality": [
+    "leech",
+    1.3,
+    0,
+    1.2
+  ],
+  "death_warrant": [
+    "mark",
+    0.6,
+    0,
+    0.85
+  ],
+  "reincarnation_doom": [
+    "judgment",
+    1.5,
+    0,
+    1.3
+  ],
+  "summon_ghost_army": [
+    "ghost",
+    1.5,
+    3,
+    1
+  ],
+  "underworld_rainbow": [
+    "beam",
+    1.6,
+    3,
+    1.2
+  ],
+  "five_horse_chains": [
+    "chains",
+    1.2,
+    5,
+    1.1
+  ]
+};
+
+window.GameData.LowMonsterTactics={
+  "spike_hare": [
+    0.2,
+    0.3,
+    "unarmed"
+  ],
+  "dungeon_rat": [
+    0.3,
+    0.28,
+    "unarmed"
+  ],
+  "goblin_clubber": [
+    0.4,
+    0.4,
+    "hammer"
+  ],
+  "stone_monkey": [
+    0.5,
+    0.35,
+    "bow"
+  ],
+  "rusty_skeleton": [
+    0.3,
+    0.3,
+    "sword"
+  ],
+  "cave_spiderling": [
+    0.24,
+    0.32,
+    "unarmed"
+  ],
+  "armored_beetle": [
+    0.45,
+    0.45,
+    "hammer"
+  ],
+  "shambling_zombie": [
+    0.5,
+    0.5,
+    "unarmed"
+  ],
+  "grass_viper": [
+    0.2,
+    0.4,
+    "unarmed"
+  ],
+  "starving_wolf": [
+    0.25,
+    0.32,
+    "unarmed"
+  ],
+  "ironspine_boar": [
+    0.5,
+    0.5,
+    "hammer"
+  ],
+  "swamp_serpent": [
+    0.45,
+    0.4,
+    "spear"
+  ],
+  "magma_toad": [
+    0.55,
+    0.45,
+    "unarmed"
+  ],
+  "shadow_panther": [
+    0.25,
+    0.4,
+    "dagger"
+  ],
+  "frost_ursa": [
+    0.6,
+    0.5,
+    "hammer"
+  ],
+  "vampire_bat": [
+    0.22,
+    0.35,
+    "unarmed"
+  ],
+  "sand_trapper": [
+    0.5,
+    0.45,
+    "spear"
+  ],
+  "ancient_rock_crab": [
+    0.65,
+    0.5,
+    "hammer"
+  ],
+  "alpha_timberwolf": [
+    0.35,
+    0.4,
+    "sword"
+  ],
+  "rotting_treant": [
+    0.7,
+    0.55,
+    "spear"
+  ]
+};
+
+window.GameData.MonsterTacticDescriptions={
+  "line": "Đòn khóa hướng; né ngang.",
+  "cone": "Quét cung trước mặt; vòng sau.",
+  "acid": "Vùng axit cắt đường 2s, phá giáp 25%.",
+  "circle": "Vùng đánh quanh người.",
+  "charge": "Lao thẳng bị tường chặn; hụt có hồi đòn.",
+  "projectile": "Đạn va chạm; dùng vật cản.",
+  "cage": "Hai rào có va chạm trong 2s, hai đầu mở.",
+  "ring": "Vòng chấn có tâm an toàn.",
+  "pillars": "Nhiều dấu khóa điểm đánh lần lượt, chia tổng damage.",
+  "fissure": "Khe nóng khóa tuyến; rời hành lang.",
+  "leap": "Điểm đáp khóa trước; có thể né và phản công.",
+  "flurry": "Tám nhịp khóa hướng, chia tổng sát thương.",
+  "fan": "Các tuyến hình quạt có khe né.",
+  "tether": "Liên kết đứt khi quá 240px hoặc bị cover chắn.",
+  "storm": "Vùng lạnh 2s, slow ngắn.",
+  "interrupt": "Ngắt niệm trong cự ly; không khóa đòn thường.",
+  "beam": "Tia khóa hướng rồi quét theo ba nhịp.",
+  "vortex": "Vùng kéo bốn nhịp, có thể bước khỏi vùng.",
+  "freeze": "Dấu thời gian trong 70px, choáng tối đa 0.6s.",
+  "sea": "Vùng nóng có tâm an toàn.",
+  "song": "Ba nhịp quanh người, có niệm.",
+  "nuke": "Niệm 2.5s, nổ ở điểm khóa trước.",
+  "spores": "Đứng trong vùng đủ lâu mới chịu choáng.",
+  "leech": "Hút máu qua liên kết có thể cắt.",
+  "mark": "Đặt dấu 5s, không tự tử hình.",
+  "judgment": "Sát thương tăng 25% nếu dấu còn hiệu lực.",
+  "ghost": "Ba vùng quỷ binh, không sinh thêm người tham chiến.",
+  "chains": "Năm điểm dây xích có khe, slow hữu hạn."
+};

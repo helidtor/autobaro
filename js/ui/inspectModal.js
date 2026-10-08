@@ -34,11 +34,11 @@ window.GameUI.InspectModal = {
 
   renderPawnInspect: function(p) {
     const traitDef = window.GameData.Traits[p.trait] || {};
-    const classDef = window.GameData.Classes[p.classId] || { name: 'Vô Định Hình (Chưa có vũ khí)', role: 'Tự do' };
+    const classDef = window.GameData.Classes[p.classId] || { name: 'Tay không', role: 'Tự do' };
 
-    const thresholds=window.GameData.LevelTable.expRequirements;
-    const levelBase=thresholds[p.level-1]||0,next=p.level<15?thresholds[p.level]:null;
-    const xpInLevel=Math.max(0,p.currentExp-levelBase),xpNeeded=next===null?0:next-levelBase;
+    const levels=window.GameData.LevelTable;
+    const levelBase=levels.expForLevel(p.level),next=levels.expForLevel(p.level+1);
+    const xpInLevel=Math.max(0,p.currentExp-levelBase),xpNeeded=next-levelBase;
     const stats=window.GameEntities.CombatSystem.combatStats(p);
     const personality=p.personality||window.GameData.PersonalityProfiles[p.trait];
     const fearPct = Math.round(p.fear || 0);
@@ -46,8 +46,8 @@ window.GameUI.InspectModal = {
     const despPct = Math.round(p.despair || 0);
 
     const weaponName = p.weapon ? `${p.weapon.name} (${window.GameData.Equipments.TIER_NAMES[p.weapon.tier]})` : 'Tay Không';
-    const armorName = p.armor ? `${p.armor.name} (+${p.armor.defense} Giáp)` : 'Áo Vải Thường';
-    const helmetName = p.helmet ? `${p.helmet.name} (+${p.helmet.defense} Giáp)` : 'Không';
+    const armorName = p.armor ? `${p.armor.name} (+${p.armor.defense||0} Giáp)` : 'Áo Vải Thường';
+    const helmetName = p.helmet ? `${p.helmet.name} (+${p.helmet.defense||0} Giáp)` : 'Không';
 
     let skillsHtml = '';
     if (p.skills && p.skills.length > 0) {
@@ -69,14 +69,14 @@ window.GameUI.InspectModal = {
       </div>
 
       <div class="inspect-subtitle">
-        <span class="badge badge-class">${classDef.name}</span>
+        <span class="badge badge-class">Vũ khí: ${classDef.name}</span>
         <span class="badge badge-trait">${traitDef.name || p.trait}</span>
         <span class="badge badge-level">Lv ${p.level} (Kills: ${p.killCount})</span>
       </div>
 
       <div class="inspect-section">
-        <div class="inspect-bar-label">${next===null?"EXP: Đã đạt cấp tối đa":"EXP: "+xpInLevel+" / "+xpNeeded+" • Còn "+Math.max(0,next-p.currentExp)+" EXP để lên cấp"}</div>
-        <div class="inspect-bar-label">Máu: ${Math.round(p.currentHp)} / ${p.maxHp}</div>
+        <div class="inspect-bar-label">${"EXP: "+xpInLevel+" / "+xpNeeded+" • Còn "+Math.max(0,next-p.currentExp)+" EXP để lên cấp"}</div>
+        <div class="inspect-bar-label">Máu: ${Math.round(p.currentHp)} / ${p.maxHp} • Hồi 1 HP/s</div>
         <div class="bar-container"><div class="bar-fill bar-hp" style="width: ${(p.currentHp / p.maxHp) * 100}%"></div></div>
 
         <div class="inspect-bar-label">Thể Lực: ${Math.round(p.currentStamina)} / ${p.maxStamina}</div>
@@ -88,7 +88,7 @@ window.GameUI.InspectModal = {
 
       <div class="inspect-section">
         <div class="section-title">Chỉ số thực chiến</div>
-        <div>ATK: <b>${stats.attack}</b> • DEF: <b>${stats.defense}</b></div>
+        <div>ATK: <b>${stats.attack}</b> • DEF: <b>${stats.defense}</b> • Kháng phép: <b>${stats.magicDefense}</b></div>
         <div>Tốc độ: <b>${Math.round(stats.speed)}</b> • Tầm đánh: <b>${stats.range}</b> • Tầm nhìn: <b>${window.GameEntities.CombatSystem.visionRange(p)}</b> • Chí mạng: <b>${Math.round(Math.min(.35,(p.critChance||0)+(p.weapon?.critChance||0))*100)}%</b></div>
         <div class="section-title">Tính cách cá nhân</div>
         <div>Chủ đạo: ${traitDef.name} • Phụ: ${window.GameData.Traits[p.secondaryTrait]?.name||'—'}</div>
@@ -99,6 +99,10 @@ window.GameUI.InspectModal = {
         <div>Chiến thuật: <b>${p.isHiding?"Đang ẩn nấp":p.combatTactic|| (p.chase?"Truy đuổi có giới hạn":"Cơ động")}</b></div><div>Bình máu: <b>${p.healthPotions || 0}</b> • ${p.action ? ({attack:"Ra đòn",skill:"Thi triển kỹ năng",block:"Đỡ đòn",dodge:"Né đòn",drink:"Uống bình"}[p.action.kind]) : "Sẵn sàng"}</div>
         ${p.allyPawn?.isAlive?'<div>Đồng minh: <b>'+p.allyPawn.name+'</b>'+ (p.pactTarget?' • Truy tìm '+p.pactTarget.name:'')+'</div>':''}
         <div class="section-title">Trạng thái cảm xúc</div>
+        <div class="emotion-row"><span>Phẫn nộ:</span><b>${Math.round(p.anger||0)}%</b></div>
+        <div class="emotion-row"><span>Chiến ý:</span> <b>${Math.round(p.battleWill||0)}%</b></div>
+        <div class="emotion-row"><span>Quyết định:</span> <b>${p.decisionReason||p.combatTactic||p.objective||'Quan sát'}</b></div>
+        <div class="emotion-row"><span>Cam kết:</span> <b>${p.survivalTarget?.isAlive?'Tử chiến: '+p.survivalTarget.name:Math.max(0,(p.plan?.until||0)-(p.decisionTime||0)).toFixed(1)+'s'}</b></div>
         <div class="emotion-row"><span>Sợ hãi (Fear):</span> <b>${fearPct}%</b></div>
         <div class="bar-container"><div class="bar-fill bar-fear" style="width: ${fearPct}%"></div></div>
         <div class="emotion-row"><span>Tự tin (Confidence):</span> <b>${confPct}%</b></div>
@@ -112,11 +116,14 @@ window.GameUI.InspectModal = {
         <div class="item-slot">⚔️ Vũ khí: <b>${weaponName}</b></div>
         <div class="item-slot">🛡️ Giáp ngực: <b>${armorName}</b></div>
         <div class="item-slot">🪖 Mũ bảo hộ: <b>${helmetName}</b></div>
+        <div class="item-slot">🥾 Giày: <b>${p.boots?.name||"Không"}</b></div>
+        ${window.GameEntities.RelicSystem.equipment(p).filter(d=>d.tier==="ancient").map(d=>'<div class="inspect-skill-item"><b>🏺 '+d.name+'</b><div class="skill-desc">'+d.desc+'</div></div>').join('')}
       </div>
 
       <div class="inspect-section">
-        <div class="section-title">Kỹ Năng Đã Mở Khóa</div>
+        <div class="section-title">Kỹ năng tự chọn • không giới hạn nhánh</div>
         ${skillsHtml}
+        ${(p.passives||[]).map(s=>'<div class="inspect-skill-item"><b>'+s.name+' (Nội tại)</b><div class="skill-desc">'+s.desc+'</div></div>').join('')}
       </div>
     `;
   },
@@ -125,8 +132,8 @@ window.GameUI.InspectModal = {
     const c=window.GameEntities.CombatSystem.getSkillConfig(e,s);
     const status=s.cooldownTimer>0 ? "Hồi chiêu "+s.cooldownTimer.toFixed(1)+"s" : "Sẵn sàng";
     const damage = /heal|buff|stance|stasis|stealth|smoke|speed|swap|shield|^teleport$/.test(c.type) ? "" : " • Sát thương cơ bản "+Math.round(c.damage);
-    const details = /heal/.test(c.type) ? 'Hồi máu có giới hạn khi thi triển.' : /stance|shield|stasis/.test(c.type) ? 'Đỡ sát thương chính diện trong thời gian ngắn.' : /stealth|smoke/.test(c.type) ? 'Ẩn thân ngắn và tăng tốc để thoát giao tranh.' : /speed|teleport/.test(c.type) ? 'Di chuyển chiến thuật với cự ly/tốc độ giới hạn.' : /buff|swap/.test(c.type) ? 'Cường hóa vũ khí trong thời gian ngắn.' : 'Có lấy đà; có thể đỡ hoặc né.'+(c.stun?' Choáng tối đa '+c.stun+'s.':'')+(c.slow?' Làm chậm '+Math.round(c.slow*100)+'%.':'');
-    return status+' • Cooldown '+c.cooldown+'s'+damage+'<br>'+details;
+    const details = c.role ? c.desc : c.monsterEffect ? 'Chuẩn bị '+c.windup+'s • '+c.damageScale+'× ATK tổng • '+c.desc+' • Nhịp phép chung '+(e.tier===5?'2':'3')+'s' : c.type==='ancient_skill' ? 'Cảnh báo '+c.windup+'s • '+c.desc+(c.phase?' • Chỉ phase 2':'') : /heal/.test(c.type) ? 'Hồi máu có giới hạn khi thi triển.' : /stance|shield|stasis/.test(c.type) ? 'Đỡ sát thương chính diện trong thời gian ngắn.' : /stealth|smoke/.test(c.type) ? 'Ẩn thân ngắn và tăng tốc để thoát giao tranh.' : /speed|teleport/.test(c.type) ? 'Di chuyển chiến thuật với cự ly/tốc độ giới hạn.' : /buff|swap/.test(c.type) ? 'Cường hóa vũ khí trong thời gian ngắn.' : 'Có lấy đà; có thể đỡ hoặc né.'+(c.stun?' Choáng tối đa '+c.stun+'s.':'')+(c.slow?' Làm chậm '+Math.round(c.slow*100)+'%.':'');
+    return status+' • Cooldown '+c.cooldown+'s'+(c.manaCost?' • '+c.manaCost+' mana':'')+(c.staminaCost?' • '+c.staminaCost+' thể lực':'')+damage+'<br>'+details;
   },
   renderMonsterInspect: function(m) {
     this.panelEl.innerHTML = `
@@ -140,24 +147,26 @@ window.GameUI.InspectModal = {
       </div>
 
       <div class="inspect-section">
-        <div class="inspect-bar-label">Máu: ${Math.round(m.currentHp)} / ${m.maxHp}</div>
+        <div class="inspect-bar-label">${m.isAncient?"Phase "+m.phase+" / 2 • ":""}Máu: ${Math.round(m.currentHp)} / ${m.maxHp} • ${({3:1,4:3,5:5}[m.tier])?"Ngoài combat: hồi "+({3:1,4:3,5:5}[m.tier])+"% HP/s • Trong combat: 1 HP/s":"Hồi 1 HP/s"}</div>
         <div class="bar-container"><div class="bar-fill bar-hp" style="width: ${(m.currentHp / m.maxHp) * 100}%"></div></div>
       </div>
 
       <div class="inspect-section">
+        ${m.isAncient?'<div>Thanh HP 1: '+(m.phase===1?Math.round(m.currentHp):0)+' / '+m.phaseMaxHp+'</div><div>Thanh HP 2: '+(m.phase===1?m.phaseMaxHp:Math.round(m.currentHp))+' / '+m.phaseMaxHp+'</div><div>Miễn khống chế: 100% • Lá chắn: '+Math.round(m.shield||0)+'</div>':''}
         <div class="section-title">Chỉ Số Thực Chiến</div>
         <div>Tấn công: <b>${m.attack}</b></div>
         <div>Phòng ngự: <b>${m.defense}</b></div>
         <div>Tốc độ chạy: <b>${m.speed}</b></div><div>Tầm đánh: <b>${window.GameEntities.CombatSystem.combatStats(m).range}</b> • Tầm nhìn: <b>${window.GameEntities.CombatSystem.visionRange(m)}</b></div>
         <div>Sinh cảnh: <b>${m.territory?.name||window.GameData.HabitatNames[m.habitat]||'—'}</b></div>
         <div>EXP khi hạ: <b>${m.expReward}</b></div>
-        <div>Nhịp phép chung: <b>${m.globalSkillCooldown>0?m.globalSkillCooldown.toFixed(1)+'s':'Sẵn sàng'}</b> • Tối đa 1 phép / 3s</div>
-        <div>Phẩm chất rơi đồ: <b>${m.dropTier}</b></div>
-        <div>Tỷ lệ rơi: <b>${[0,20,30,40,100,100][m.tier]}%</b> • ${m.tier>=4?"1 bình máu + 1 trang bị/vũ khí":"1 bình máu hoặc 1 trang bị/vũ khí"}</div>
+        <div>Nhịp phép chung: <b>${m.globalSkillCooldown>0?m.globalSkillCooldown.toFixed(1)+'s':'Sẵn sàng'}</b> • Tối đa 1 phép / ${m.tier>=6?1:m.tier===5?2:3}s</div>
+        <div>Mục tiêu: <b>${m.objective||"Canh giữ sinh cảnh"}</b></div>
+        ${m.tier>=6?'<div>Lượt '+(m.gauntletRound||1)+'/5 • Hai phase • Rơi 1 Thượng Bảo không trùng; boss tiếp theo sau 10s.</div>':`<div>Phẩm chất rơi đồ: <b>${m.dropTier}</b></div>
+        <div>Tỷ lệ rơi: <b>${[0,20,30,40,100,100][m.tier]}%</b> • ${m.tier===5?"1 bình máu + vũ khí, giáp, mũ Thần Khí":m.tier===4?"1 bình máu + 1 trang bị/vũ khí":"1 bình máu hoặc 1 trang bị/vũ khí"}</div>`}
       </div>
       <div class="inspect-section"><div class="section-title">Kỹ năng quái</div>
         ${(m.skills || []).map(s=>'<div class="inspect-skill-item"><span class="skill-name">'+s.def.name+'</span><div class="skill-desc">'+this.skillDescription(m,s)+'</div></div>').join('') || '<div class="skill-desc">Đánh thường • Có lấy đà • Cooldown 1.1s</div>'}
-        ${(m.passives || []).map(s=>'<div class="inspect-skill-item"><span class="skill-name">'+s.name+' (Nội tại)</span><div class="skill-desc">'+(s.desc || 'Đặc tính loài')+'<br>'+(s.cooldownTimer>0?'Hồi chiêu '+s.cooldownTimer.toFixed(1)+'s':'Sẵn sàng')+'</div></div>').join('')}
+        ${window.GameEntities.CombatSystem.passiveList(m).map(s=>'<div class="inspect-skill-item"><span class="skill-name">'+s.name+' (Nội tại)</span><div class="skill-desc">'+(s.desc || 'Đặc tính loài')+'<br>'+(s.cooldownTimer>0?'Hồi chiêu '+s.cooldownTimer.toFixed(1)+'s':'Sẵn sàng')+'</div></div>').join('')}
       </div>
     `;
   }

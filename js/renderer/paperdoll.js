@@ -25,7 +25,7 @@ window.GameRenderer.Paperdoll = {
     ctx.fill();
 
     // Tia sáng chiếu thẳng lên trời cho đồ Siêu Hiếm trở lên
-    if (tier === 'super_rare' || tier === 'supreme' || tier === 'god') {
+    if (tier === 'super_rare' || tier === 'supreme' || tier === 'god' || tier==='ancient') {
       const gradient = ctx.createLinearGradient(0, 0, 0, -40);
       gradient.addColorStop(0, tierColor);
       gradient.addColorStop(1, 'transparent');

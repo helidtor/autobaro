@@ -1,123 +1,63 @@
-/**
- * emotionEngine.js - Bộ đếm Cảm xúc Động (Fear, Confidence, Despair)
- * và Cơ chế Đột biến Bản năng (Adrenaline Breakthrough: Berserk & Clutch Escape)
- */
+/** Short event memory drives emotion; personality remains stable. */
 window.GameAI = window.GameAI || {};
-
 window.GameAI.EmotionEngine = {
-  updatePawnEmotions: function(pawn, dt, nearbyPawns = [], nearbyMonsters = []) {
-    if (!pawn || !pawn.isAlive) return;
-    pawn.isUnderThreat = (nearbyPawns.length > 0 || nearbyMonsters.length > 0);
-    this.update(pawn, dt);
+  updatePawnEmotions(p,dt,pawns=[],monsters=[]){
+    if(!p?.isAlive)return;
+    const C=window.GameEntities.CombatSystem,visible=[...pawns,...monsters].filter(t=>C.isEnemy(p,t)&&C.canSee(p,t));
+    p.isUnderThreat=visible.some(t=>C.canSee(t,p));this.observe(p,visible);this.update(p,dt);
   },
-
-  update: function(pawn, dt) {
-    if (!pawn.isAlive) return;
-
-    // 1. Tự giảm dần cảm xúc về trạng thái cân bằng theo thời gian
-    const decay = window.GameData.Emotions.DECAY_RATE * dt;
-    pawn.fear = Math.max(0, (pawn.fear || 0) - decay);
-    pawn.confidence = Math.max(0, (pawn.confidence || 0) - decay);
-    pawn.despair = Math.max(0, (pawn.despair || 0) - decay);
-
-    const hpRatio = pawn.currentHp / pawn.maxHp;
-
-    // 2. Tăng Despair khi bị đuổi liên tục hoặc kiệt sức
-    if (pawn.isUnderThreat && (pawn.currentStamina < 15 || pawn.currentMana < 15)) {
-      pawn.despair = Math.min(100, pawn.despair + 12 * dt);
-    }
-
-    pawn.emotionMoteTimer=(pawn.emotionMoteTimer||0)-dt;
-    if(pawn.emotionMoteTimer<=0){
-      pawn.emotionMoteTimer=2.5;
-      const icon=pawn.isBerserk?'😡':pawn.despair>65?'😰':pawn.fear>65?'😨':pawn.confidence>75?'😎':pawn.objective?.startsWith('Nhặt')?'🤩':pawn.trait==='wise'&&pawn.targetEnemy?'🤔':null;
-      if(icon)window.GameRenderer.VfxManager.addEmotionMote(pawn,icon,pawn.fear>65?'#8bdfff':'#ffdf96');
-    }
-    // 3. Cơ chế Đột biến Bản năng (Adrenaline Breakthrough)
-    // Kích hoạt khi Tuyệt Vọng > 90 và HP < 15%
-    if (!pawn.breakthroughAttempted && !pawn.hasBreakthrough && pawn.despair > window.GameData.Emotions.DESPAIR_BREAKTHROUGH_THRESHOLD && hpRatio < window.GameData.Emotions.LOW_HP_THRESHOLD) {
-      pawn.breakthroughAttempted = true;
-      if (Math.random() < 0.02) this.triggerBreakthrough(pawn);
-    }
-
-    // 4. Cập nhật thời gian duy trì Cuồng Nộ / Sinh Tồn
-    if (pawn.isBerserk) {
-      pawn.berserkTimer -= dt;
-      if (pawn.berserkTimer <= 0) {
-        pawn.isBerserk = false;
-      }
-    }
-    if (pawn.isClutchEscape) {
-      pawn.clutchEscapeTimer -= dt;
-      if (pawn.clutchEscapeTimer <= 0) {
-        pawn.isClutchEscape = false;
-        pawn.invincible = false;
-      }
+  observe(p,targets){
+    const now=window.GameManager.matchTime||0,P=p.personality||window.GameData.PersonalityProfiles[p.trait];
+    p.seenRivals=p.seenRivals||{};
+    for(const [id,m] of Object.entries(p.seenRivals))if(now-m.at>20||!m.target.isAlive)delete p.seenRivals[id];
+    for(const t of targets){
+      if(!t.isPawn)continue;
+      const memory=p.seenRivals[t.id];
+      if(!memory||now-memory.eventAt>=8){
+        const gap=t.level-p.level;
+        if(gap<=0){p.battleWill=Math.min(100,(p.battleWill||0)+32+P.aggression*.16-(P.cowardice||0)*.08);p.confidence=Math.min(100,(p.confidence||20)+5);}
+        else if(gap>=2)p.farmMotivationUntil=now+4;
+        p.seenRivals[t.id]={target:t,at:now,eventAt:now,x:t.x,y:t.y};
+      }else Object.assign(memory,{at:now,x:t.x,y:t.y});
     }
   },
-
-  // Khi nhận sát thương lớn đột ngột
-  onDamageTaken: function(pawn, damage, attacker) {
-    const hpRatio = pawn.currentHp / pawn.maxHp;
-    const trait = window.GameData.Traits[pawn.trait] || window.GameData.Traits.brave;
-
-    // Tính chỉ số Fear tăng theo tính cách
-    let fearGain = (damage / pawn.maxHp) * 100 * trait.fearGainMultiplier;
-    pawn.fear = Math.min(100, (pawn.fear || 0) + fearGain);
-
-    // Bị quái Yêu Vương/Thần đánh tăng thêm sợ hãi
-    if (attacker && attacker.tier >= 4) {
-      pawn.fear = Math.min(100, pawn.fear + 20);
-    }
-
-    // Nếu sợ hãi > 80, hiện Mote mồ hôi và bỏ chạy
-    if (pawn.fear >= window.GameData.Emotions.FEAR_FLEE_THRESHOLD && pawn.trait !== 'brave') {
-      window.GameRenderer.VfxManager.addEmotionMote(pawn, '💧', '#3498db');
-    }
+  update(p,dt){
+    if(!p.isAlive)return;
+    const P=p.personality||window.GameData.PersonalityProfiles[p.trait],baseline=25+P.aggression*.2+(P.composure||50)*.15;
+    p.fear=Math.max(0,(p.fear||0)-dt*(3+(P.composure||50)/25));
+    p.anger=Math.max(0,(p.anger||0)-dt*(2+(P.composure||50)/50));
+    p.battleWill=Math.max(0,(p.battleWill||0)-dt*3);
+    p.confidence=(p.confidence??baseline)+(baseline-(p.confidence??baseline))*Math.min(1,dt*.08);
+    const ready=p.skills||[],needsMana=ready.some(s=>(s.def.t1?.manaCost||s.def.manaCost||0)>0),needsStamina=ready.some(s=>(s.def.t1?.staminaCost||s.def.staminaCost||0)>0);
+    const depleted=(needsMana&&p.currentMana<12)&&(needsStamina&&p.currentStamina<15)||p.currentHp<p.maxHp*.2&&p.currentStamina<15;
+    p.despair=Math.max(0,Math.min(100,(p.despair||0)+(p.isUnderThreat&&depleted?5:-4)*dt));
+    if(p.survivalTarget&&!p.survivalTarget.isAlive){p.survivalTarget=null;p.decisionReason='Kẻ truy sát đã bị hạ';}
+    p.emotionMoteTimer=(p.emotionMoteTimer||0)-dt;
+    if(p.emotionMoteTimer<=0){p.emotionMoteTimer=2.5;const icon=p.survivalTarget?'💀':p.anger>55?'😡':p.fear>65?'😨':p.battleWill>65?'⚔️':p.confidence>75?'😎':p.objective?.startsWith('Nhặt')?'🤩':null;if(icon)window.GameRenderer.VfxManager.addEmotionMote(p,icon,p.fear>65?'#8bdfff':'#ffdf96');}
+    if(p.isBerserk){p.berserkTimer-=dt;if(p.berserkTimer<=0)p.isBerserk=false;}
+    if(p.isClutchEscape){p.clutchEscapeTimer-=dt;if(p.clutchEscapeTimer<=0){p.isClutchEscape=false;p.invincible=false;}}
   },
-
-  // Khi tiêu diệt mục tiêu hoặc nhặt đồ xịn
-  onKillOrLoot: function(pawn, rewardTier = 'rare') {
-    let confGain = 25;
-    if (rewardTier === 'supreme' || rewardTier === 'god') confGain = 50;
-
-    pawn.confidence = Math.min(100, (pawn.confidence || 0) + confGain);
-    pawn.fear = Math.max(0, pawn.fear - 30);
-
-    if (pawn.confidence >= window.GameData.Emotions.CONFIDENCE_OVERCONFIDENT_THRESHOLD) {
-      window.GameRenderer.VfxManager.addEmotionMote(pawn, '😎', '#f1c40f');
-    }
+  onDamageTaken(p,damage,a,c={}){
+    const P=p.personality||window.GameData.PersonalityProfiles[p.trait],now=window.GameManager.matchTime||0,fraction=damage/p.maxHp;
+    const independent=!c.dot&&!c.reflected,token=c.sourceSkill?.castId!==undefined?'skill:'+c.sourceSkill.castId:c.actionId!==undefined?'attack:'+c.actionId:a.action?.id!==undefined?'action:'+a.action.id:'time:'+now;
+    const previous=p.pokeHistory,repeated=previous?.attacker===a&&now-previous.at<6,distinct=independent&&(!repeated||previous.token!==token);
+    if(distinct){p.pokeHistory={attacker:a,at:now,token,hits:repeated?previous.hits+1:1};}
+    p.fear=Math.min(100,(p.fear||0)+Math.min(9,fraction*35)*(1+(P.cowardice||0)/100)/(1+(P.composure||50)/100));
+    p.anger=Math.min(100,(p.anger||0)+fraction*65+(distinct?P.aggression*.08+(repeated?9:0):0));
+    if(p.pokeHistory?.attacker===a&&p.pokeHistory.hits>=3){p.defiantTarget=a;p.defiantUntil=now+6;p.battleWill=Math.min(100,(p.battleWill||0)+12);p.fear=Math.max(0,p.fear-6);}
+    if(p.action?.skillId==='a_snipe'&&!p.action.released){p.action=null;p.attackState=null;}
+    if(p.healInterruptibleTimer>0){p.healTimer=0;p.healInterruptibleTimer=0;}
   },
-
-  // Kích hoạt Đột biến Bản năng (Berserk hoặc Clutch Escape)
-  triggerBreakthrough: function(pawn, forceBerserk = false) {
-    pawn.hasBreakthrough = true;
-    const roll = Math.random();
-
-    if (forceBerserk || roll < 0.6 || pawn.trait === 'brave') {
-      // 1. Cuồng nộ (Berserk)
-      pawn.isBerserk = true;
-      pawn.isClutchEscape = false;
-      pawn.invincible = false;
-      pawn.berserkTimer = 5.0; // 5 giây
-      pawn.fear = 0;
-      pawn.despair = 0;
-      pawn.confidence = 100;
-      window.GameRenderer.VfxManager.addEmotionMote(pawn, '💀', '#e74c3c');
-      if (window.GameUI && window.GameUI.CombatTicker) {
-        window.GameUI.CombatTicker.log(`🔥 [ĐỘT BIẾN] ${pawn.name} bước vào trạng thái CUỒNG NỘ khi chỉ còn hơi tàn!`);
-      }
-    } else {
-      // 2. Sinh tồn (Clutch Escape)
-      pawn.isClutchEscape = true;
-      pawn.isBerserk = false;
-      pawn.clutchEscapeTimer = 3.0;
-      pawn.invincible = true;
-      pawn.fear = 100;
-      window.GameRenderer.VfxManager.addEmotionMote(pawn, '🪽', '#00d2d3');
-      if (window.GameUI && window.GameUI.CombatTicker) {
-        window.GameUI.CombatTicker.log(`🪽 [ĐỘT BIẾN] ${pawn.name} mở cánh thiên thần SINH TỒN tháo chạy thoát hiểm!`);
-      }
-    }
+  commitSurvival(p,t){
+    if((p.personality?.cowardice??window.GameData.PersonalityProfiles[p.trait]?.cowardice??50)>=85||p.survivalTarget===t)return false;
+    p.survivalTarget=t;p.finalDuel=t;p.plan=null;p.chase=null;p.isClutchEscape=false;p.invincible=false;p.battleWill=100;p.fear=Math.min(25,p.fear||0);
+    p.decisionReason='Bị truy sát liên tục, không còn đường thoát';p.thought='Không chạy thoát được: giữ phòng thủ và chiến đấu tới cùng.';
+    window.GameUI.CombatTicker.log('💀 '+p.name+' thức tỉnh bản năng sinh tồn, quyết đấu với '+t.name);return true;
+  },
+  onKillOrLoot(p,tier='rare'){p.confidence=Math.min(100,(p.confidence||0)+(['supreme','god','ancient'].includes(tier)?35:15));p.fear=Math.max(0,(p.fear||0)-15);p.battleWill=Math.min(100,(p.battleWill||0)+10);},
+  triggerBreakthrough(p,forceBerserk=false){
+    p.hasBreakthrough=true;
+    if(forceBerserk||p.trait==='brave'){p.isBerserk=true;p.isClutchEscape=false;p.invincible=false;p.berserkTimer=5;p.fear=0;p.confidence=100;}
+    else{p.isClutchEscape=true;p.isBerserk=false;p.clutchEscapeTimer=3;p.invincible=false;p.fear=100;}
   }
 };

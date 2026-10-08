@@ -1,0 +1,19 @@
+Command: rtk npm test
+Tests: 104
+Pass: 104
+Fail: 0
+Skipped: 0
+Duration: 164023.2917 ms
+
+Command: rtk npm run build
+Result: success, 30 modules transformed
+
+Browser: Edge headless, current Vite source update/render and God countdown
+Page errors: 0
+HUD: Thượng Cổ • 15s; Ancient not awakened; God weapon collected
+
+Final telemetry: seed 67, fingerprint d83f24c120d3fc2b8da376c53b5a20adc70bdc5beccf677dc595745550afae78
+Finished: true
+Simulated seconds: 650.6
+Stuck suspects: 0
+Invalid active encounters: 0

@@ -62,6 +62,8 @@
     </div>
     <div class="hud-divider"></div>
     <div class="director-group">
+      <button id="btn-sound" class="btn-ctrl" aria-pressed="true" onclick="window.GameEngine.Audio.toggle()" title="Bật/tắt âm thanh">🔊 Âm thanh</button>
+      <label class="sound-volume">Âm lượng <input id="sound-volume" type="range" min="0" max="100" value="30" aria-label="Âm lượng hiệu ứng" oninput="window.GameEngine.Audio.setVolume(this.value)"></label>
       <button id="btn-new-match" class="btn-ctrl" onclick="window.GameManager.startNewMatch()">↻ Ván mới</button>
       <button class="btn-ctrl" onclick="window.GameManager.showMapOverview()" title="M: bản đồ toàn cảnh">🗺 Bản đồ</button>
       <button id="btn-toggle-mode" class="btn-ctrl">👁️ Chế độ: Đạo Diễn (Spectator)</button>
