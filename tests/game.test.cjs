@@ -163,17 +163,27 @@ test('water, pause, emotion ticks and invincibility behave correctly', () => {
 test('a complete seeded match finishes with finite state and real loot/progression', () => {
   const w = loadGame(), G = w.GameManager;
   let dropsSeen = 0;
+  const movementSamples=new Map();let longestOscillation=0;
   for (let i = 0; i < 27000 && !G.battleRoyaleResolved; i++) {
     G.matchTime += 0.1;
     G.update(0.1);
     dropsSeen = Math.max(dropsSeen, G.dropItems.length);
     if (i % 100 === 0) G.render();
     if(i%10===0){const C=w.GameEntities.CombatSystem;
+      for(const p of G.pawns.filter(p=>p.isAlive)){
+        const signature=[p.plan?.kind,p.plan?.target?.id,p.tactic?.mode,p.targetEnemy?.id].join(":");
+        const previous=movementSamples.get(p.id),quiet=!p.action&&!(p.combatLease>0)&&!p.isHiding&&!(p.healTimer>0)&&!["rest","ambush"].includes(p.plan?.kind);
+        const oscillating=previous&&quiet&&signature!==previous.signature&&Math.hypot(p.x-previous.x,p.y-previous.y)<5;
+        const duration=oscillating?previous.duration+1:0;longestOscillation=Math.max(longestOscillation,duration);
+        assert.ok(duration<10,p.id+" alternates stationary decisions for ten seconds: "+signature);
+        movementSamples.set(p.id,{x:p.x,y:p.y,signature,duration});
+      }
       for(const p of G.pawns.filter(p=>p.isAlive)){assert.ok(C.validMembers(C.crowdAt(p,p.x,p.y)),p.id+' overcrowded');}
       for(const e of [...G.pawns,...G.monsters].filter(e=>e.isAlive&&e.combatLease>0))assert.ok(C.validMembers(new Set(C.groupMembers(e).filter(p=>p.isAlive&&p.combatLease>0))),e.id+' linked battle exceeds cap');
     }
   }
   assert.equal(G.battleRoyaleResolved, true, 'last survivor must be found within 45 simulated minutes without a storm: '+JSON.stringify(G.pawns.filter(p=>p.isAlive).map(p=>({id:p.id,lv:p.level,x:Math.round(p.x),y:Math.round(p.y),hp:Math.round(p.currentHp),objective:p.objective,plan:p.plan?.kind,target:p.targetEnemy?.id}))));
+  console.log("Seeded match: longest stationary decision alternation = "+longestOscillation+" seconds");
   assert.ok(G.pawns.filter(p => p.isAlive).length <= 1);
   assert.ok(dropsSeen > 0);
   // Low-tier loot is probabilistic: a valid seed may award only potions/armor.
@@ -267,7 +277,7 @@ test('monster skill cooldown only ticks once, CC and skill damage are bounded',(
   assert.ok((p.stunTimer||0)<=.7);
   for(const data of Object.values(w.GameData.Skills))for(const def of data.actives){
     const c=C.getSkillConfig(p,{def,tier:3});
-    assert.ok(c.cooldown>=6);assert.ok(c.damage<=p.attack*2.1);assert.ok(c.stun<=.9);assert.ok(c.slow<=.45);
+    assert.ok(c.cooldown>=6);assert.ok(c.damage<=C.combatStats(p).attack*(c.role==='finisher'?2.4:2.1));assert.ok(c.stun<=.9);assert.ok(c.slow<=.45);
   }
 });
 
@@ -892,9 +902,9 @@ test('Ancient movesets resolve all thirty skills with real timed fields, collisi
 
 test('Ancient defenses, copied build and warned ultimate behave as designed',()=>{
  const mirror=ancientScenario('mirror');
- assert.equal(mirror.m.maxHp,Math.round(mirror.p.maxHp*1.5));assert.equal(mirror.m.copiedPassives.length,mirror.p.passives.length);assert.equal(mirror.m.passiveMultiplier,1);
+ assert.equal(mirror.m.maxHp,Math.round(mirror.p.maxHp));assert.equal(mirror.m.copiedPassives.length,mirror.p.passives.length);assert.equal(mirror.m.passiveMultiplier,1);
  assert.equal(mirror.A.incoming(mirror.p,mirror.m,100,{skill:true},null),0);assert.equal(mirror.A.incoming(mirror.p,mirror.m,100,{skill:true},null),100);
- const col=ancientScenario('colossus');assert.equal(col.A.incoming(col.p,col.m,100,{},null),90);assert.equal(col.A.incoming(col.p,col.m,100,{trueDamage:true},null),75);
+ const col=ancientScenario('colossus');assert.equal(col.A.incoming(col.p,col.m,100,{},null),89);assert.equal(col.A.incoming(col.p,col.m,100,{trueDamage:true},null),75);
  const mecha=ancientScenario('mecha'),shield=mecha.m.shield;
  assert.ok(mecha.A.incoming(mecha.p,mecha.m,100,{},null)>=0);assert.ok(mecha.m.shield<shield,'incoming hit consumes the scaled shield');for(let i=1;i<10;i++)mecha.A.incoming(mecha.p,mecha.m,100,{},null);
  assert.equal(mecha.m.shield,0);assert.ok(mecha.A.fields.some(f=>f.name==='Xả Nhiệt Quá Tải'));
@@ -1001,7 +1011,7 @@ test('reworked skills split damage over real pulses and mana shields consume the
  C.resolveSkill(p,skill,q);const first=1000-q.currentHp;assert.ok(first>0&&C.pendingEffects.length===2);C.tickEffects(.4);assert.ok(q.currentHp<1000-first);const second=q.currentHp;C.tickEffects(.4);assert.ok(q.currentHp<second);assert.equal(C.pendingEffects.length,0);
  const shieldDef=w.GameData.Skills.mage.actives.find(d=>d.type==='mana_shield_toggle');C.resolveSkill(q,{id:shieldDef.id,def:shieldDef,tier:3},null);
  const mana=q.currentMana,hp=q.currentHp;C.applyDamage(p,q,null,{baseDamage:40});assert.equal(q.currentMana,mana-20);assert.equal(q.currentHp,hp-20);
- for(const group of Object.values(w.GameData.Skills))for(const def of group.actives)for(let tier=1;tier<=3;tier++){const c=C.getSkillConfig(p,{def,tier});assert.ok(c.damage<=C.combatStats(p).attack*2.1);assert.ok(c.cooldown>=6);assert.ok(c.stun<=.9);}
+ for(const group of Object.values(w.GameData.Skills))for(const def of group.actives)for(let tier=1;tier<=3;tier++){const c=C.getSkillConfig(p,{def,tier});assert.ok(c.damage<=C.combatStats(p).attack*(c.role==='finisher'?2.4:2.1));assert.ok(c.cooldown>=6);assert.ok(c.stun<=.9);}
 });
 
 test('escape stops after the threat is out of sight instead of driving the bot to the map edge',()=>{
@@ -1288,12 +1298,12 @@ test('progression passives open at three and spend shared points without grantin
 });
 test('Blood Body heals in real combat, crosses once, ignores lethal hits and stops outside combat',()=>{
  const w=loadGame(9,{openTemple:true}),G=w.GameManager,C=w.GameEntities.CombatSystem,[p,q]=G.pawns;G.pawns=[p,q];G.monsters=[];Object.assign(p,{x:2600,y:2600,maxHp:1000,currentHp:410,defense:0});Object.assign(q,{x:2640,y:2600});p.passives=[C.makePassive(w.GameData.EndgamePassives.find(d=>d.id==='p_blood_body'))];p.passives[0].tier=3;p.lastHostileAt=0;G.matchTime=0;
- C.updateStatus(p,1);assert.equal(p.currentHp,421);C.applyDamage(q,p,null,{baseDamage:80,trueDamage:true});assert.equal(p.progression.bloodRemaining,3);assert.equal(p.passives[0].cooldownTimer,60);
- const hp=p.currentHp;C.updateStatus(p,1);assert.equal(p.currentHp,hp+91);C.applyDamage(q,p,null,{baseDamage:50,trueDamage:true});assert.equal(p.progression.bloodRemaining,2);
+ C.updateStatus(p,1);assert.equal(p.currentHp,422);C.applyDamage(q,p,null,{baseDamage:80,trueDamage:true});assert.equal(p.progression.bloodRemaining,3);assert.equal(p.passives[0].cooldownTimer,60);
+ const hp=p.currentHp;C.updateStatus(p,1);assert.ok(Math.abs(p.currentHp-(hp+77))<.001);C.applyDamage(q,p,null,{baseDamage:50,trueDamage:true});assert.equal(p.progression.bloodRemaining,2);
  G.matchTime=20;C.updateStatus(p,1);assert.equal(p.progression.bloodRemaining,0);p.currentHp=1;C.applyDamage(q,p,null,{baseDamage:100,trueDamage:true});assert.equal(p.isAlive,false);
 });
 test('each Ancient scales phase HP to the survivor and keeps stronger phase-two attacks',()=>{
- for(const kind of ['colossus','mirror','void','chaos','mecha']){const {m,p,C,A}=ancientScenario(kind),atk=m.attack;assert.equal(m.maxHp,Math.round(p.maxHp*1.5));m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(m.maxHp,Math.round(p.maxHp*3));assert.equal(m.currentHp,m.maxHp);assert.ok(m.attack>atk);assert.ok(m.defense<m.profile.def);}
+ for(const kind of ['colossus','mirror','void','chaos','mecha']){const {m,p,C,A}=ancientScenario(kind),atk=m.attack;assert.equal(m.maxHp,Math.round(p.maxHp));m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(m.maxHp,Math.round(p.maxHp*2));assert.equal(m.currentHp,m.maxHp);assert.ok(m.attack>atk);assert.ok(m.defense<m.profile.def);}
 });
 test('visible potion is sought outside combat, collected and consumed for healing',()=>{
  const w=loadGame(12),G=w.GameManager,A=w.GameAI.AIBrain,M=w.GameEngine.MapTerrain,p=G.pawns[0];G.pawns=[p];G.monsters=[];Object.assign(p,{x:1000,y:300,currentHp:p.maxHp*.6,healthPotions:0});const item=G.spawnDropItem(1060,300,w.GameEntities.CombatSystem.potion,'potion');G.spatialGrid.clear();[p,item].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);assert.match(p.objective,/bình máu/);p.x=item.x;p.y=item.y;A.update(p,.1,G.spatialGrid,M);assert.equal(item.isCollected,true);assert.equal(p.action?.kind,'drink');const hp=p.currentHp;w.GameEntities.CombatSystem.updateStatus(p,1);assert.ok(p.currentHp>hp);
@@ -1380,7 +1390,7 @@ test('Ancient full-heal potion is independent of normal inventory and restores c
 
 test('between Ancient rounds upgrades are equipped before healing and inferior relics never replace them',()=>{
  const {w,G,C,A,p,m}=ancientScenario('colossus'),AI=w.GameAI.AIBrain,D=w.GameData.Equipments;m.currentHp=0;C.handleDeath(p,m);m.currentHp=0;C.handleDeath(p,m);p.armor=null;p.currentHp=30;p.relicLoot=G.spawnDropItem(p.x,p.y,D.relics.core,'body');p.ancientPotionLoot.x=p.x;p.ancientPotionLoot.y=p.y;const base=p.maxHp;A.prepare(p,.1);assert.equal(p.armor.id,'relic_core');assert.equal(p.maxHp,base+350);A.prepare(p,.1);assert.equal(p.fullHealthPotions,1);p.potionCooldown=0;A.prepare(p,.1);assert.equal(p.action.kind,'drink');C.updateStatus(p,1);assert.equal(p.currentHp,p.maxHp);
- p.relicLoot=G.spawnDropItem(p.x,p.y,D.relics.nano,'body');A.prepare(p,.1);assert.equal(p.armor.id,'relic_core');assert.equal(p.relicLoot.isCollected,true);assert.ok(p.keptRelics.some(r=>r.id==='relic_nano'));A.clock=A.nextAt;A.spawnNext();assert.equal(A.boss.maxHp,Math.round(p.maxHp*1.5));const phase2=A.boss.profile.hp2;p.maxHp+=200;A.boss.currentHp=0;C.handleDeath(p,A.boss);assert.equal(A.boss.maxHp,phase2,'phase HP remains a snapshot from spawn');
+ p.relicLoot=G.spawnDropItem(p.x,p.y,D.relics.nano,'body');A.prepare(p,.1);assert.equal(p.armor.id,'relic_core');assert.equal(p.relicLoot.isCollected,true);assert.ok(p.keptRelics.some(r=>r.id==='relic_nano'));A.clock=A.nextAt;A.spawnNext();assert.equal(A.boss.maxHp,Math.round(p.maxHp));const phase2=A.boss.profile.hp2;p.maxHp+=200;A.boss.currentHp=0;C.handleDeath(p,A.boss);assert.equal(A.boss.maxHp,phase2,'phase HP remains a snapshot from spawn');
 });
 
 test('equipment cards expose effects and use shared colors across all six rarity tiers',()=>{
@@ -1418,4 +1428,61 @@ test('auto director holds a living target for ten real seconds at every game spe
   next.isAlive=false;C.update(.01,true,[first,next]);assert.equal(C.targetEntity,first);
   next.isAlive=true;
  }
+});
+
+
+test('base plus stat scaling progresses all actives and respects low-level and boss caps',()=>{
+ const w=loadGame(42,{openTemple:true}),C=w.GameEntities.CombatSystem,p=w.GameManager.pawns[0];
+ for(const level of [1,5,10,15,20,100]){
+  Object.assign(p,{level,attack:16+(level-1)*3,defense:5+(level-1)*2,maxHp:160+(level-1)*24,weapon:null});
+  for(const group of Object.values(w.GameData.Skills))for(const def of group.actives){let previous=-1;
+   for(let tier=1;tier<=3;tier++){const c=C.getSkillConfig(p,{id:def.id,def,tier});assert.ok(Object.keys(c.scaling).length>0,def.id);assert.ok(Number.isFinite(c.damage));assert.ok(c.damage<=c.maxDamage);if(c.scaling.damage){assert.ok(c.damage>=previous);previous=c.damage;}if(c.healAmount)assert.ok(c.healAmount<=p.maxHp*(def.type==='self_heal'?.2:.12));if(c.guardAmount)assert.ok(c.guardAmount<=p.maxHp*.25);if(c.shieldAmount)assert.ok(c.shieldAmount<=p.maxHp*.2);if(c.distance)assert.ok(c.distance<=c.scaling.distance.base*1.2);if(c.speedBuff)assert.ok(c.speedBuff<=.35);if(c.magicOnHit)assert.ok(c.magicOnHit<=C.combatStats(p).attack*.15);}
+  }
+ }
+ Object.assign(p,{attack:150,maxHp:600});const thunder=w.GameData.Skills.warrior.actives.find(d=>d.id==='w_thunder_slash');
+ assert.equal(C.getSkillConfig(p,{id:thunder.id,def:thunder,tier:3}).damage,180);
+ const fire=w.GameData.Skills.mage.actives.find(d=>d.id==='m_fireball');p.weapon={attack:50};assert.equal(C.getSkillConfig(p,{id:fire.id,def:fire,tier:3}).damage,220);
+ for(const m of w.GameManager.monsters.filter(m=>m.tier>=4))for(const s of m.skills){const c=C.getSkillConfig(m,s),range=C.bossDamageRange(m);assert.ok(c.damage>=range[0]&&c.damage<=range[1]);assert.ok(c.scaling.damage.base>0&&c.scaling.damage.ratio>0);}
+});
+
+test('overlapping boss hits, crits and rounded pulses share a per-target cast budget',()=>{
+ const w=loadGame(42,{openTemple:true}),G=w.GameManager,C=w.GameEntities.CombatSystem,[p,q]=G.pawns,m=G.monsters.find(m=>m.tier===4);
+ Object.assign(p,{x:m.x+30,y:m.y,maxHp:10000,currentHp:10000,defense:0,passives:[]});Object.assign(q,{x:m.x+40,y:m.y,maxHp:10000,currentHp:10000,defense:0,passives:[]});G.pawns=[p,q];G.monsters=[m];m.isAlive=true;m.critChance=.35;w.__math.random=()=>0;
+ const budget=C.damageBudget(m,{damage:100}),hp=p.currentHp;
+ for(let i=0;i<12;i++)C.applyDamage(m,p,null,{baseDamage:100/8,damageBudget:budget,skill:true});
+ assert.equal(hp-p.currentHp,100);assert.ok(C.applyDamage(m,q,null,{baseDamage:100,damageBudget:budget,skill:true})<=100);
+ assert.equal(C.applyDamage(m,p,null,{baseDamage:1000,damageBudget:budget,skill:true}),0);
+ p.weapon={effect:'tome',type:'tome',tier:'ancient',attack:0};p.critChance=0;p.weaponBuffTimer=0;m.defense=m.magicDefense=0;m.passives=[];m.currentHp=m.maxHp=10000;w.__math.random=()=>.99;
+ const relicBudget={limit:100,spent:new Map(),dealt:new Map()},before=m.currentHp;
+ C.applyDamage(p,m,null,{baseDamage:60,skill:true,damageBudget:relicBudget});
+ const R=w.GameEntities.RelicSystem;assert.ok(C.canEngage(p,m),'relic target: '+JSON.stringify({enemy:C.isEnemy(p,m),pAlive:p.isAlive,mAlive:m.isAlive,p:[p.x,p.y],m:[m.x,m.y]}));R.onCast(p,{tier:3},1,relicBudget);assert.equal(p.relicBolts.length,3);for(const bolt of p.relicBolts){bolt.x=m.x;bolt.y=m.y;}R.update(p,.1);assert.ok(before-m.currentHp<=100);assert.equal(p.relicBolts.length,0);
+});
+
+test('healing and shield formulas snapshot stats, use finite budgets and halve ally healing',()=>{
+ const w=loadGame(42,{openTemple:true}),G=w.GameManager,C=w.GameEntities.CombatSystem,[p,q,t]=G.pawns;G.pawns=[p,q,t];G.monsters=[];
+ Object.assign(p,{x:2600,y:2600,attack:100,defense:50,maxHp:600,currentHp:100,passives:[]});Object.assign(q,{x:2620,y:2600,maxHp:2000,currentHp:100,passives:[]});Object.assign(t,{x:2660,y:2600,attack:100,passives:[]});p.allyPawn=q;q.allyPawn=p;
+ G.spatialGrid.clear();[p,q,t].forEach(e=>G.spatialGrid.insert(e));w.__math.random=()=>.99;
+ const def=w.GameData.Skills.warrior.actives.find(d=>d.id==='w_second_wind'),skill={id:def.id,def,tier:3,cooldownTimer:0};
+ const c=C.getSkillConfig(p,skill);assert.equal(c.healAmount,108);assert.equal(C.castSkill(p,skill,null),true);p.maxHp=1200;C.updateStatus(p,.28);assert.ok(Math.abs(p.currentHp-(100+.28+108*.7))<.001);assert.ok(Math.abs(p.healPerSecond-10.8)<.001);
+ p.action=null;p.attackState=null;p.guardTimer=0;p.healTimer=0;p.currentHp=100;
+ const aura=w.GameData.Skills.hybrid.actives.find(d=>d.id==='h_healing_aura');C.resolveSkill(p,{id:aura.id,def:aura,tier:3},null);const a=p.currentHp,b=q.currentHp;C.tickFields(.1);assert.ok(Math.abs((p.currentHp-a)/2-(q.currentHp-b))<.001);
+ p.allyPawn=null;q.allyPawn=null;p.healingAura=null;p.progression={};p.defense=0;p.armor=p.helmet=null;p.guardTimer=1;p.guardReduction=.8;p.guardAngle=0;p.guardBudget=10;const hp=p.currentHp;C.applyDamage(t,p,null,{baseDamage:100});assert.equal(hp-p.currentHp,90);assert.equal(p.guardBudget,0);
+});
+
+test('Ancient HP and half-HP virtual armor stay fixed through gear changes and phase transition',()=>{
+ for(const kind of ['colossus','mirror','void','chaos','mecha']){
+  const {C,A,p,m}=ancientScenario(kind),base=p.maxHp;
+  assert.equal(m.maxHp,base);assert.equal(m.profile.hp2,base*2);assert.equal(m.shield,kind==='mecha'?Math.round(base*.5):0);
+  p.maxHp+=500;m.currentHp=0;C.handleDeath(p,m);assert.equal(m.maxHp,base*2);assert.equal(m.shield,0);
+  assert.ok(C.combatStats(m).attack>=100&&C.combatStats(m).attack<=200);
+  for(const s of m.skills){const c=C.getSkillConfig(m,s);if(c.scaling.damage)assert.ok(c.damage>=100&&c.damage<=200);}
+  if(kind==='mirror'){A.split(m,p);for(const clone of m.clones){assert.ok(C.combatStats(clone).attack<=100);for(const s of clone.skills)assert.ok(C.getSkillConfig(clone,s).damage<=100);}}
+ }
+});
+
+test('progression scaling includes every passive and Blood Body respects its healing caps',()=>{
+ const w=loadGame(),C=w.GameEntities.CombatSystem,p=w.GameManager.pawns[0];Object.assign(p,{maxHp:1000,currentHp:100,defense:80,attack:150});
+ for(const d of w.GameData.EndgamePassives)for(let tier=1;tier<=3;tier++){const c=C.passiveConfig(p,{...d,tier});assert.ok(Object.keys(c.scaling).length>0,d.id);for(const key of Object.keys(c.scaling))assert.ok(Number.isFinite(c[key+'Amount']));}
+ const d=w.GameData.EndgamePassives.find(d=>d.id==='p_blood_body'),c=C.passiveConfig(p,{...d,tier:3});assert.equal(c.regenAmount,11);assert.equal(c.burstAmount,195);assert.ok(c.burstAmount<=p.maxHp*.2);
+ const reserve=w.GameData.EndgamePassives.find(d=>d.id==='p_blood_reserve');p.passives=[C.makePassive(reserve)];p.passives[0].tier=3;C.progressionEvent(p,w.GameManager.pawns[1],'strike',{actionId:1,damage:10});assert.equal(p.progression.reserve,1);
 });

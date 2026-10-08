@@ -131,12 +131,23 @@ window.GameUI.InspectModal = {
       .replace(/\bdamage\b/gi,'sát thương').replace(/\bpulse\b/gi,'nhịp').replace(/\bbuild\b/gi,'kỹ năng').replace(/\blane\b/gi,'đường')
       .replace(/\bAoE\b/g,'sát thương diện rộng').replace(/\bstamina\b/gi,'thể lực').replace(/\bCD\b/g,'hồi chiêu');
   },
+  scalingDescription(e,s,passive=false){
+    const C=window.GameEntities.CombatSystem,c=passive?C.passiveConfig(e,s):C.getSkillConfig(e,s);
+    const names={damage:'Sát thương tổng',counter:'Phản công',heal:'Hồi máu tổng',guard:'Sát thương đỡ tối đa',shield:'Khiên',distance:'Khoảng lướt',speed:'Tăng tốc',onHit:'Cộng mỗi đòn',regen:'Hồi trong combat mỗi giây',burst:'Đợt hồi khi nguy hiểm',reserve:'Giới hạn máu tích',radius:'Phạm vi'};
+    const stats={attack:'ATK',defense:'DEF',hp:e.isAncient||e.isAncientClone?'máu tối đa của bot gốc':'máu tối đa',mana:'mana tối đa',speed:'tốc chạy cơ bản'};
+    return Object.entries(c.scaling||{}).map(([key,f])=>{
+      const value=key==='damage'?c.damage:key==='onHit'?c.magicOnHit:c[key+'Amount'];
+      const limited=Number.isFinite(value)&&value+.01<C.scaledValue(e,{...f,cap:undefined});
+      const actual=Number.isFinite(value)?' ≈ '+Number(value.toFixed(1))+(limited?' (đã giới hạn)':''):'';
+      return names[key]+': '+f.base+' + '+Number((f.ratio*100).toFixed(2))+'% '+stats[f.stat]+actual;
+    }).join(' • ');
+  },
   skillCard(e,s,passive=false){
     const c=passive?s:window.GameEntities.CombatSystem.getSkillConfig(e,s),remaining=Math.max(0,s.cooldownTimer||0);
     const duration=Math.max(c.cooldown||0,remaining),progress=duration?Math.max(0,Math.min(100,(1-remaining/duration)*100)):100;
     const cooldown=c.cooldown?c.cooldown.toFixed(1).replace('.0','')+' giây':'Liên tục';
     return '<div class="inspect-skill-item '+(remaining?'skill-cooling':'skill-ready')+'" style="--skill-progress:'+progress+'%">'+
-      '<span class="skill-name">'+(s.def?.name||s.name)+(passive?' · Nội tại':'')+'</span><div class="skill-desc">'+this.skillDescription(e,s,passive)+'</div>'+
+      '<span class="skill-name">'+(s.def?.name||s.name)+(passive?' · Nội tại':'')+'</span><div class="skill-desc">'+this.skillDescription(e,s,passive)+'</div><div class="skill-desc">'+this.scalingDescription(e,s,passive)+'</div>'+
       '<div class="skill-cooldown">'+(c.cooldown?'Hồi chiêu: ':'')+cooldown+(remaining?' · Còn '+remaining.toFixed(1)+' giây':'')+'</div>'+
       '<div class="skill-progress" role="progressbar" aria-label="Hồi chiêu '+(s.def?.name||s.name)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(progress)+'"></div></div>';
   },

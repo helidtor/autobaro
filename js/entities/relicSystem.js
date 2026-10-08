@@ -16,7 +16,7 @@ window.GameEntities.RelicSystem={
    bolt.life-=dt;if(!bolt.target.isAlive||!e.isAlive){bolt.life=0;continue;}
    const t=bolt.target,dx=t.x-bolt.x,dy=t.y-bolt.y,d=Math.hypot(dx,dy),step=360*dt;
    bolt.x+=dx/Math.max(1,d)*Math.min(d,step);bolt.y+=dy/Math.max(1,d)*Math.min(d,step);
-   if(d<=step+12){C.applyDamage(e,t,e.weapon,{baseDamage:bolt.damage,magic:true,relic:true,projectile:true});bolt.life=0;}
+   if(d<=step+12){C.applyDamage(e,t,e.weapon,{baseDamage:bolt.damage,magic:true,relic:true,projectile:true,damageBudget:bolt.damageBudget});bolt.life=0;}
   }
   e.relicBolts=(e.relicBolts||[]).filter(b=>b.life>0);
   for(const trap of e.relicTraps||[]){trap.life-=dt;trap.next-=dt;if(trap.next<=0){trap.next=.5;for(const t of G.monsters)if(t.isAlive&&C.isEnemy(e,t)&&Math.hypot(t.x-trap.x,t.y-trap.y)<30)C.applyDamage(e,t,null,{baseDamage:C.combatStats(e).attack*.2,magic:true,relic:true,dot:'burn',element:'fire'});}}
@@ -68,11 +68,11 @@ window.GameEntities.RelicSystem={
    const s=this.state(a,'ring');if(s.charge>=50){s.charge=0;a.currentHp=Math.min(a.maxHp,a.currentHp+damage*.1);const angle=Math.atan2(a.y-t.y,a.x-t.x);M.moveEntity(a,Math.cos(angle)*80,Math.sin(angle)*80);window.GameRenderer.VfxManager.addEffect('rune',a.x,a.y,{radius:32,color:'#c5acff',life:.5});}else s.charge=Math.min(50,(s.charge||0)+1);
   }
  },
- onCast(e,skill,castId=e.skillsCast){
+ onCast(e,skill,castId=e.skillsCast,damageBudget){
   if(!this.has(e,'tome')||skill.tier!==3)return;
   const s=this.state(e,'tome');if(s.cast!==undefined&&castId<=s.cast)return;s.cast=castId;
   const C=window.GameEntities.CombatSystem,t=window.GameManager.monsters.filter(m=>C.isEnemy(e,m)&&C.canEngage(e,m)).sort((a,b)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(b.x-e.x,b.y-e.y))[0];
-  if(t)e.relicBolts=[...(e.relicBolts||[]),...[0,1,2].map(i=>({x:e.x,y:e.y+i*8,target:t,life:3,damage:C.combatStats(e).attack*.5}))];
+  if(t)e.relicBolts=[...(e.relicBolts||[]),...[0,1,2].map(i=>({x:e.x,y:e.y+i*8,target:t,life:3,damageBudget,damage:C.combatStats(e).attack*.5}))];
  },
  tryDash(e,t,mode){
   if(!this.has(e,'voidblade')||!['retreat','bait','counter'].includes(mode)||e.action||e.stunTimer>0||e.relicInterrupt>0)return false;
