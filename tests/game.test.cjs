@@ -32,6 +32,18 @@ function loadGame(seed = 42, { openTemple = false } = {}) {
   return context.window;
 }
 
+test('all 20 pawn skins are assigned in order and render with and without gear', () => {
+  const w = loadGame(), G = w.GameManager, S = w.GameRenderer.PawnSkins;
+  assert.equal(S.list.length, 20);
+  assert.deepEqual(G.pawns.slice(0, 20).map(p => p.appearance.skin), S.list.map(s => s.id));
+  for (const s of S.list) {
+    const p = { ...G.pawns[0], appearance: S.apply(w.GameRenderer.ProceduralPawn.generateAppearance('x'), 'pawn_' + S.list.indexOf(s)) };
+    for (const gear of [{}, { armor: { tier: 'rare' }, helmet: { tier: 'rare' } }]) {
+      w.GameRenderer.ProceduralPawn.renderPawn(G.ctx, { ...p, ...gear }, 1, 0, true);
+    }
+  }
+});
+
 test('every monster definition renders, including centaur', () => {
   const w = loadGame();
   const E = w.GameEntities.EntityManager;
