@@ -350,6 +350,38 @@ window.GameData.Equipments = {
     }
   },
 
+  // Hình dáng riêng từng vũ khí (weaponArt.js). Thiếu id => sinh tất định từ hash id.
+  // fx = màu hào quang/rune; tint = màu kim loại; deco = rust|fuller|vein|gold.
+  WEAPON_LOOKS: {
+    w_rusty_axe: { head: 'hatchet', deco: ['rust'] },
+    w_steel_cleaver_axe: { head: 'cleaver', top: 'spike', fx: '#a9c4ff' },
+    w_infernal_axe: { head: 'double', top: 'spike', fx: '#ff6a2a', tint: '#e8b9a0' },
+    w_rusty_sword: { blade: 'straight', len: 42, w: 3.5, guard: 'bar', pommel: 'ball', deco: ['rust'] },
+    w_tempered_blade: { blade: 'katana', len: 48, w: 3.2, guard: 'disc', pommel: 'ring', deco: ['fuller'] },
+    w_enchanted_shortblade: { blade: 'leaf', len: 38, w: 3.8, guard: 'wing', pommel: 'gem', deco: ['vein'], fx: '#6fe0ff' },
+    w_wooden_wand: { head: 'wand' },
+    w_hybrid_cane: { head: 'cane' },
+    w_crystal_staff: { head: 'crystal', fx: '#5fe3ff' },
+    w_frost_pillar_staff: { head: 'pillar', fx: '#8fe8ff' },
+    w_black_panther_staff: { head: 'claws', fx: '#d04dff', shaft: '#1c1624' },
+    god_yggdrasil_staff: { head: 'bough', fx: '#6dff9a', shaft: '#6b4a34' },
+    w_crude_bow: { curve: 'short', tip: 'none', arrow: 'plain' },
+    w_stag_bow: { curve: 'horn', tip: 'horn', arrow: 'tri' },
+    w_tempest_bow: { curve: 'recurve', tip: 'wing', arrow: 'barbed', fx: '#7fd0ff' },
+    w_thunderbird_bow: { curve: 'composite', tip: 'wing', arrow: 'barbed', fx: '#ffe14a' },
+    god_solar_bow: { curve: 'sun', tip: 'orb', arrow: 'barbed', fx: '#ffb81f' },
+    w_rusty_dagger: { blade: 'tanto', len: 26, w: 2.9, guard: 'bar', pommel: 'ball', deco: ['rust'] },
+    w_serrated_dagger: { blade: 'serrated', len: 28, w: 2.6, guard: 'cross', pommel: 'spike' },
+    w_viper_venom_dagger: { blade: 'kris', len: 30, w: 2.8, guard: 'wing', pommel: 'gem', deco: ['vein'], fx: '#7bff5a', tint: '#bfe8a8' },
+    w_blood_lord_dagger: { blade: 'fang', len: 30, w: 3.2, guard: 'horn', pommel: 'crown', fx: '#ff3050', tint: '#e0a0a8' },
+    god_void_spear: { head: 'trident', fx: '#b27cff', tint: '#d9c6ff', tassel: '#6d3fb0' },
+    god_death_tome: { cover: '#2a1236', emblem: 'skull', chain: true, fx: '#c46bff' },
+    relic_voidblade: { blade: 'flame', len: 34, w: 2.8, guard: 'disc', pommel: 'ring', fx: '#b782ff', tint: '#d9c6ff' },
+    relic_halberd: { head: 'halberd', fx: '#f8b05b', tassel: '#d9a63a' },
+    relic_greatbow: { curve: 'long', tip: 'orb', arrow: 'barbed', fx: '#ffe0a3' },
+    relic_tome: { cover: '#4b2a6b', emblem: 'eye', fx: '#d7a0ff' }
+  },
+
   // Danh mục Đồ Phòng Thủ (Paperdoll Helmets & Armors)
   armors: {
     // Thường
