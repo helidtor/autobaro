@@ -1130,19 +1130,19 @@ test('God rewards every top-tier equipment slot, one potion and 10000 EXP before
 });
 
 
-test('gauntlet defeats all five unique bosses, waits exactly ten seconds and drops five different relics',()=>{
+test('gauntlet defeats all six unique bosses (final Eternal last), waits exactly ten seconds and drops six different relics',()=>{
  const a=ancientScenario('colossus'),{w,G,C,A,p}=a,M=w.GameEngine.MapTerrain,seen=[];
- for(let round=1;round<=5;round++){
+ for(let round=1;round<=6;round++){
   const m=A.boss;seen.push(m.ancientKind);assert.equal(m.gauntletRound,round);assert.equal(m.isAlive,true);
   const count=G.dropItems.filter(d=>d.tier==='ancient').length;
   m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(G.dropItems.filter(d=>d.tier==='ancient').length,count);
   m.currentHp=0;C.handleDeath(p,m);assert.equal(G.dropItems.filter(d=>d.tier==='ancient').length,count+1);
   const relic=p.relicLoot;assert.equal(relic.tier,'ancient');C.handleDeath(p,m);assert.equal(A.defeated,round);
   p.action=null;p.targetEnemy=null;for(let i=0;i<60&&!relic.isCollected;i++)A.prepare(p,.1);assert.equal(relic.isCollected,true,'survivor walks to collect the relic, equipping only upgrades');
-  if(round<5){const next=A.nextAt;A.tick(9.999);assert.equal(A.boss,m);assert.equal(G.isGameOver,false);G.isPaused=true;G.update(10);assert.equal(A.nextAt,next);G.isPaused=false;A.tick(.002);assert.notEqual(A.boss,m);}
+  if(round<6){const next=A.nextAt;A.tick(9.999);assert.equal(A.boss,m);assert.equal(G.isGameOver,false);G.isPaused=true;G.update(10);assert.equal(A.nextAt,next);G.isPaused=false;A.tick(.002);assert.notEqual(A.boss,m);}
  }
- assert.equal(new Set(seen).size,5);assert.equal(new Set(A.usedRelics).size,5);assert.equal(A.queue.length,0);
- A.tick(.1);assert.equal(G.isGameOver,true);assert.equal(G.ancientDefeated,true);assert.match(w.documentText('story-card-modal'),/đủ 5 boss/);
+ assert.equal(new Set(seen).size,6);assert.equal(seen[5],'eternal');assert.equal(new Set(A.usedRelics).size,6);assert.equal(A.queue.length,0);
+ A.tick(.1);assert.equal(G.isGameOver,true);assert.equal(G.ancientDefeated,true);assert.match(w.documentText('story-card-modal'),/đủ 6 boss/);
  G.startNewMatch();assert.equal(A.arena,null);assert.equal(M.ancientArena,null);assert.equal(A.usedRelics.length,0);assert.equal(A.defeated,0);
  assert.ok(M.canStand(1000,300));assert.equal(M.navBlocked[Math.floor(300/M.cell)*M.cols+Math.floor(1000/M.cell)],0);
 });
@@ -1266,4 +1266,14 @@ test('a swimming bot escapes low progress at the river and restricted lair bound
  const w=loadGame(),G=w.GameManager,M=w.GameEngine.MapTerrain,p=G.pawns[0];G.pawns=[p];G.monsters=[];Object.assign(p,{x:3868.1466,y:3699.999,level:8,moveSpeed:95});
  assert.equal(M.isInWater(p.x,p.y),true);for(let i=0;i<60;i++){G.matchTime+=.1;M.navigate(p,i%3===0?4065.8:4766.7,i%3===0?3751:3900,.1);}
  assert.ok(Math.hypot(p.x-3868.1466,p.y-3699.999)>30,'must leave the repeated short-step loop');assert.ok(p.navRecoveries>0);assert.ok(M.canStand(p.x,p.y));
+});
+
+test('final Eternal boss: capped hits, poison immunity, stacking attack, Red Flare phase 2, renders both phases',()=>{
+ const {w,G,C,A,p}=ancientScenario('colossus');
+ A.queue=[w.GameData.FinalAncientBoss];A.boss.isAlive=false;A.spawnNext();
+ const m=A.boss;assert.equal(m.ancientKind,'eternal');assert.equal(m.skills.length,6);assert.equal(m.passives.length,6);
+ assert.equal(A.incoming(p,m,1e9,{}),m.phaseMaxHp*.04);assert.equal(A.incoming(p,m,50,{dot:'poison'}),0);
+ p.x=m.x+60;p.y=m.y;m.globalSkillCooldown=0;m.skills[0].cooldownTimer=0;const atk=m.attack;A.cast(m,m.skills[0],p);assert.equal(m.memStacks,1);assert.ok(m.attack>atk);
+ const speed=m.speed;m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(m.speed,speed*1.4);
+ assert.equal(A.config(m,m.skills[0]).cooldown,m.skills[0].def.cooldown*.65);G.monsters=[m];G.render();
 });

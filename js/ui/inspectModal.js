@@ -161,7 +161,7 @@ window.GameUI.InspectModal = {
         <div>EXP khi hạ: <b>${m.expReward}</b></div>
         <div>Nhịp phép chung: <b>${m.globalSkillCooldown>0?m.globalSkillCooldown.toFixed(1)+'s':'Sẵn sàng'}</b> • Tối đa 1 phép / ${m.tier>=6?1:m.tier===5?2:3}s</div>
         <div>Mục tiêu: <b>${m.objective||"Canh giữ sinh cảnh"}</b></div>
-        ${m.tier>=6?'<div>Lượt '+(m.gauntletRound||1)+'/5 • Hai phase • Rơi 1 Thượng Bảo không trùng; boss tiếp theo sau 10s.</div>':`<div>Phẩm chất rơi đồ: <b>${m.dropTier}</b></div>
+        ${m.tier>=6?'<div>Lượt '+(m.gauntletRound||1)+'/'+window.GameEntities.AncientSystem.total+' • Hai phase • Rơi 1 Thượng Bảo không trùng; boss tiếp theo sau 10s.</div>':`<div>Phẩm chất rơi đồ: <b>${m.dropTier}</b></div>
         <div>Tỷ lệ rơi: <b>${[0,20,30,40,100,100][m.tier]}%</b> • ${m.tier===5?"1 bình máu + vũ khí, giáp, mũ Thần Khí":m.tier===4?"1 bình máu + 1 trang bị/vũ khí":"1 bình máu hoặc 1 trang bị/vũ khí"}</div>`}
       </div>
       <div class="inspect-section"><div class="section-title">Kỹ năng quái</div>

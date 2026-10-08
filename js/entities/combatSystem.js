@@ -220,6 +220,7 @@ window.GameEntities.CombatSystem = {
     if (!e.isMonster) return 'unarmed';
     if(window.GameData.LowMonsterTactics?.[e.defId])return window.GameData.LowMonsterTactics[e.defId][2];
     if (['golem', 'titan_ape', 'demon_lord','primordial_colossus'].includes(e.visual?.type)) return 'hammer';
+    if (e.visual?.type==='primordial_eternal') return 'sword';
     if (['centaur','naga'].includes(e.visual?.type)) return 'spear';
     if(['undead_mage','floating_wraith'].includes(e.visual?.type))return 'staff';
     return e.tier >= 4 ? 'staff' : 'unarmed';

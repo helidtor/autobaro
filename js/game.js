@@ -555,7 +555,7 @@ window.GameManager = {
       const remaining=window.GameEngine.MapTerrain.remainingLords();
       const ancient=window.GameEntities.AncientSystem.boss;
       const trial=window.GameEntities.AncientSystem;
-      templeStatus.innerText=trial.pendingGod&&!trial.awakened?'Thượng Cổ • '+Math.ceil(trial.wakeRemaining)+'s':trial.nextAt!==null?'Boss '+(trial.defeated+1)+'/5 • '+Math.max(0,trial.nextAt-trial.clock).toFixed(1)+'s':ancient?.isAlive?'Thượng Cổ '+ancient.gauntletRound+'/5 • Phase '+ancient.phase:this.ancientDefeated?'Đã chinh phục Thượng Cổ':remaining?'Khóa • còn '+remaining+' Yêu Vương':window.GameEntities.EntityManager.worldBoss?.isAlive?'Đã mở cửa':'Đã hạ Yêu Thần';
+      templeStatus.innerText=trial.pendingGod&&!trial.awakened?'Thượng Cổ • '+Math.ceil(trial.wakeRemaining)+'s':trial.nextAt!==null?'Boss '+(trial.defeated+1)+'/'+trial.total+' • '+Math.max(0,trial.nextAt-trial.clock).toFixed(1)+'s':ancient?.isAlive?'Thượng Cổ '+ancient.gauntletRound+'/'+window.GameEntities.AncientSystem.total+' • Phase '+ancient.phase:this.ancientDefeated?'Đã chinh phục Thượng Cổ':remaining?'Khóa • còn '+remaining+' Yêu Vương':window.GameEntities.EntityManager.worldBoss?.isAlive?'Đã mở cửa':'Đã hạ Yêu Thần';
     }
 
     // Cập nhật thanh HUD Player nếu ở chế độ người chơi
