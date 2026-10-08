@@ -1,0 +1,99 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>VFX sheet</title>
+<style>body{margin:0;background:#10141c;color:#dde;font:12px Arial}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script src="../js/data/monstersData.js"></script>
+<script src="../js/data/skillsData.js"></script>
+<script src="../js/data/ancientBossesData.js"></script>
+<script src="../js/renderer/vfxRecipes.js"></script>
+<script src="../js/renderer/vfxManager.js"></script>
+<script>
+// Frozen-frame contact sheet of the real VfxManager. #bot | #mon | #anc selects the section.
+const V=GameRenderer.VfxManager,R=GameRenderer.VfxRecipes,G=GameData;
+window.GameManager={matchTime:3.2};window.GameEngine={};window.GameEntities={AncientSystem:{}};
+const [section0,from0,to0,z0]=(location.hash.slice(1)||'bot').split(','),section=section0,FROM=+from0||0,TO=+to0||1e9,Z=+z0||1,CW=170*Z,CH=150*Z,COLS=Math.floor(2040/CW),cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const cells=[];
+function ground(x,y,seed){ctx.fillStyle='#4f7a4a';ctx.fillRect(x,y,CW,CH);ctx.fillStyle='rgba(255,255,255,.05)';for(let i=0;i<14;i++)ctx.fillRect(x+((i*47+seed*13)%CW),y+((i*31+seed*7)%CH),3,2);}
+function dummy(x,y,col){ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(x,y+9,9,4,0,0,7);ctx.fill();ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,8,0,7);ctx.fill();ctx.fillStyle='#fbe0c0';ctx.beginPath();ctx.arc(x,y-9,6,0,7);ctx.fill();}
+let ci=0;function cell(i0,label,draw,scale=1){
+  const idx=ci++;if(idx<FROM||idx>=TO)return;const i=idx-FROM;scale*=Z;
+  const x=(i%COLS)*CW,y=Math.floor(i/COLS)*CH+(cell.top||0);
+  ctx.save();ctx.beginPath();ctx.rect(x,y,CW,CH);ctx.clip();ground(x,y,i);
+  ctx.translate(x+CW/2,y+CH/2+4);ctx.scale(scale,scale);V.effects=[];V.projectiles=[];V.particles=[];draw();ctx.restore();
+  ctx.fillStyle='rgba(8,10,16,.7)';ctx.fillRect(x,y,CW,13*Z);ctx.fillStyle='#fff';ctx.font=(10*Z)+'px Arial';ctx.fillText(label,x+3,y+10*Z);
+  ctx.strokeStyle='#0008';ctx.strokeRect(x,y,CW,CH);
+}
+function show(e,p){e.life=e.maxLife*(1-p);V.effects=[e];V.render(ctx,3.2);}
+function fx(kind,x,y,o,p){const e=V.addEffect(kind,x,y,o);V.effects=[];show(e,p);}
+function field(f,p){f.owner=f.owner||{x:-50,y:0};f.maxLife=f.maxLife??3;f.life=f.maxLife/2;f.delay=0;f.delay0=0;f.seed=f.seed||99;f.x=0;f.y=0;V.drawField(ctx,f);}
+
+// --- bot skills: [telegraph/windup | exec tier1 | exec tier3] ---
+const AREA=/aoe|slam|barrage|whirlwind|vortex|nuke|monster_skill/,PROJECTILE=/projectile|arrows|snipe|bolt/,UTIL=['teleport','speed_buff','ethereal_speed','stealth','smoke_cloud','weapon_swap','weapon_buff','self_heal','aura_heal','shield_stance','counter_stance','mana_shield_toggle','stasis'];
+const COL={fire:'#ff9b48',ice:'#8be6ff',nature:'#a9e76c',void:'#bd9cff',earth:'#ebc892',steel:'#ffe4a3'};
+function botCell(d,tier,phase,idx){
+  const c={...d,...d.t1,...(tier>=2?d.t2:{}),...(tier>=3?d.t3:{})};c.radius=Math.min(100,c.radius||50);c.range=Math.min(240,Math.max(c.range||100,c.radius));
+  const el=c.element||(/fire|meteor/.test(d.id)?'fire':/frost|ice/.test(d.id)?'ice':d.id[0]==='m'?'void':'steel'),color=COL[el],type=c.type,area=AREA.test(type),utility=UTIL.includes(type);
+  const base={fx:d.id,el,tier,color},scale=c.radius>70?.75:1,self=c.selfArea||type==='whirlwind_aoe';
+  const tgtX=utility?0:(area&&!self?0:50);
+  cell(idx,d.id+' T'+tier+(phase==='tele'?' tele':''),()=>{
+    dummy(-45,0,'#3a6ad0');if(!utility)dummy(tgtX+(area?0:0),0,'#b04040');
+    if(phase==='tele'){
+      if(!utility&&(area||type==='cone_slash'))fx('telegraph',self?-45:tgtX,0,{...base,radius:c.radius,angle:0,shape:type==='cone_slash'?'cone':'circle',length:c.range,inner:type==='ground_slam'?18:0,life:1,label:c.name},.65);
+      else fx('rune',-45,0,{...base,plain:true,ph:'tele',radius:24,tx:50,ty:0,angle:0,length:95,life:1},.65);
+      return;}
+    const p=phase==='zone'?.5:.34;
+    if(['teleport','teleport_backstab','backstep_shot','linear_dash','dash_stun'].includes(type)){fx('dash',-50,0,{...base,tx:type==='backstep_shot'?-90:35,ty:0,angle:0,life:.45},p);}
+    else if(['self_heal','aura_heal'].includes(type)){fx('heal',0,0,{...base,radius:40,life:.9},p);if(type==='aura_heal')field({fx:d.id,ftype:type,radius:100,shape:'circle',heal:1,el:'heal',color:'#86efb5',life:3,maxLife:3},.5);}
+    else if(['speed_buff','ethereal_speed','stealth','smoke_cloud'].includes(type)){fx(type==='smoke_cloud'?'smoke':'rune',0,0,{...base,radius:type==='smoke_cloud'?65:40,life:.8},p);if(type==='smoke_cloud')field({fx:d.id,ftype:type,radius:65,shape:'circle',smoke:1,life:2,maxLife:2},.5);}
+    else if(['weapon_buff','weapon_swap'].includes(type))fx('rune',0,0,{...base,radius:28,life:.6},p);
+    else if(['shield_stance','counter_stance','mana_shield_toggle','stasis'].includes(type))fx('guard',-45,0,{...base,radius:28,angle:0,life:1.2},.5);
+    else if(type==='vortex_pull')field({fx:d.id,ftype:type,radius:c.radius,shape:'circle',pull:12,el,color,life:2,maxLife:2,tier},.5);
+    else if(PROJECTILE.test(type)&&!area){
+      const spec=R.PROJ[d.id]||R.PROJ.projectile;V.projectiles=[{x:-10,y:0,angle:0,spec,pal:V.PALETTES[spec.el]||V.PALETTES[el],config:{},acc:0}];
+      const e=V.addEffect(type==='projectile_explosion'?(el==='fire'?'flame':'impact'):'impact',50,0,{...base,radius:type==='projectile_explosion'?c.radius:24,life:.6});V.effects=[];e.life=e.maxLife*(1-p);
+      V.effects=[e];V.render(ctx,3.2);V.projectiles=[];
+      if(type==='projectile_explosion')field({fx:d.id,ftype:type,radius:c.radius,shape:'circle',el,color,life:1.5,maxLife:1.5,tier,x:0},.5);
+    }else{const directed=type==='cone_slash';fx(area?(el==='fire'?'flame':el==='ice'?'frost':'impact'):'slash',directed||self?-45:tgtX,0,{...base,radius:c.radius,angle:0,color,shape:type==='cone_slash'?'cone':undefined,length:c.range,life:.7},p);}
+  },scale);
+}
+function bots(){
+  const all=Object.values(G.Skills).flatMap(g=>g.actives);let i=0;
+  for(const d of all){botCell(d,2,'tele',i++);botCell(d,1,'exec',i++);botCell(d,3,'exec',i++);}
+  window.__n=Math.min(i,TO)-FROM;
+}
+// --- monsters: [telegraph | exec | zone] using each species' own tint ---
+function skillOwner(id){for(const defs of Object.values(G.Monsters))for(const d of defs)if(d.skills&&d.skills.some(s=>s.id===id))return d;}
+function mons(){
+  let i=0;const T=G.MonsterTactics,ids=Object.keys(T);
+  for(const id of ids){
+    const mode=T[id][0],d=skillOwner(id)||{visual:{detailColor:'#e0a040'},name:id},tint=d.visual&&d.visual.detailColor,shape=['line','beam','charge','fissure'].includes(mode)?'line':['cone','fan','flurry'].includes(mode)?'cone':'circle',base={fx:id,mon:mode,tint,color:tint,tier:1};
+    const hw=({line:20,beam:18,charge:22,fan:12})[mode]??25,rad=65;
+    cell(i++,id+' tele',()=>{dummy(-60,0,'#7a3a3a');dummy(30,0,'#3a6ad0');fx('telegraph',shape==='circle'&&mode!=='ring'?30:-60,0,{...base,radius:rad,angle:0,shape,length:shape==='cone'?rad:150,halfW:hw,inner:mode==='ring'?20:0,life:1,label:id},.65);},.8);
+    cell(i++,id+' exec',()=>{dummy(-60,0,'#7a3a3a');dummy(30,0,'#3a6ad0');const e=V.addEffect('exec',shape==='circle'&&mode!=='ring'?30:-60,0,{...base,radius:rad,halfW:hw,angle:0,shape,length:shape==='cone'?rad:150,life:.6});V.effects=[];
+      if(mode==='projectile'){const spec=R.PROJ[id]||R.PROJ.projectile;V.projectiles=[{x:-20,y:0,angle:0,spec,pal:V.PALETTES[spec.el]||V.PALETTES.void,config:{},acc:0}];}
+      show(e,.35);V.projectiles=[];},.8);
+    cell(i++,id+' zone',()=>{dummy(-60,0,'#7a3a3a');dummy(30,0,'#3a6ad0');field({fx:id,ftype:mode,mon:true,radius:shape==='line'?hw:rad,length:150,shape,angle:0,tint,color:tint,fxDone:true,life:2,maxLife:2.5,target:{x:70,y:10},owner:{x:-60,y:0}},.5);
+      ctx.save();ctx.translate(-0,0);ctx.restore();},.8);
+  }
+  window.__n=Math.min(i,TO)-FROM;
+}
+// --- ancient bosses: [telegraph | impact exec | zone] ---
+function ancs(){
+  let i=0;
+  for(const b of G.AncientBosses)for(const s of b.skills){
+    const eff=s.effect,shape=['devour','spear','fissure','map_arrow','lasers','spin_beam','lava','collapse','cross'].includes(eff)?'line':eff==='sweep'?'cone':'circle',base={anc:eff,tint:b.color,color:b.color},rad=eff==='net'?100:Math.min(70,s.radius),hw=Math.min(40,s.radius);
+    cell(i++,b.kind+':'+eff+' tele',()=>{dummy(-60,0,b.color);dummy(30,0,'#3a6ad0');fx('telegraph',shape==='circle'?20:-60,0,{...base,radius:rad,halfW:hw,arc:eff==='sweep'?Math.PI/2:undefined,inner:eff==='net'?25:0,shape,angle:0,length:shape==='cone'?rad:150,life:1,label:s.name.slice(0,18)},.65);},.75);
+    cell(i++,b.kind+':'+eff+' exec',()=>{dummy(-60,0,b.color);dummy(30,0,'#3a6ad0');fx('impact',shape==='circle'?20:-60,0,{...base,radius:rad,halfW:hw,arc:eff==='sweep'?Math.PI/2:undefined,shape,angle:0,length:shape==='cone'?rad:150,life:.4},.3);},.75);
+    cell(i++,b.kind+':'+eff+' zone',()=>{dummy(-60,0,b.color);dummy(30,0,'#3a6ad0');
+      const owner={x:-60,y:0,ancientKind:b.kind,ancientDef:{color:b.color}};
+      if(eff==='homing')V.drawAncientField(ctx,{owner,x:20,y:0,radius:20,at:1,end:5,speed:100,homing:{}},2);
+      else V.drawAncientField(ctx,{owner,effect:eff,x:shape==='circle'?20:-60,y:0,radius:shape==='line'?hw:rad,length:150,angle:0,shape,at:1,end:6,arc:Math.PI/2},2);
+      if(eff==='wall')V.drawWall(ctx,{x:10,y:-16,w:32,h:32,end:5},1);},.75);
+  }
+  window.__n=Math.min(i,TO)-FROM;
+}
+// Canvas must be sized before drawing: run once to count, then redraw.
+cv.width=COLS*CW;cv.height=4000;
+const run={bot:bots,mon:mons,anc:ancs}[section];
+ci=0;run();ci=0;cv.width=COLS*CW;cv.height=Math.ceil(window.__n/COLS)*CH;run();document.title='done';
+</script></body></html>

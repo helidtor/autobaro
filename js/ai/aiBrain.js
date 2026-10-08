@@ -517,8 +517,8 @@ window.GameAI.AiBrain = {
     if(!item||item.isCollected)return false;
     if(this.lootValue(pawn,item)>0)for(const other of window.GameManager.pawns||[])if(other!==pawn&&other.isAlive&&(other.plan?.target===item||other.combatLoot?.item===item))this.noteGrudge(other,pawn,'loot');
     if(this.lootValue(pawn,item)<=0){if(item.tier!=='ancient')return false;pawn.keptRelics=pawn.keptRelics||[];pawn.keptRelics.push(item.data);item.isCollected=true;return true;}
-    if (item.slot === 'potion') { window.GameEngine.Audio?.play('loot',pawn);if(item.data?.fullHeal)pawn.fullHealthPotions=(pawn.fullHealthPotions||0)+1;else pawn.healthPotions = (pawn.healthPotions || 0) + 1; item.isCollected = true; return true; }
-    window.GameEngine.Audio?.play('loot',pawn);
+    if (item.slot === 'potion') { window.GameEngine.Audio?.play('loot',pawn,'potion');if(item.data?.fullHeal)pawn.fullHealthPotions=(pawn.fullHealthPotions||0)+1;else pawn.healthPotions = (pawn.healthPotions || 0) + 1; item.isCollected = true; return true; }
+    window.GameEngine.Audio?.play('loot',pawn,item.tier==='ancient'?'relic':item.slot);
     const eqData = item.data || item;
     const slot = { weapon: 'weapon', head: 'helmet', body: 'armor', feet:'boots' }[item.slot];
     if (!slot) return false;

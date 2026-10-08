@@ -395,8 +395,8 @@ test('bot spawns remain free after habitat buildings are added, including Hai Ye
 
 test('navigation recovers a bot embedded in a habitat building and the last two bots finish their duel',()=>{
  const w=loadGame(6),G=w.GameManager,M=w.GameEngine.MapTerrain,C=w.GameEntities.CombatSystem,p=G.pawns[48],q=G.pawns[77];
- const building=M.obstacles.find(o=>o.kind==='building'&&Math.abs(o.x-240.5)<.01&&Math.abs(o.y-2496)<.01);
- assert.ok(building,'same village building as the reported stuck bot');
+ const building=M.obstacles.find(o=>o.kind==='building'&&Math.abs(o.x-780)<.01&&Math.abs(o.y-2320)<.01&&o.w===128&&o.h===84);
+ assert.ok(building,'Làng Trúc house that can trap a bot');
  Object.assign(p,{x:building.x+24,y:building.y+59});
  G.pawns.forEach(e=>e.isAlive=e===p||e===q);G.monsters.forEach(e=>e.isAlive=false);
  Object.assign(q,M.nearestFree(p.x+70,p.y+35));
@@ -417,7 +417,7 @@ test('navigation recovers a bot embedded in a habitat building and the last two 
 
 test('river disables attacks, skills, defensive actions and incoming damage, even with water-walk buff',()=>{
  const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,M=w.GameEngine.MapTerrain,[a,b]=G.pawns;
- a.x=M.riverX(2600);a.y=2600;b.x=a.x+5;b.y=a.y;a.waterWalkTimer=10;
+ a.x=M.riverX(3000);a.y=3000;b.x=a.x+5;b.y=a.y;a.waterWalkTimer=10; // y=2600 is now a shallow ford, so use a deep stretch
  assert.equal(C.canAttack(a),false);assert.equal(C.defend(a,'dodge'),false);
  assert.equal(C.applyDamage(a,b,null,{baseDamage:100}),0);
  assert.equal(M.getMoveSpeed(a),a.moveSpeed*.45);
@@ -1086,6 +1086,39 @@ test('sound controls, camera distance and voice budget guard Web Audio playback'
  A.setVolume(500);assert.equal(A.volume,1);A.setVolume(-20);assert.equal(A.volume,0);assert.equal(A.play('hit',p),false);
 });
 
+test('audio recipes cover every weapon style, skill, monster mode, ancient effect and play without gameplay RNG',async()=>{
+ const w=loadGame(),A=w.GameEngine.Audio,G=w.GameManager,T=A.recipes,cam=w.GameEngine.Camera,ended=[];let nodes=0;
+ const param=()=>({value:0,setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){},setTargetAtTime(){}});
+ const node=()=>{nodes++;return{connect(){},disconnect(){},start(){},stop(){},gain:param(),frequency:param(),Q:param(),pan:param(),delayTime:param(),threshold:param(),ratio:param(),set onended(f){ended.push(f);}};};
+ w.AudioContext=function(){return{state:'running',currentTime:0,sampleRate:8000,destination:{},createGain:node,createOscillator:node,createBufferSource:node,createBiquadFilter:node,createStereoPanner:node,
+  createDynamicsCompressor:node,createDelay:node,createBuffer:(c,n)=>({getChannelData:()=>new Float32Array(n)}),resume:async()=>{}};};
+ await A.unlock();assert.ok(A.master&&A.noise&&A.fx);
+ const missing=[];const need=name=>{if(!T[name])missing.push(name);};
+ for(const s of Object.keys(w.GameEntities.CombatSystem.styles))['wind','swing','hit'].forEach(k=>need(k+'.'+s));
+ for(const g of ['blade','heavy','arrow','magic'])need('block.'+g);
+ for(const d of Object.values(w.GameData.Skills).flatMap(g=>g.actives))need('skill.'+d.id);
+ for(const mode of new Set(Object.values(w.GameData.MonsterTactics).map(t=>t[0])))need('skill.m_'+mode);
+ for(const b of w.GameData.AncientBosses){need('warn.'+b.kind);need('phase.'+b.kind);for(const s of b.skills)need('ancient.'+s.effect);}
+ for(const def of Object.values(w.GameData.Monsters).flat()){const f=A.fam({visual:def.visual});['roar','bite','grunt','death'].forEach(k=>need(k+'.'+f));}
+ for(const s of ['grass','stone','swim','bridge','bush','rock'])need('step.'+s);
+ for(const e of ['fire','ice','void','steel','burn','bleed','poison'])need('hit.'+e);
+ for(const k of ['dodge','evade','drink','potion','heal','level','loot','death.pawn','awaken','ancientDown','victory','raise','ui.on','ui.tick','loot.potion','loot.weapon','loot.body','loot.head','loot.feet','loot.relic','impact.fire','impact.ice','impact.void','impact.steel'])need(k);
+ assert.deepEqual(missing,[]);
+ // Every recipe is well formed.
+ for(const [name,r] of Object.entries(T))for(const L of r.L)assert.ok(L.d>0&&L.g>0&&L.at>=0&&(L.o?L.f0>0&&L.f1>0:L.f0>0&&L.f1>0&&L.q>0),name);
+ // play() builds nodes, never touches gameplay Math.random, honours the voice cap and releases voices.
+ const random=w.__math.random;w.__math.random=()=>{throw new Error('audio must not consume gameplay RNG');};
+ const p={id:'a',x:cam.x,y:cam.y};let t=0,played=0;
+ const calls=[['skill','w_whirlwind',{tier:3,el:undefined}],['skill','m_cleave',{}],['skill','not_a_skill',{el:'fire'}],['hit','sword',{crit:true,big:.2}],['block','axe'],['swing','bow'],['wind','tome'],['step','stone',{heavy:true}],['roar','giant',{tier:5}],['warn','mecha'],['phase','void'],['ancient','meteor'],['loot','relic'],['death'],['level'],['ui',null]];
+ for(const [kind,style,o] of calls){A.ctx.currentTime=t+=1;if(A.play(kind,kind==='ui'?null:p,style==null?undefined:style,o))played++;}
+ assert.ok(played>=calls.length-1,'played '+played);assert.ok(nodes>50);assert.ok(A.voices>0&&A.voices<=20);
+ const live=A.voices;A.voices=16;assert.equal(A.play('hit',p,'sword'),false);A.voices=live;
+ ended.forEach(f=>f());assert.equal(A.sources,0);assert.equal(A.voices,0);
+ assert.equal(A.surface(cam.x,cam.y)!==undefined,true);
+ G.isPaused=true;assert.equal(A.play('hit',p,'sword'),false);assert.equal(A.play('victory',null),true);
+ w.__math.random=random;
+});
+
 test('all 32 reworked skills execute at all ranks without invalid resources or effects',()=>{
  const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,V=w.GameRenderer.VfxManager,[p,q]=G.pawns;G.pawns=[p,q];G.monsters=[];
  const defs=Object.values(w.GameData.Skills).flatMap(group=>group.actives);assert.equal(defs.length,32);
@@ -1403,6 +1436,29 @@ test('momentum reacts to real interruptions and pattern reading waits for the th
  p.passives=[C.makePassive(w.GameData.EndgamePassives.find(d=>d.id==='p_pattern_reading'))];p.progression={};for(let i=1;i<=3;i++){q.action={id:i,kind:'skill',skillId:'m_fireball',released:false};C.progressionEvent(p,q,'observed');assert.equal(p.passives[0].cooldownTimer>0,i===3);}
 });
 
+test('merged audio and field VFX retain full-heal inventory and shared damage budgets',()=>{
+ const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,A=w.GameAI.AIBrain,V=w.GameRenderer.VfxManager,p=G.pawns[0],calls=[];
+ w.GameEngine.Audio.play=(...args)=>calls.push(args);
+ p.healthPotions=2;p.currentHp=1;
+ const item=G.spawnDropItem(p.x,p.y,{id:'full_health_potion',tier:'ancient',fullHeal:true},'potion');
+ assert.equal(A.lootItem(p,item),true);assert.equal(p.fullHealthPotions,1);assert.equal(p.healthPotions,2);assert.equal(calls[0][2],'potion');
+ const c={id:'m_gravity_vortex',type:'vortex_pull',element:'void',damage:100,maxDamage:100};c.damageBudget=C.damageBudget(p,c);
+ const f=C.field(p,c,p.x,p.y,{life:3,delay:.5});
+ assert.equal(f.damageBudget,c.damageBudget);assert.equal(f.fx,c.id);assert.equal(f.ftype,c.type);assert.equal(f.maxLife,3);assert.equal(f.delay0,.5);
+ V.drawField(G.ctx,f);f.delay=0;V.drawField(G.ctx,f);assert.equal(f.damageBudget,c.damageBudget);
+});
+
+test('weaponArt draws every weapon and relic at every tier, each id has a distinct look',()=>{
+ const w=loadGame(),G=w.GameManager,WA=w.GameRenderer.WeaponAnimations,A=w.GameRenderer.WeaponArt,E=w.GameData.Equipments;
+ const all=[...Object.values(E.weapons),...Object.values(E.relics).filter(r=>r.slot==='weapon')],seen=new Set();
+ for(const def of all){
+  for(const tier of A.TIERS)for(const fx of [undefined,{time:2,sw:.5,fade:1}])WA.drawWeapon(G.ctx,{...def,tier},def.type==='bow'?9:0,fx);
+  const sig=WA.weaponType(def)+JSON.stringify(A.lookOf(def,WA.weaponType(def)));
+  assert.ok(!seen.has(sig),'duplicate look '+def.id);seen.add(sig);
+ }
+ for(const type of ['hammer','crossbow','sword','tome'])for(const id of 'abcdefgh')WA.drawWeapon(G.ctx,{id:type+id,type,tier:'god'});
+ assert.ok(all.length>=27);
+});
 
 test('combat focus holds across alternating threats, but releases dead or allied targets immediately',()=>{
  const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,A=w.GameAI.AIBrain,[p,q,t]=G.pawns;G.pawns=[p,q,t];G.monsters=[];Object.assign(p,{x:1000,y:300,skills:[],attackCooldown:999,personality:{...w.GameData.PersonalityProfiles.brave},flankSide:1});Object.assign(q,{x:850,y:300});Object.assign(t,{x:1150,y:300});let swaps=0,last=null;for(let i=0;i<40;i++){G.matchTime=i*.1;A.engageCombat(p,i%2?q:t,.1);if(last&&last!==p.targetEnemy)swaps++;last=p.targetEnemy;}assert.ok(swaps<=3,'alternating priorities must not restart targeting every frame: '+swaps);assert.ok(Math.hypot(p.x-1000,p.y-300)>20);

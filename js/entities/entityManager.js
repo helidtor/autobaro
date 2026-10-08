@@ -89,8 +89,8 @@ window.GameEntities.EntityManager = {
       };
 
       const M=window.GameEngine.MapTerrain;
-      let pos=M.nearestFree(p.x,p.y);
-      if(M.isInWater(pos.x,pos.y))pos=M.nearestFree(pos.x+(edge===1?180:-180),pos.y);
+      let pos=M.nearestFree(p.x,p.y,14);
+      if(M.isInWater(pos.x,pos.y))for(const d of [180,300,420]){const q=M.nearestFree(pos.x+(edge===1?d:-d),pos.y,14);if(!M.isInWater(q.x,q.y)){pos=q;break;}}
       Object.assign(p,pos);
       this.pawns.push(p);
     }
@@ -129,8 +129,21 @@ window.GameEntities.EntityManager = {
       M.bushes.push({x:(h.x+Math.cos(angle+.3)*h.radius*.42)/M.scale,y:(h.y+Math.sin(angle+.3)*h.radius*.42)/M.scale,radius:20,isBurned:false});
     }
     M.buildObstacles();
-    // Habitat buildings are added after pawn creation; validate against the finished map.
-    for(const p of this.pawns)Object.assign(p,M.nearestFree(p.x,p.y,p.collisionRadius||9));
+    // Buildings and habitat trees land after the first placement. Free anyone they cover, and keep monsters inside their habitat.
+    for(const e of [...this.pawns,...this.monsters]){
+      const r=e.isPawn?Math.max(12,e.collisionRadius||9):12;
+      if(M.canStand(e.x,e.y,r))continue;
+      if(e.territory){
+        let placed=null;
+        for(let d=8;d<e.territory.radius&&!placed;d+=12)for(let i=0;i<16&&!placed;i++){
+          const px=e.territory.x+Math.cos(i*Math.PI/8)*d,py=e.territory.y+Math.sin(i*Math.PI/8)*d;
+          if(M.canStand(px,py,r)&&M.monsterCanOccupy(e,px,py))placed={x:px,y:py};
+        }
+        if(placed){Object.assign(e,placed);e.homeX=placed.x;e.homeY=placed.y;continue;}
+      }
+      const pos=M.nearestFree(e.x,e.y,e.isPawn?r:14);
+      Object.assign(e,pos);if(e.isMonster){e.homeX=pos.x;e.homeY=pos.y;}
+    }
     M.lairs.forEach((site,i)=>this.spawnMonster(D.lords[i],site.x,site.y,site));
     // Monster ids no longer draw Math.random. Burn the old 71 id rolls so seeded Yêu Thần stays the same.
     for(let i=0;i<71;i++)Math.random();
@@ -161,7 +174,7 @@ window.GameEntities.EntityManager = {
 
   spawnMonster: function(def, x, y, territory = null) {
     const M=window.GameEngine.MapTerrain,stub={isMonster:true,tier:def.tier,territory,targetEnemy:null};
-    let pos=M.nearestFree(x,y);
+    let pos=M.nearestFree(x,y,14);
     if(territory&&!M.monsterCanOccupy(stub,pos.x,pos.y)){
       let placed=null;
       for(let d=8;d<territory.radius&&!placed;d+=12)for(let i=0;i<16&&!placed;i++){

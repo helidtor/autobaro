@@ -1,0 +1,21 @@
+<!doctype html><meta charset=utf-8><body style="margin:0;background:#26382f"><canvas id=c></canvas>
+<script src="../js/data/equipmentsData.js"></script><script src="../js/data/ancientRelicsData.js"></script>
+<script src="../js/renderer/weaponArt.js"></script><script src="../js/renderer/weaponAnimations.js"></script>
+<script>
+const E=GameData.Equipments,WA=GameRenderer.WeaponAnimations;
+const q=new URLSearchParams(location.search),mode=q.get('m')||'native';
+const items=[];
+if(mode==='native'){for(const w of [...Object.values(E.weapons),...Object.values(E.relics).filter(r=>r.slot==='weapon')])items.push({w,label:w.id+' ['+w.tier+']'});}
+else{ // every type x every tier
+ const TY=[['sword','w_tempered_blade'],['dagger','w_serrated_dagger'],['spear','god_void_spear'],['axe','w_steel_cleaver_axe'],['hammer','hm'],['bow','w_tempest_bow'],['crossbow','cb'],['staff','w_crystal_staff'],['tome','relic_tome']];
+ for(const [type,id] of TY)for(const tier of ['common','rare','super_rare','supreme','god','ancient'])items.push({w:{id,type,tier},label:type+' '+tier});
+}
+const Z=+(q.get('z')||1.7),COLS=+(q.get('c')||6),CW=Math.round(210*Z/1.7),CH=Math.round(140*Z/1.7),rows=Math.ceil(items.length/COLS);
+const cv=document.getElementById('c');cv.width=COLS*CW;cv.height=rows*CH;const ctx=cv.getContext('2d');
+const T=+(q.get('t')||3.3);
+items.forEach((it,i)=>{const cx=(i%COLS)*CW,cy=Math.floor(i/COLS)*CH;
+ ctx.fillStyle=(i+Math.floor(i/COLS))%2?'#2c4036':'#26382f';ctx.fillRect(cx,cy,CW,CH);
+ ctx.save();ctx.translate(cx+60*Z/1.7,cy+62*Z/1.7);ctx.scale(Z,Z);
+ WA.drawWeapon(ctx,it.w,0,{time:T,sw:.65,fade:1});ctx.restore();
+ ctx.fillStyle='#fff';ctx.font='11px sans-serif';ctx.fillText(it.label,cx+6,cy+CH-6);});
+</script>
