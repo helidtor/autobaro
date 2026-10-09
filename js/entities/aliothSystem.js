@@ -174,6 +174,7 @@ window.GameEntities.AliothSystem = {
 
   protected(entity) {
     if (!entity?.isAlive || entity.isAlioth || entity.isCloud || entity.isSplit) return true;
+    if (entity.captured) return true;
     if (entity.isAncient || entity.isAncientClone || entity.isDemonKing) return true;
     return entity === window.GameEntities.EntityManager?.worldBoss;
   },
