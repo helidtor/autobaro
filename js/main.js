@@ -31,6 +31,7 @@ import './entities/relicSystem.js';
 import './entities/aliothSystem.js';
 import './entities/cloudSystem.js';
 import './entities/huaguoSystem.js';
+import './entities/truclamSystem.js';
 import './ui/combatTicker.js';
 import './ui/botRoster.js';
 import './ui/inspectModal.js';

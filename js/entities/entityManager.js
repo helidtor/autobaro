@@ -230,6 +230,7 @@ window.GameEntities.EntityManager = {
     this.finalHuntStarted=true;
     const G=window.GameManager,M=window.GameEngine.MapTerrain,D=window.GameData.Monsters;
     for(const m of this.monsters)if(m.tier<=4){m.isAlive=false;m.action=null;m.despawned=true;}
+    if(window.GameEntities.CloudSystem?.cloud) window.GameEntities.CloudSystem.cloud.isAlive=false;
     // Remove lingering attacks from the dismissed monsters before the new hunt.
     window.GameRenderer.VfxManager.projectiles=[];
     winner.action=null;winner.attackState=null;winner.targetEnemy=null;winner.combatGroup=null;winner.combatLease=0;winner.roamGoal=null;winner.navTimer=0;winner.navPath=[];

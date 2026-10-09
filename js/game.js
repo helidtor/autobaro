@@ -71,6 +71,7 @@ window.GameManager = {
     window.GameEntities.AliothSystem.init(this.width, this.height);
     window.GameEntities.CloudSystem.init(this.width, this.height);
     window.GameEntities.HuaguoSystem.init(this.width, this.height);
+    window.GameEntities.TrucLamSystem.init(this.width, this.height);
 
     // Gán listener sự kiện bàn phím & chuột
     this.bindInputs();
@@ -159,6 +160,7 @@ window.GameManager = {
     window.GameEntities.AliothSystem.reset(this.width, this.height);
     window.GameEntities.CloudSystem.reset(this.width, this.height);
     window.GameEntities.HuaguoSystem.reset(this.width, this.height);
+    window.GameEntities.TrucLamSystem.reset(this.width, this.height);
     window.GameUI.DirectorControls.syncSpeed();
     document.getElementById('btn-toggle-mode').innerText='👁️ Chế độ: Đạo Diễn (Spectator)';
     document.getElementById('btn-toggle-mode').classList.remove('btn-player-mode');
@@ -422,6 +424,7 @@ window.GameManager = {
     window.GameEntities.AliothSystem.update(dt);
     window.GameEntities.CloudSystem.update(dt);
     window.GameEntities.HuaguoSystem.update(dt);
+    window.GameEntities.TrucLamSystem.update(dt);
     window.GameEntities.AncientSystem.tick(dt);
     window.GameEntities.CombatSystem.tickEffects(dt);
     window.GameEngine.Audio?.update(dt);
@@ -549,7 +552,7 @@ window.GameManager = {
       window.GameUI.DirectorControls.showPostMatchStoryCard(this.winnerPawn);
     } else if (this.battleRoyaleResolved && !alive.length) {
       this.isGameOver=true;
-      if(window.GameEntities.AncientSystem.awakened&&!this.resultOpen){this.resultOpen=true;this.isPaused=true;window.GameUI.DirectorControls.syncSpeed();window.GameUI.DirectorControls.showPostMatchStoryCard(null);}
+      if(!this.resultOpen){this.resultOpen=true;this.isPaused=true;window.GameUI.DirectorControls.syncSpeed();window.GameUI.DirectorControls.showPostMatchStoryCard(null);}
     }
   },
 
@@ -607,6 +610,7 @@ window.GameManager = {
     window.GameEntities.AliothSystem.render(ctx);
     window.GameEntities.CloudSystem.render(ctx);
     window.GameEntities.HuaguoSystem.render(ctx);
+    window.GameEntities.TrucLamSystem.render(ctx);
 
     ctx.save();if(arena){ctx.beginPath();ctx.rect(arena.x,arena.y,arena.w,arena.h);ctx.clip();}
     // 6. Vẽ Đạn đạo, Số Sát Thương, Hạt VFX & Cảm Xúc Mote

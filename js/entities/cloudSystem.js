@@ -66,6 +66,10 @@ window.GameEntities.CloudSystem = {
   update(dt) {
     const c = this.cloud;
     if (!c?.isAlive) return;
+    if (window.GameManager?.battleRoyaleResolved) {
+      c.isAlive = false;
+      return;
+    }
     this.clock += dt;
     const G = window.GameManager;
     const mapW = G?.width || 5200;
@@ -122,6 +126,7 @@ window.GameEntities.CloudSystem = {
   protected(entity) {
     if (!entity?.isAlive || entity.isAlioth || entity.isCloud || entity.isSplit) return true;
     if (entity.isAncient || entity.isAncientClone || entity.isDemonKing) return true;
+    if (window.GameManager?.battleRoyaleResolved && (entity.isPawn || entity.isFinalHunt)) return true;
     return entity === window.GameEntities.EntityManager?.worldBoss;
   },
 
@@ -184,8 +189,9 @@ window.GameEntities.CloudSystem = {
   avoid(pawn, dt) {
     const c = this.cloud;
     if (!c?.isAlive || !pawn?.isAlive) return false;
+    if (window.GameManager?.battleRoyaleResolved) return false;
     const dist = Math.hypot(pawn.x - c.x, pawn.y - c.y);
-    if (dist > 360) return false;
+    if (dist > (c.radius || 175) + 30) return false;
     const M = window.GameEngine.MapTerrain;
     pawn.plan = null;
     pawn.targetEnemy = null;

@@ -105,6 +105,12 @@ window.GameEntities.HuaguoSystem = {
       if (Math.sin(k.phase) > 0.98) k.facing = -k.facing;
     }
 
+    for (let i = this.capturedDragons.length - 1; i >= 0; i--) {
+      const d = this.capturedDragons[i];
+      d.fade = (d.fade ?? 10) - dt;
+      if (d.fade <= 0) this.capturedDragons.splice(i, 1);
+    }
+
     // Tôn Ngộ Không đang xuất kích.
     if (this.wukong) {
       this.updateWukong(dt);
@@ -191,14 +197,22 @@ window.GameEntities.HuaguoSystem = {
         w.x += dx / dist * step;
         w.y += dy / dist * step;
       } else {
-        w.state = 'strike';
-        w.timer = 0.6;
+        w.state = 'duel';
+        w.timer = 5.2;
+        w.beat = 0;
+        w.beatT = 0;
       }
       if (w.timer <= 0) { w.state = 'return'; w.timer = 8; }
-    } else if (w.state === 'strike') {
-      if (w.timer <= 0) {
-        if (w.target?.isAlive) this.captureDragon(w.target);
-        else { w.state = 'return'; w.timer = 8; }
+    } else if (w.state === 'duel') {
+      const t = w.target;
+      if (!t?.isAlive) { w.state = 'return'; w.timer = 8; return; }
+      const beats = [1.0, 1.1, 1.0, 1.0, 1.1];
+      w.beatT += dt;
+      if (w.beatT >= beats[w.beat]) {
+        this.duelBeat(w, t);
+        w.beatT = 0;
+        w.beat++;
+        if (w.beat >= beats.length) this.captureDragon(t);
       }
     } else if (w.state === 'drag') {
       const m = this.mountain;
@@ -253,6 +267,31 @@ window.GameEntities.HuaguoSystem = {
       this.clouds[i].life -= dt;
       if (this.clouds[i].life <= 0) this.clouds.splice(i, 1);
     }
+  },
+
+  duelBeat(w, dragon) {
+    const V = window.GameRenderer?.VfxManager;
+    const names = ['gậy quét ngang', 'nhảy lên giáng đòn', 'đâm xuyên mây', 'lộn vòng né đòn', 'gậy dài khóa cổ'];
+    w.swing = (w.beat % 5) / 5;
+    const dx = dragon.x - w.x, dy = dragon.y - w.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    const away = Math.atan2(dy, dx);
+    if (w.beat % 2 === 1) {
+      w.x -= dx / dist * 90;
+      w.y -= dy / dist * 90;
+      dragon.x += dx / dist * 40;
+      dragon.y += dy / dist * 40;
+      V?.addBurstParticles?.(dragon.x, dragon.y, dragon.colors?.gold || '#f97316', 18);
+      window.GameUI?.CombatTicker?.log(`🐉 ${dragon.name} phản kháng, hất Đại Thánh lùi lại!`);
+    } else {
+      w.x += dx / dist * 30;
+      w.y += dy / dist * 30;
+      V?.addEffect?.('impact', dragon.x, dragon.y, { radius: 90, color: '#f6d48a', life: 0.5 });
+      V?.addBurstParticles?.(dragon.x, dragon.y, '#f6d48a', 16);
+    }
+    w.angle = away;
+    window.GameEngine?.Audio?.play?.('impact', w, 'steel');
+    window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không ${names[w.beat % names.length]} vào ${dragon.name}!`);
   },
 
   captureDragon(dragon) {
@@ -884,15 +923,17 @@ window.GameEntities.HuaguoSystem = {
     const ang = w.angle || 0;
     const dir = Math.cos(ang) >= 0 ? 1 : -1;
     const tilt = Math.atan2(Math.sin(ang), Math.abs(Math.cos(ang)));
-    const strike = state === 'strike';
+    const strike = state === 'strike' || state === 'duel';
 
     let legs, sa, back = 60, front = 100, hand, glow = 8, p = 0, swinging = false;
     const FS = { x: 17, y: -24 };
     if (strike) {
       legs = [[-7, 24, -22, 38, -26, 57], [7, 24, 30, 34, 34, 57]];
+      const beatAngs = [-2.2, 0.4, -1.0, 1.2, -0.2];
+      const targetSa = beatAngs[(w.beat || 0) % beatAngs.length];
       p = w.swing != null ? clamp(w.swing, 0, 1) : 0.5;
-      if (p < 0.5) { sa = lerp(-2.5, 0.7, ease(p / 0.5)); swinging = p > 0.12; }
-      else sa = lerp(0.7, -2.5, ease((p - 0.5) / 0.5));
+      sa = lerp(-1.2, targetSa, p);
+      swinging = true;
       back = 42; front = 122; glow = 18;
       hand = { x: FS.x + Math.cos(sa) * 30, y: FS.y + Math.sin(sa) * 30 };
     } else if (state === 'drag') {
@@ -944,6 +985,9 @@ window.GameEntities.HuaguoSystem = {
     if (!this.capturedDragons.length) return;
     const kit = window.GameRenderer?.ArtKit?.(ctx);
     for (const d of this.capturedDragons) {
+      const alpha = Math.max(0, Math.min(1, (d.fade ?? 10) / 10));
+      ctx.save();
+      ctx.globalAlpha = alpha;
       if (kit && d.spine?.length) {
         const spine = d.spine, c = d.colors || {};
         for (let i = spine.length - 1; i >= 1; i--) {
@@ -952,7 +996,6 @@ window.GameEntities.HuaguoSystem = {
         window.GameEntities.AliothSystem?.drawHead?.(ctx, kit, d, spine[0], c.scale, c.deep, c.belly, c.gold, c.mane, 0);
       }
       this.drawChain(ctx, d, m.x, m.y + 12);
-      ctx.save();
       ctx.strokeStyle = 'rgba(246, 212, 138, 0.7)';
       ctx.lineWidth = 3;
       ctx.beginPath();
