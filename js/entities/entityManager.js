@@ -202,7 +202,8 @@ window.GameEntities.EntityManager = {
       attack: Math.round(def.attack * ([0, 0.45, 0.4, 0.65, 1, 1][def.tier]??1)),
       defense: Math.round(def.defense*(def.tier<=2?.55:1)),
       speed: def.speed || 80,
-      expReward: def.tier===5?Math.max(10000,def.expReward||0):def.expReward??50,
+      expReward: def.tier===5?0:Math.round((def.expReward??50)*1.2),
+      expRewardPerLevel: def.tier===5?750:0,
       dropTier: def.dropTier || (def.tier===5?'god':'common'),
       godArtifactId: def.godArtifactId,
       attackCooldown: 0,
@@ -240,7 +241,7 @@ window.GameEntities.EntityManager = {
     const sites=[...M.lairs,last];
     this.finalHuntMonsters=definitions.map((def,i)=>{
       const m=this.spawnMonster(def,sites[i].x,sites[i].y,sites[i]);
-      m.isFinalHunt=true;m.expReward=Math.max(def.expReward,Math.ceil(missing/5));
+      m.isFinalHunt=true;m.expReward=Math.round(Math.max(def.expReward,Math.ceil(missing/5))*1.2);
       // Five distinct bosses get stronger in sequence; the first is viable for the survivor.
       const readiness=Math.min(1,window.GameEntities.CombatSystem.combatStats(winner).attack/Math.max(1,m.attack));
       m.maxHp=m.currentHp=Math.max(24,Math.round(winner.maxHp*(.9+i*.35)*readiness));

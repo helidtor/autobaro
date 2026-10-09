@@ -238,7 +238,12 @@ window.GameEntities.CombatSystem = {
     if(state.strideUntil>now&&!e.action&&e.targetEnemy?.isAlive&&e.currentStamina>=10){const a=Math.atan2(e.targetEnemy.y-e.y,e.targetEnemy.x-e.x)+(e.tactic?.mode==='retreat'?Math.PI:state.strideRank>=2?.7:0),distance=state.strideDistance||10+(state.strideRank||1)*10;e.currentStamina-=10;M.moveEntity(e,Math.cos(a)*distance,Math.sin(a)*distance);state.strideUntil=0;if(state.strideRank===3&&['p_rebound_step','p_opening_stride'].includes(state.strideKind)&&Math.cos(a-e.targetEnemy.aimAngle)<0){e.movingShotReady=true;e.speedBuffTimer=Math.max(e.speedBuffTimer||0,1);}}
   },
 
- visionRange(e){return e.isMonster?(e.tier>=4?300:220):230+(e.personality?.curiosity||50);},
+ visionRange(e){
+  if(!e?.isMonster)return 230+(e?.personality?.curiosity||50);
+  const base=e.tier>=4?300:220;
+  const mult=e.tier>=6||e.isAncient||e.isAncientClone?4:e.tier===5?3:e.tier===4?2:1;
+  return base*mult;
+ },
  canSee(observer,target,ignoreConcealment=false){
   if(!target?.isAlive||observer===target)return false;
   if((target.mythicUntargetable||0)>(window.GameManager.matchTime||0))return false;
@@ -343,8 +348,21 @@ window.GameEntities.CombatSystem = {
     mate.targetEnemy=enemy;
   }
  },
+ bossDen(e){
+  if(!e?.isMonster||(e.tier||0)<4)return null;
+  const a=e.territory;
+  return a?.radius>0?a:null;
+ },
+ insideDen(e,den){
+  if(!den||!e)return true;
+  const arena=window.GameEngine.MapTerrain?.ancientArena;
+  if(den.id==='ancient_arena'&&arena)return e.x>=arena.x&&e.y>=arena.y&&e.x<=arena.x+arena.w&&e.y<=arena.y+arena.h;
+  return Math.hypot(e.x-den.x,e.y-den.y)<=den.radius+1;
+ },
  canEngage(a,t){
   const M=window.GameEngine.MapTerrain;
+  const den=this.bossDen(t)||this.bossDen(a);
+  if(den&&(!this.insideDen(a,den)||!this.insideDen(t,den)))return false;
   const pierce=window.GameEntities.MythicSystem?.has(a,'myth_ballista')&&['bow','crossbow','staff','tome'].includes(this.weaponStyle(a));
   return this.isEnemy(a,t) && M.templeAccess(a,t.x,t.y) && M.templeAccess(t,a.x,a.y) && (!a.isMonster || M.monsterCanTarget(a,t)) && !M.isInWater(a.x,a.y) && !M.isInWater(t.x,t.y) && this.canJoin(a,t) && M.segmentClear(a.x,a.y,t.x,t.y,false,0,null,pierce);
  },
@@ -392,6 +410,13 @@ window.GameEntities.CombatSystem = {
   mage:{hp:16,attack:1,defense:0,crit:0,mana:15,skill:4,hpRegen:0},
   restore:{hp:20,attack:2,defense:1,crit:0,mana:5,skill:0,hpRegen:.15}
  },
+ buildBonusRows:{
+  fortify:{hp:.05,attack:.01,defense:.05,skill:.01,crit:.005},
+  assassin:{hp:.02,attack:.05,defense:.01,skill:.01,crit:.02},
+  archer:{hp:.01,attack:.04,defense:.02,skill:.02,crit:.015},
+  mage:{hp:.01,attack:.01,defense:.01,skill:.05,crit:.005},
+  restore:{hp:.02,attack:.02,defense:.03,skill:.03,crit:.0025}
+ },
  skillVector(d){
   const id=d?.id||'',role=d?.role||'',blank={fortify:0,assassin:0,archer:0,mage:0,restore:0};
   if(role==='heal'||id==='h_healing_aura'||id==='p_blood_body'||id==='p_recovery_cycle')return {...blank,restore:1};
@@ -429,6 +454,10 @@ window.GameEntities.CombatSystem = {
  levelGrowth(p){
   const w=this.normalizedBuild(p),g={hp:0,attack:0,defense:0,crit:0,mana:0,skill:0,hpRegen:0};
   for(const [key,row] of Object.entries(this.buildRows))for(const stat of Object.keys(g))g[stat]+=w[key]*(row[stat]||0);
+  // Equipment HP is already included in maxHp; exclude it from permanent level bonuses.
+  const equipmentHp=[p.weapon,p.armor,p.helmet,p.boots].reduce((sum,item)=>sum+(item?.hp||0),0);
+  const base={hp:Math.max(0,(p.maxHp||0)-equipmentHp),attack:p.attack||0,defense:p.defense||0,skill:p.skillPower||0,crit:p.critChance||0};
+  for(const [key,row] of Object.entries(this.buildBonusRows))for(const [stat,rate] of Object.entries(row))g[stat]+=w[key]*rate*base[stat];
   return g;
  },
  dominantBuild(p){
@@ -459,7 +488,11 @@ window.GameEntities.CombatSystem = {
   },
   startAction(e, kind, target, resolve, options = {}) {
     if (e.action || !e.isAlive) return false;
-    if (target && ['attack','skill'].includes(kind) && (!this.canEngage(e,target)||!this.reserveCombat(e,target))) return false;
+    if (target && ['attack','skill'].includes(kind)) {
+      const den=this.bossDen(target)||this.bossDen(e);
+      if(e.isPlayerControlled&&den&&!this.insideDen(e,den))window.GameRenderer.VfxManager.addDamageNumber(e.x,e.y-18,'VÀO SÀO HUYỆT','block');
+      if (!this.canEngage(e,target)||!this.reserveCombat(e,target)) return false;
+    }
     if(target&&['attack','skill'].includes(kind)){e.isHiding=false;e.stealthTimer=0;}
     const style = options.style || this.weaponStyle(e), timing = this.styles[style];
     const windup = options.windup ?? timing.windup;
@@ -886,7 +919,7 @@ window.GameEntities.CombatSystem = {
   },
   applyDamage(a, t, weapon, c = {}) {
     if (!a || !t) return 0;
-    if (c.mythicBomb){ if(!this.isEnemy(a,t)) return 0; }
+    if (c.mythicBomb){ if(!this.isEnemy(a,t)) return 0; const den=this.bossDen(t)||this.bossDen(a); if(den&&(!this.insideDen(a,den)||!this.insideDen(t,den)))return 0; }
     else if (!this.canEngage(a,t) || t.invincible || t.relicInvulnerable>0 || !this.reserveCombat(a,t)) return 0;
     if(t.phoenixEgg){const dealt=Math.max(1,c.baseDamage??this.combatStats(a).attack);t.phoenixEgg.hp-=dealt;a.lastHostileAt=t.lastHostileAt=window.GameManager.matchTime||0;window.GameRenderer.VfxManager.addDamageNumber(t.x,t.y,dealt,'normal');if(t.phoenixEgg.hp<=0){t.phoenixEgg=null;t.currentHp=0;this.handleDeath(a,t);}return dealt;}
     if(t.afterimageReady&&c.projectile&&!c.dot&&t.action?.kind==='dodge'){t.afterimageReady=0;return 0;}
@@ -1020,7 +1053,14 @@ window.GameEntities.CombatSystem = {
     }
     if(victim.isMonster&&victim.tier>=4&&victim.territory)victim.territory.isCleared=true;
     window.GameRenderer.VfxManager.addBurstParticles(victim.x, victim.y, '#d8c4a3', 12);
-    if (killer?.isPawn&&!victim.isAncient&&!victim.isAncientClone) { this.rewardBotKill(killer,victim);killer.currentExp += victim.isPawn ? Math.max(1,victim.level||1)*60 : victim.expReward||50; this.checkLevelUp(killer); killer.killCount = (killer.killCount || 0) + 1; window.GameAI.EmotionEngine.onKillOrLoot(killer, victim.dropTier || 'rare'); }
+    if (killer?.isPawn&&!victim.isAncient&&!victim.isAncientClone) {
+      this.rewardBotKill(killer,victim);
+      const exp = victim.isPawn ? Math.max(1,victim.level||1)*100
+        : victim.expRewardPerLevel ? victim.expRewardPerLevel*Math.max(1,killer.level||1)
+        : victim.expReward??60;
+      killer.currentExp += exp;
+      this.checkLevelUp(killer); killer.killCount = (killer.killCount || 0) + 1; window.GameAI.EmotionEngine.onKillOrLoot(killer, victim.dropTier || 'rare');
+    }
     if(victim.isMonster&&killer?.isPawn)for(const pawn of window.GameManager.pawns||[])if(pawn!==killer&&pawn.isAlive&&(pawn.targetEnemy===victim||pawn.plan?.target===victim))window.GameAI.AIBrain.noteGrudge(pawn,killer,'kill');
     this.rememberBotKill(killer,victim);
     this.dropLootOnDeath(victim);

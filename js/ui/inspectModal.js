@@ -284,10 +284,10 @@ window.GameUI.InspectModal = {
         <div>Phòng ngự: <b>${m.defense}</b></div>
         <div>Tốc độ chạy: <b>${m.speed}</b></div><div>Tầm đánh: <b>${window.GameEntities.CombatSystem.combatStats(m).range}</b> • Tầm nhìn: <b>${window.GameEntities.CombatSystem.visionRange(m)}</b></div>
         <div>Sinh cảnh: <b>${m.territory?.name||window.GameData.HabitatNames[m.habitat]||'—'}</b></div>
-        <div>EXP khi hạ: <b>${m.expReward}</b></div>
+        <div>EXP khi hạ: <b>${m.expRewardPerLevel?m.expRewardPerLevel+' × cấp của bot kết liễu':m.expReward}</b></div>
         <div>Nhịp phép chung: <b>${m.globalSkillCooldown>0?m.globalSkillCooldown.toFixed(1)+'s':'Sẵn sàng'}</b> • Tối đa 1 phép / ${m.tier>=6?1:m.tier===5?2:3}s</div>
         <div class="monster-objective">Mục tiêu: <b>${m.objective||"Canh giữ sinh cảnh"}</b></div>
-        ${m.tier>=6?'<div>Lượt '+(m.gauntletRound||1)+'/'+window.GameEntities.AncientSystem.total+' • Hai phase • Rơi 1 Thượng Cổ và 1 bình hồi đầy máu; boss tiếp theo sau 10s.</div>':`<div>Phẩm chất rơi đồ: <b>${m.dropTier}</b></div>
+        ${m.tier>=6?'<div>Một Thượng Cổ ngẫu nhiên • Hai phase • Rơi 1 Thượng Bảo và 1 bình hồi đầy máu.</div>':`<div>Phẩm chất rơi đồ: <b>${m.dropTier}</b></div>
         <div>Tỷ lệ rơi: <b>${[0,20,30,40,100,100][m.tier]}%</b> • ${m.tier===5?"1 bình máu + vũ khí, giáp, mũ Thần Khí":m.tier===4?"1 bình máu + 1 trang bị/vũ khí":"1 bình máu hoặc 1 trang bị/vũ khí"}</div>`}
       </div>
       ${m.weapon?'<div class="inspect-section pane-equipment">'+this.weaponDetails(m.weapon)+'</div>':'<div class="inspect-section pane-equipment empty-slot">Đối tượng chiến đấu bằng sức mạnh tự thân, không mang trang bị.</div>'}

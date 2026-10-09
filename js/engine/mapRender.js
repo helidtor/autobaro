@@ -499,16 +499,16 @@ window.GameEngine.MapRender = (() => {
     },
     seal(M, ctx, v) {
       const x = 1300, y = 1300; if (!hits(v, x - 190, y - 190, 380, 380)) return;
-      const remaining = M.remainingLords();
-      ctx.save(); ctx.strokeStyle = remaining ? '#ffad80' : '#9adbbe'; ctx.lineWidth = remaining ? 4 : 2; ctx.shadowColor = remaining ? '#e27477' : '#9adbbe'; ctx.shadowBlur = remaining ? 8 : 0;
-      ctx.setLineDash(remaining ? [10, 4] : []); ctx.beginPath(); ctx.arc(x, y, 166, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      const remaining = M.remainingLords(), locked = !!M.godFightLocked;
+      ctx.save(); ctx.strokeStyle = locked ? '#ff5d6c' : remaining ? '#ffad80' : '#9adbbe'; ctx.lineWidth = locked || remaining ? 4 : 2; ctx.shadowColor = locked ? '#ff5d6c' : remaining ? '#e27477' : '#9adbbe'; ctx.shadowBlur = locked || remaining ? 8 : 0;
+      ctx.setLineDash(locked || remaining ? [10, 4] : []); ctx.beginPath(); ctx.arc(x, y, 166, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
       if (remaining) for (const angle of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
         ctx.save(); ctx.translate(x + Math.cos(angle) * 166, y + Math.sin(angle) * 166); ctx.rotate(angle);
         ctx.fillStyle = '#583e51'; ctx.strokeStyle = '#ffd9a7'; ctx.lineWidth = 2; ctx.fillRect(-6, -18, 12, 36); ctx.strokeRect(-6, -18, 12, 36);
         for (const offset of [-10, 0, 10]) { ctx.beginPath(); ctx.moveTo(-5, offset - 3); ctx.lineTo(5, offset + 3); ctx.stroke(); } ctx.restore();
       }
-      ctx.restore(); ctx.fillStyle = remaining ? '#ffd3a6' : '#b1f1d4'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
-      ctx.fillText(remaining ? 'PHONG ẤN • CÒN ' + remaining + ' YÊU VƯƠNG' : 'PHONG ẤN ĐÃ GIẢI', x, y + 145);
+      ctx.restore(); ctx.fillStyle = locked ? '#ffd0d4' : remaining ? '#ffd3a6' : '#b1f1d4'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
+      ctx.fillText(locked ? 'ĐIỆN KHÓA • YÊU THẦN' : remaining ? 'PHONG ẤN • CÒN ' + remaining + ' YÊU VƯƠNG' : 'PHONG ẤN ĐÃ GIẢI', x, y + 145);
     }
   };
   const H_LABEL = 160;

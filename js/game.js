@@ -128,6 +128,12 @@ window.GameManager = {
     if (!this.isGameOver || !this.demonKing || this.pawns.some(p => p.isAlive)) return false;
     return this.startNewMatch('keep');
   },
+  conquerDemonKing: function() {
+    const A = window.GameEntities.AncientSystem, boss = window.GameEntities.EntityManager.worldBoss;
+    if (!this.isGameOver || !this.demonKing || this.pawns.some(p => p.isAlive)) return false;
+    if (!boss?.isAlive || A.awakened || A.demonKingFight) return false;
+    return this.startNewMatch('keep');
+  },
   startNewMatch: function(mode) {
     if (this.matchStarting) return false;
     if (mode === 'succeed' && !this.winnerPawn?.isAlive) return false;
@@ -138,7 +144,7 @@ window.GameManager = {
     try {
     if (mode === 'succeed') this.demonKing = crowned;
     else if (mode !== 'keep') this.demonKing = null;
-    this.matchTime=0;this.gameSpeed=1;this.isPaused=false;this.isGameOver=false;
+    this.matchTime=0;this.gameSpeed=1;this.isPaused=false;this.isGameOver=false;this.conquerOffer=false;
     this.battleRoyaleResolved=false;this.finalShowdown=false;this.resultOpen=false;this.winnerPawn=null;this.cataclysm=false;this.ancientDefeated=false;
     window.GameEntities.AncientSystem.reset();
     this.selectedEntity=null;this.isPlayerMode=false;this.keys={};this.mouse.isDown=false;
@@ -192,7 +198,7 @@ window.GameManager = {
       if (e.key === 'Escape' && this.resultOpen) this.continueAfterResult();
       if (this.isGameOver && this.resultOpen && !e.repeat) {
         if (e.key === '1') { e.preventDefault(); this.startNewMatch(); return; }
-        if (e.key === '2') { e.preventDefault(); if (this.winnerPawn?.isAlive) this.usurpDemonKing(); else if (this.demonKing) this.retryDemonKing(); return; }
+        if (e.key === '2') { e.preventDefault(); if (this.winnerPawn?.isAlive) this.usurpDemonKing(); else if (this.conquerOffer) this.conquerDemonKing(); else if (this.demonKing) this.retryDemonKing(); return; }
       }
       if (this.isPlayerMode && !this.isPaused && !this.isGameOver) {
         if (e.key === 'Shift') window.GameEntities.CombatSystem.defend(this.playerPawn, 'block');
@@ -388,6 +394,7 @@ window.GameManager = {
   update: function(dt) {
     if (this.isGameOver || this.isPaused || dt <= 0) return;
 
+    window.GameEngine.MapTerrain.noteGodFight();
     const aliveCount=this.pawns.filter(p=>p.isAlive).length;
     this.finalShowdown=!this.battleRoyaleResolved&&aliveCount>=2&&aliveCount<=5;
     window.GameEntities.EntityManager.updateRespawns(dt);
@@ -452,10 +459,11 @@ window.GameManager = {
     }
     if (p.isPlayerControlled || p.stunTimer > 0) return;
     if (window.GameEntities.AncientSystem.boss?.isDemonKing && window.GameEntities.RelicSystem.distract(p, dt)) return;
-    // Quyết định lại mỗi 0.1s. Giữa các mốc vẫn đi theo đường đã có. dt >= 0.1 thì nghĩ mỗi lần gọi.
+    // Quyết định lại mỗi 0.1s. Giữa các mốc vẫn đi theo đường đã có. Hết đường thì nghĩ ngay, không đứng chờ hết cửa.
+    // dt >= 0.1 vẫn nghĩ mỗi lần gọi.
     p.thinkTimer = (p.thinkTimer || 0) - dt;
-    if (p.thinkTimer > 0 && !p.action) {
-      if (p.navPath?.length && p.navGoal) window.GameEngine.MapTerrain.navigate(p, p.navGoal.x, p.navGoal.y, dt);
+    if (p.thinkTimer > 0 && !p.action && p.navPath?.length && p.navGoal) {
+      window.GameEngine.MapTerrain.navigate(p, p.navGoal.x, p.navGoal.y, dt);
       return;
     }
     p.thinkTimer = 0.1;
@@ -515,6 +523,7 @@ window.GameManager = {
       if(m.tier>=3&&window.GameAI.BossBrain.update(m,targets,dt))return;
       targets.sort((a,b)=>Math.hypot(a.x-m.x,a.y-m.y)-Math.hypot(b.x-m.x,b.y-m.y));
       const target=targets[0];m.targetEnemy=target||null;
+      if(target&&m.tier===5&&m===window.GameEntities.EntityManager.worldBoss&&!m.isAncient)M.godFightLocked=true;
       if(target){
         const dist=Math.hypot(target.x-m.x,target.y-m.y);m.aimAngle=Math.atan2(target.y-m.y,target.x-m.x);
         if(m.skills.some(s=>C.castSkill(m,s,target)))return;
@@ -557,7 +566,9 @@ window.GameManager = {
       window.GameUI.DirectorControls.showPostMatchStoryCard(this.winnerPawn);
     } else if (this.battleRoyaleResolved && !alive.length) {
       this.isGameOver=true;
-      if(window.GameEntities.AncientSystem.awakened&&!this.resultOpen){this.resultOpen=true;this.isPaused=true;window.GameUI.DirectorControls.syncSpeed();window.GameUI.DirectorControls.showPostMatchStoryCard(null);}
+      const ancient=window.GameEntities.AncientSystem,godAlive=!!window.GameEntities.EntityManager.worldBoss?.isAlive;
+      const conquer=!!this.demonKing&&godAlive&&!ancient.awakened&&!ancient.demonKingFight;
+      if(!this.resultOpen&&(conquer||ancient.awakened)){this.resultOpen=true;this.isPaused=true;window.GameUI.DirectorControls.syncSpeed();window.GameUI.DirectorControls.showPostMatchStoryCard(null);}
     }
   },
 
@@ -666,7 +677,7 @@ window.GameManager = {
       const ancient=window.GameEntities.AncientSystem.boss;
       const trial=window.GameEntities.AncientSystem;
       const prep=trial.pendingGod&&!trial.awakened?(this.demonKing?'Quỷ Vương • ':'Thượng Cổ • ')+Math.ceil(trial.wakeRemaining)+'s':'';
-      const text=prep||(ancient?.isDemonKing&&ancient.isAlive?'Quỷ Vương • '+ancient.name:trial.nextAt!==null?'Boss '+(trial.defeated+1)+'/'+trial.total+' • '+Math.max(0,trial.nextAt-trial.clock).toFixed(1)+'s':ancient?.isAlive?'Thượng Cổ '+ancient.gauntletRound+'/'+window.GameEntities.AncientSystem.total+' • Phase '+ancient.phase:this.ancientDefeated?'Đã chinh phục Thượng Cổ':remaining?'Khóa • còn '+remaining+' Yêu Vương':window.GameEntities.EntityManager.worldBoss?.isAlive?'Đã mở cửa':'Đã hạ Yêu Thần');
+      const text=prep||(ancient?.isDemonKing&&ancient.isAlive?'Quỷ Vương • '+ancient.name:trial.nextAt!==null?'Boss '+(trial.defeated+1)+'/'+trial.total+' • '+Math.max(0,trial.nextAt-trial.clock).toFixed(1)+'s':ancient?.isAlive?'Thượng Cổ • Phase '+ancient.phase:this.ancientDefeated?'Đã chinh phục Thượng Cổ':remaining?'Khóa • còn '+remaining+' Yêu Vương':window.GameEntities.EntityManager.worldBoss?.isAlive?'Đã mở cửa':'Đã hạ Yêu Thần');
       if(templeStatus.textContent!==text) templeStatus.textContent=templeStatus.innerText=text;
     }
 

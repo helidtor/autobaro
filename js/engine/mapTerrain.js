@@ -33,6 +33,7 @@ window.GameEngine.MapTerrain = {
   this.bridges=L.river.bridges.map(y=>y*s);this.fords=L.river.fords.map(f=>({...f,y:f.y*s}));
   this.lairs=L.lairDefs.map((d,i)=>({id:'lair_'+i,name:d.name,x:d.x*s,y:d.y*s,radius:125*s,color:d.color,theme:d.theme}));
   this.templeRuins={id:'temple',name:'ĐIỆN THỜ YÊU THẦN',x:w/2,y:h/2,radius:L.temple.r*s};
+  this.godFightLocked=false;
   this.waterBodies=[{x:this.riverX(1000),y:1000,radius:54*s}];
   this.cliffs=L.regions.flatMap(r=>r.ledges||[]).map(([x,y,r])=>({x:x*s,y:y*s,radius:r*s}));
   this.marshes=L.regions.flatMap(r=>r.marsh||[]).map(m=>({x:m.x*s,y:m.y*s,rx:m.rx*s,ry:m.ry*s}));
@@ -151,12 +152,31 @@ window.GameEngine.MapTerrain = {
  },
  templeAccess(e,x,y){
   if(this.ancientArena)return true;
+  if(this.godArenaBlocks(e,x,y))return false;
   if(!this.templeRuins||!this.remainingLords())return true;
   if(e?.isMonster&&e.tier>=5)return true;
   const a=this.templeRuins,d=Math.hypot(x-a.x,y-a.y);
   if(d>=a.radius+12)return true;
   // An actor already inside can leave, but cannot move further into a locked arena.
   return !!e&&d>Math.hypot(e.x-a.x,e.y-a.y)+.01;
+ },
+ // Yêu Thần (trận thần đầu, không phải Thượng Cổ): một khi giao tranh đã mở thì ai đang trong điện không bước ra.
+ noteGodFight(){
+  const boss=window.GameEntities.EntityManager?.worldBoss;
+  if(!boss?.isAlive||boss.tier!==5||boss.isAncient){this.godFightLocked=false;return;}
+  if(this.godFightLocked)return;
+  const fighting=boss.combatLease>0||boss.targetEnemy?.isAlive||!!boss.action?.target?.isAlive
+    ||(window.GameManager?.pawns||[]).some(p=>p.isAlive&&(p.targetEnemy===boss||p.action?.target===boss)&&(p.combatLease>0||p.action));
+  if(fighting)this.godFightLocked=true;
+ },
+ godArenaBlocks(e,x,y){
+  if(!this.godFightLocked||this.ancientArena||!e||!this.templeRuins)return false;
+  const boss=window.GameEntities.EntityManager?.worldBoss;
+  if(!boss?.isAlive||boss.tier!==5||boss.isAncient){this.godFightLocked=false;return false;}
+  const a=this.templeRuins,limit=a.radius,start=Math.hypot(e.x-a.x,e.y-a.y);
+  if(start>limit+8)return false;
+  const next=Math.hypot(x-a.x,y-a.y);
+  return next>limit&&next>start+.01;
  },
  moveEntity(e,dx,dy){
   const r=e.collisionRadius||9,n=Math.max(1,Math.ceil(Math.hypot(dx,dy)/6));

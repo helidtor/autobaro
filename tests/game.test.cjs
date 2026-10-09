@@ -323,15 +323,42 @@ test('all boss passives have valid labels and a bounded cooldown',()=>{
  }
 });
 
+test('monsters award 20% more EXP, including final-hunt rewards',()=>{
+ const w=loadGame(),G=w.GameManager,E=w.GameEntities.EntityManager,C=w.GameEntities.CombatSystem,p=G.pawns[0];
+ for(const category of ['minions','beasts','generals','lords'])for(const def of w.GameData.Monsters[category]){
+  const monster=E.spawnMonster(def,1000,300);
+  assert.equal(monster.expReward,Math.round(def.expReward*1.2));
+  const before=p.currentExp;C.handleDeath(p,monster);
+  assert.equal(p.currentExp-before,Math.round(def.expReward*1.2));
+ }
+ p.currentExp=320;const missing=6400-p.currentExp;
+ E.startFinalHunt(p);
+ for(const monster of E.finalHuntMonsters){
+  const def=[...w.GameData.Monsters.lords,w.GameData.FinalLord].find(d=>d.id===monster.defId);
+  assert.equal(monster.expReward,Math.round(Math.max(def.expReward,Math.ceil(missing/5))*1.2));
+ }
+});
+
+test('god EXP uses the killer level before leveling up and inspection shows the formula',()=>{
+ for(const level of [1,15,20]){
+  const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,p=G.pawns[0],god=w.GameEntities.EntityManager.worldBoss;
+  p.currentExp=w.GameData.LevelTable.expForLevel(level);C.checkLevelUp(p);
+  w.GameUI.InspectModal.inspect(god);assert.match(w.documentText('inspect-panel'),/750 × cấp của bot kết liễu/);
+  const before=p.currentExp;C.handleDeath(p,god);
+  assert.equal(p.currentExp-before,750*level);
+  C.handleDeath(p,god);assert.equal(p.currentExp-before,750*level);
+ }
+});
+
 test('bot PvP always drops carried gear or a 25% upgrade, and awards level-scaled XP',()=>{
  const w=loadGame(),C=w.GameEntities.CombatSystem,G=w.GameManager,[k,v]=G.pawns;
  w.GameRenderer.VfxManager.addBurstParticles=()=>{};
  v.weapon=w.GameData.Equipments.weapons.w_wooden_wand;w.__math.random=()=>.25;
- C.handleDeath(k,v);assert.equal(k.level,1);assert.equal(k.currentExp,60);assert.equal(G.dropItems.length,1);assert.equal(G.dropItems[0].data.id,v.weapon.id);
+ C.handleDeath(k,v);assert.equal(k.level,2);assert.equal(k.currentExp,100);assert.equal(G.dropItems.length,1);assert.equal(G.dropItems[0].data.id,v.weapon.id);
  const v2=G.pawns[2];v2.level=8;v2.weapon={id:'victim_sword',name:'Sword',type:'sword',tier:'super_rare'};
- w.__math.random=()=>.24999;C.handleDeath(k,v2);assert.equal(G.dropItems[1].tier,'supreme');assert.equal(k.currentExp,540);assert.equal(k.level,5);
+ w.__math.random=()=>.24999;C.handleDeath(k,v2);assert.equal(G.dropItems[1].tier,'supreme');assert.equal(k.currentExp,900);assert.equal(k.level,6);
  const count=G.dropItems.length;C.handleDeath(G.monsters[0],G.pawns[3]);assert.equal(G.dropItems.length,count);
- k.isPlayerControlled=true;C.handleDeath(k,G.pawns[4]);assert.equal(G.dropItems.length,count);assert.equal(k.currentExp,600);
+ k.isPlayerControlled=true;C.handleDeath(k,G.pawns[4]);assert.equal(G.dropItems.length,count);assert.equal(k.currentExp,1000);
 });
 
 test('PvP upgrade caps at god, naked victims get an item, and gear preserves its slot',()=>{
@@ -620,6 +647,72 @@ test('temple seal blocks movement, paths, attacks and opens only after every lor
  lords[3].isAlive=false;assert.equal(M.remainingLords(),0);assert.equal(M.templeAccess(p,2500,2600),true);
  M.moveEntity(p,100,0);assert.ok(p.x>2600-M.templeRuins.radius);
  G.updateHUD();
+});
+
+test('lord, god and ancient vision scale and the first god fight seals the temple exit',()=>{
+ const w=loadGame(),G=w.GameManager,M=w.GameEngine.MapTerrain,C=w.GameEntities.CombatSystem,p=G.pawns[0],q=G.pawns[1];
+ const lord=G.monsters.find(m=>m.tier===4),god=w.GameEntities.EntityManager.worldBoss,minion=G.monsters.find(m=>m.tier<=3);
+ assert.equal(C.visionRange(minion),220);
+ assert.equal(C.visionRange(lord),600);
+ assert.equal(C.visionRange(god),900);
+ assert.equal(C.visionRange({isMonster:true,tier:6,isAncient:true}),1200);
+ assert.equal(C.visionRange({isMonster:true,tier:6,isAncientClone:true}),1200);
+ G.monsters.forEach(m=>{if(m.tier===4)m.isAlive=false;});
+ const a=M.templeRuins;
+ p.x=a.x;p.y=a.y;god.x=a.x;god.y=a.y;god.isAncient=false;god.tier=5;
+ assert.equal(M.godFightLocked,false);
+ assert.equal(M.templeAccess(p,a.x+a.radius+40,a.y),true);
+ M.godFightLocked=true;
+ assert.equal(M.templeAccess(p,a.x+a.radius+40,a.y),false);
+ assert.equal(M.templeAccess(god,a.x+a.radius+40,a.y),false);
+ assert.equal(M.templeAccess(p,a.x+10,a.y),true);
+ M.moveEntity(p,a.radius+120,0);
+ assert.ok(Math.hypot(p.x-a.x,p.y-a.y)<=a.radius+1);
+ M.moveEntity(god,a.radius+120,0);
+ assert.ok(Math.hypot(god.x-a.x,god.y-a.y)<=a.radius+1);
+ q.x=a.x+a.radius+40;q.y=a.y;
+ assert.equal(M.templeAccess(q,a.x,a.y),true);
+ god.x=1000;god.y=300;god.targetEnemy=p;
+ assert.equal(M.templeAccess(god,1200,300),true);
+ M.ancientArena={};
+ assert.equal(M.templeAccess(p,a.x+a.radius+80,a.y),true);
+ M.ancientArena=null;god.isAlive=false;M.noteGodFight();
+ assert.equal(M.godFightLocked,false);
+ p.x=a.x;p.y=a.y;god.x=a.x;god.y=a.y;god.isAlive=true;god.targetEnemy=p;M.godFightLocked=false;
+ M.noteGodFight();assert.equal(M.godFightLocked,true);
+});
+
+test('bosses from yêu vương upward only take hits from inside their den',()=>{
+ const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,A=w.GameAI.AIBrain,M=w.GameEngine.MapTerrain,p=G.pawns[0];
+ const lord=G.monsters.find(m=>m.tier===4),den=lord.territory,god=w.GameEntities.EntityManager.worldBoss;
+ lord.x=den.x+den.radius-24;lord.y=den.y;p.x=den.x+den.radius+50;p.y=den.y;p.level=15;
+ p.weapon={type:'bow',range:220,attack:40,speed:1};p.currentHp=p.maxHp=5000;
+ assert.equal(C.insideDen(p,den),false);assert.equal(C.canEngage(p,lord),false);assert.equal(C.canEngage(lord,p),false);
+ assert.equal(C.applyDamage(p,lord,p.weapon,{baseDamage:80}),0);assert.equal(C.executeAttack(p,lord),false);
+ const outside=p.x;A.engageCombat(p,lord,.4);assert.equal(p.targetEnemy,lord);assert.ok(p.x<outside);
+ p.x=lord.x-20;p.y=lord.y;assert.equal(C.canEngage(p,lord),true);assert.equal(C.canEngage(lord,p),true);
+ const hp=lord.currentHp;assert.ok(C.applyDamage(p,lord,null,{baseDamage:30})>0);assert.ok(lord.currentHp<hp);
+ p.x=den.x+den.radius-8;p.y=den.y;p.currentStamina=100;A.retreatSafely(p,lord,.1,true);
+ assert.ok(Math.hypot(p.x-den.x,p.y-den.y)<=den.radius+1);
+ G.monsters.forEach(m=>{if(m.tier===4)m.isAlive=false;});
+ [p,lord,god].forEach(e=>{e.combatLease=0;e.combatGroup=null;e.action=null;});
+ const temple=M.templeRuins;god.x=temple.x;god.y=temple.y;p.x=temple.x+temple.radius+40;p.y=temple.y;
+ assert.equal(C.insideDen(p,god.territory),false);assert.equal(C.canEngage(p,god),false);
+ p.x=temple.x+24;assert.equal(C.insideDen(p,god.territory),true);assert.equal(C.canEngage(p,god),true);
+ const minion=G.monsters.find(m=>m.tier===1);minion.x=1000;minion.y=300;p.x=1040;p.y=300;minion.territory=null;p.combatLease=0;p.combatGroup=null;
+ assert.equal(C.bossDen(minion),null);assert.equal(C.canEngage(p,minion),true);
+});
+
+test('a bot that cannot enter a den leaves it instead of standing, and an empty think window still decides',()=>{
+ const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,p=G.pawns[0],lord=G.monsters.find(m=>m.tier===4),den=lord.territory;
+ p.level=3;p.x=den.x+den.radius+100;p.y=den.y;p.currentHp=p.maxHp;p.action=null;p.plan={kind:'farm',target:lord,until:999};
+ for(let i=0;i<20;i++)A.engageCombat(p,lord,.4);
+ assert.notEqual(p.targetEnemy,lord);assert.equal(A.ignored(p,lord),true);assert.doesNotMatch(p.objective||'',/Vào sào huyệt/);
+ p.level=15;p.ignoredTargets={};p.denApproach=null;p.plan=null;p.x=den.x+den.radius+50;p.y=den.y;
+ const outside=p.x;A.engageCombat(p,lord,.4);assert.equal(p.targetEnemy,lord);assert.ok(p.x<outside);
+ p.thinkTimer=0.08;p.navPath=[{x:p.x+80,y:p.y}];p.navGoal={x:p.x+80,y:p.y};p.action=null;const stamp=p.decisionTime||0;
+ G.updateBot(p,0.03);assert.equal(p.decisionTime||0,stamp);
+ p.navPath=[];G.updateBot(p,0.03);assert.ok((p.decisionTime||0)>stamp);
 });
 
 test('physical admission rejects a fourth solo bot and admits exactly two allied pairs',()=>{
@@ -915,7 +1008,7 @@ test('all five Ancient variants awaken in the collapsed arena and continue the g
   assert.equal(m.phase,2);assert.equal(m.currentHp,m.phaseMaxHp);assert.equal(m.isAlive,true);assert.equal(G.isGameOver,false);
   m.stunTimer=m.silenceTimer=m.slowTimer=10;C.updateStatus(m,.1);assert.equal(m.stunTimer+m.silenceTimer+m.slowTimer,0);
   m.currentHp=0;C.handleDeath(p,m);assert.equal(m.isAlive,false);assert.equal(G.isGameOver,false);assert.equal(G.isPaused,false);
-  assert.equal(p.currentExp,exp);assert.equal(G.dropItems.length,drops+2);assert.equal(A.defeated,1);assert.equal(A.nextAt,A.clock+10);
+  assert.equal(p.currentExp,exp);assert.equal(G.dropItems.length,drops+2);assert.equal(A.defeated,1);assert.equal(A.nextAt,null);assert.equal(A.victoryPending,true);assert.equal(A.queue.length,0);assert.equal(A.total,1);
   G.startNewMatch();assert.equal(A.awakened,false);assert.equal(A.boss,null);assert.equal(G.isGameOver,false);
  }
 });
@@ -1000,7 +1093,7 @@ test('boss brain attack range matches its real normal attack; Mirror clone death
  const a=ancientScenario('mirror');a.m.currentHp=0;a.C.handleDeath(a.p,a.m);a.A.split(a.m,a.p);
  const [first,second]=a.m.clones;assert.equal(first.speed,a.m.speed*.5);
  first.currentHp=0;a.C.handleDeath(a.p,first);assert.equal(a.m.isAlive,true);assert.equal(a.m.currentHp,second.currentHp);
- second.currentHp=0;a.C.handleDeath(a.p,second);assert.equal(a.G.isGameOver,false);assert.equal(a.A.defeated,1);assert.equal(a.A.nextAt,a.A.clock+10);
+ second.currentHp=0;a.C.handleDeath(a.p,second);assert.equal(a.G.isGameOver,false);assert.equal(a.A.defeated,1);assert.equal(a.A.nextAt,null);assert.equal(a.A.victoryPending,true);
 });
 
 test('expired alliances disperse before breaking a four-person physical crowd',()=>{
@@ -1250,34 +1343,32 @@ test('high-tier monsters recover percentage HP only out of combat, with frame-in
  god.targetEnemy=null;G.isPaused=true;G.update(1);assert.equal(god.currentHp,101);
 });
 
-test('God rewards every top-tier equipment slot, one potion and 10000 EXP before Ancient awakening',()=>{
+test('God rewards every top-tier equipment slot, one potion and killer-level EXP before Ancient awakening',()=>{
  const w=loadGame(),G=w.GameManager,E=w.GameEntities.EntityManager,C=w.GameEntities.CombatSystem,p=G.pawns[0],god=E.worldBoss;
  G.pawns.forEach(e=>e.isAlive=e===p);G.checkVictoryCondition();p.currentExp=6400;C.checkLevelUp(p);assert.equal(p.level,15);
- assert.equal(god.expReward,10000);const before=p.currentExp;C.handleDeath(p,god);
- assert.equal(p.currentExp-before,10000);assert.ok(p.level>15);
+ assert.equal(god.expRewardPerLevel,750);const before=p.currentExp;C.handleDeath(p,god);
+ assert.equal(p.currentExp-before,11250);assert.ok(p.level>15);
  const rewards=G.dropItems.filter(d=>d.slot!=='potion');assert.equal(rewards.length,3);
  assert.deepEqual(Array.from(rewards,d=>d.slot).sort(),['body','head','weapon']);assert.ok(rewards.every(d=>d.tier==='god'));
  assert.equal(G.dropItems.filter(d=>d.slot==='potion').length,1);assert.equal(w.GameEntities.AncientSystem.awakened,false);assert.equal(w.GameEntities.AncientSystem.wakeRemaining,20);
   w.GameUI.InspectModal.inspect(god);assert.match(w.documentText('inspect-panel'),/Hồi 0 HP\/s/);assert.match(w.documentText('inspect-panel'),/giáp, mũ Thần Khí/);
- const count=G.dropItems.length;C.handleDeath(p,god);assert.equal(G.dropItems.length,count);assert.equal(p.currentExp-before,10000);
+ const count=G.dropItems.length;C.handleDeath(p,god);assert.equal(G.dropItems.length,count);assert.equal(p.currentExp-before,11250);
 });
 
 
-test('gauntlet defeats all five unique bosses, waits exactly ten seconds and drops five different relics',()=>{
- const a=ancientScenario('colossus'),{w,G,C,A,p}=a,M=w.GameEngine.MapTerrain,seen=[];
- for(let round=1;round<=5;round++){
-  const m=A.boss;seen.push(m.ancientKind);assert.equal(m.gauntletRound,round);assert.equal(m.isAlive,true);
-  const count=G.dropItems.filter(d=>d.tier==='ancient'&&d.slot!=='potion').length;
-  m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(G.dropItems.filter(d=>d.tier==='ancient'&&d.slot!=='potion').length,count);
-  m.currentHp=0;C.handleDeath(p,m);assert.equal(G.dropItems.filter(d=>d.tier==='ancient'&&d.slot!=='potion').length,count+1);
-  const relic=p.relicLoot;assert.equal(relic.tier,'ancient');C.handleDeath(p,m);assert.equal(A.defeated,round);
-  p.action=null;p.targetEnemy=null;for(let i=0;i<60&&!relic.isCollected;i++)A.prepare(p,.1);assert.equal(relic.isCollected,true,'survivor walks to collect the relic, equipping only upgrades');
-  const potion=p.ancientPotionLoot;assert.ok(potion.data.fullHeal);p.x=potion.x;p.y=potion.y;w.GameAI.AIBrain.lootItem(p,potion);p.currentHp=p.maxHp*.4;p.potionCooldown=0;C.usePotion(p);C.updateStatus(p,1);assert.equal(p.currentHp,p.maxHp);
-  if(round<5){const next=A.nextAt;A.tick(9.999);assert.equal(A.boss,m);assert.equal(G.isGameOver,false);G.isPaused=true;G.update(10);assert.equal(A.nextAt,next);G.isPaused=false;A.tick(.002);assert.notEqual(A.boss,m);}
- }
- assert.equal(new Set(seen).size,5);assert.deepEqual([...new Set(seen)].sort(),['chaos','colossus','mecha','mirror','void']);assert.equal(new Set(A.usedRelics).size,5);assert.equal(A.queue.length,0);
- A.tick(.1);assert.equal(G.isGameOver,true);assert.equal(G.ancientDefeated,true);assert.match(w.documentText('story-card-modal'),/đủ 5 boss/);
- G.startNewMatch();assert.equal(A.arena,null);assert.equal(M.ancientArena,null);assert.equal(A.usedRelics.length,0);assert.equal(A.defeated,0);
+test('one random ancient is fought through both HP bars and drops one relic',()=>{
+ const a=ancientScenario('colossus'),{w,G,C,A,p}=a,M=w.GameEngine.MapTerrain;
+ assert.equal(A.total,1);assert.equal(A.queue.length,0);assert.equal(A.boss.ancientKind,'colossus');
+ const m=A.boss,count=G.dropItems.filter(d=>d.tier==='ancient'&&d.slot!=='potion').length;
+ m.currentHp=0;C.handleDeath(p,m);assert.equal(m.phase,2);assert.equal(G.dropItems.filter(d=>d.tier==='ancient'&&d.slot!=='potion').length,count);
+ m.currentHp=0;C.handleDeath(p,m);assert.equal(A.defeated,1);assert.equal(A.nextAt,null);assert.equal(A.victoryPending,true);
+ assert.equal(G.dropItems.filter(d=>d.tier==='ancient'&&d.slot!=='potion').length,count+1);
+ const relic=p.relicLoot;assert.equal(relic.tier,'ancient');
+ p.action=null;p.targetEnemy=null;for(let i=0;i<60&&!relic.isCollected;i++)A.prepare(p,.1);assert.equal(relic.isCollected,true,'survivor walks to collect the relic, equipping only upgrades');
+ const potion=p.ancientPotionLoot;assert.ok(potion.data.fullHeal);p.x=potion.x;p.y=potion.y;w.GameAI.AIBrain.lootItem(p,potion);p.currentHp=p.maxHp*.4;p.potionCooldown=0;C.usePotion(p);C.updateStatus(p,1);assert.equal(p.currentHp,p.maxHp);
+ assert.equal(G.monsters.filter(e=>e.isAncient&&e.isAlive).length,0);assert.equal(A.nextAt,null);
+ A.tick(.1);assert.equal(G.isGameOver,true);assert.equal(G.ancientDefeated,true);assert.match(w.documentText('story-card-modal'),/hai thanh máu/);assert.doesNotMatch(w.documentText('story-card-modal'),/đủ 5 boss/);
+ G.startNewMatch();assert.equal(A.arena,null);assert.equal(M.ancientArena,null);assert.equal(A.usedRelics.length,0);assert.equal(A.defeated,0);assert.equal(A.total,1);
  assert.ok(M.canStand(1000,300));assert.equal(M.navBlocked[Math.floor(300/M.cell)*M.cols+Math.floor(1000/M.cell)],0);
 });
 
@@ -1558,7 +1649,7 @@ test('Ancient full-heal potion is independent of normal inventory and restores c
 
 test('between Ancient rounds upgrades are equipped before healing and inferior relics never replace them',()=>{
  const {w,G,C,A,p,m}=ancientScenario('colossus'),AI=w.GameAI.AIBrain,D=w.GameData.Equipments;m.currentHp=0;C.handleDeath(p,m);m.currentHp=0;C.handleDeath(p,m);p.armor=null;p.currentHp=30;p.relicLoot=G.spawnDropItem(p.x,p.y,D.relics.core,'body');p.ancientPotionLoot.x=p.x;p.ancientPotionLoot.y=p.y;const base=p.maxHp;A.prepare(p,.1);assert.equal(p.armor.id,'relic_core');assert.equal(p.maxHp,base+350);A.prepare(p,.1);assert.equal(p.fullHealthPotions,1);p.potionCooldown=0;A.prepare(p,.1);assert.equal(p.action.kind,'drink');C.updateStatus(p,1);assert.equal(p.currentHp,p.maxHp);
- p.relicLoot=G.spawnDropItem(p.x,p.y,D.relics.nano,'body');A.prepare(p,.1);assert.equal(p.armor.id,'relic_core');assert.equal(p.relicLoot.isCollected,true);assert.ok(p.keptRelics.some(r=>r.id==='relic_nano'));A.clock=A.nextAt;A.spawnNext();assert.equal(A.boss.maxHp,Math.round(p.maxHp));const phase2=A.boss.profile.hp2;p.maxHp+=200;A.boss.currentHp=0;C.handleDeath(p,A.boss);assert.equal(A.boss.maxHp,phase2,'phase HP remains a snapshot from spawn');
+ p.relicLoot=G.spawnDropItem(p.x,p.y,D.relics.nano,'body');A.prepare(p,.1);assert.equal(p.armor.id,'relic_core');assert.equal(p.relicLoot.isCollected,true);assert.ok(p.keptRelics.some(r=>r.id==='relic_nano'));A.victoryPending=false;A.queue=[w.GameData.AncientBosses.find(d=>d.kind==='void')];A.spawnNext();assert.equal(A.boss.ancientKind,'void');assert.equal(A.boss.maxHp,Math.round(p.maxHp));const phase2=A.boss.profile.hp2;p.maxHp+=200;A.boss.currentHp=0;C.handleDeath(p,A.boss);assert.equal(A.boss.maxHp,phase2,'phase HP remains a snapshot from spawn');
 });
 
 test('equipment cards expose effects and use shared colors across all six rarity tiers',()=>{
@@ -1766,11 +1857,11 @@ test('a crowned match replaces the god drop, waits out loot, then opens one bot 
  G.winnerPawn=survivor;G.battleRoyaleResolved=true;G.resultOpen=false;G.isPaused=false;G.isGameOver=false;
  G.monsters.filter(m=>m.tier===4).forEach(m=>m.isAlive=false);
  const exp=survivor.currentExp,drops=G.dropItems.length;C.handleDeath(survivor,god);
- assert.equal(survivor.currentExp-exp,10000);assert.equal(A.successionLoot.potions.length,3);
+ assert.equal(survivor.currentExp-exp,11250);assert.equal(A.successionLoot.potions.length,3);
  const prep=G.dropItems.filter(d=>d.successionPrep);assert.equal(prep.length,5);assert.equal(drops+5,G.dropItems.length);
  assert.equal(prep.filter(d=>d.slot==='weapon'&&d.tier==='ancient').length,1);assert.equal(prep.filter(d=>d.slot==='body'&&d.tier==='ancient').length,1);
  assert.equal(prep.filter(d=>d.slot==='potion').length,3);assert.equal(prep.some(d=>d.slot==='head'||d.tier==='god'),false);
- C.handleDeath(survivor,god);assert.equal(G.dropItems.filter(d=>d.successionPrep).length,5);assert.equal(survivor.currentExp-exp,10000);
+ C.handleDeath(survivor,god);assert.equal(G.dropItems.filter(d=>d.successionPrep).length,5);assert.equal(survivor.currentExp-exp,11250);
  for(const item of prep)assert.ok(Brain.lootValue(survivor,item)>0);
  A.tick(20);assert.equal(A.boss,null);assert.equal(A.awakened,false);
  G.isPaused=true;const remain=A.wakeRemaining;G.update(5);assert.equal(A.wakeRemaining,remain);G.isPaused=false;
@@ -1840,8 +1931,45 @@ test('losing to the king offers a rematch and a fresh match clears the crown',()
  for(const item of [loot.weapon,loot.armor,...loot.potions])Brain.lootItem(next,item);w.GameEntities.AncientSystem.tick(20.1);
  assert.equal(w.GameEntities.AncientSystem.boss.isDemonKing,true);assert.equal(G.monsters.filter(m=>m.isDemonKing&&m.isAlive).length,1);
  G.startNewMatch();assert.equal(G.demonKing,null);
- const fresh=G.pawns[0],plain=w.GameEntities.EntityManager.worldBoss;G.pawns.forEach(e=>e.isAlive=e===fresh);C.handleDeath(fresh,plain);
+ const fresh=G.pawns[0],plain=w.GameEntities.EntityManager.worldBoss;G.pawns.forEach(e=>e.isAlive=e===fresh);plain.phoenixReborn=true;C.handleDeath(fresh,plain);
  assert.equal(G.dropItems.filter(d=>d.tier==='god').length,3);assert.equal(G.dropItems.filter(d=>d.successionPrep).length,0);assert.equal(w.GameEntities.AncientSystem.demonKingFight,false);
+});
+
+test('a crowned wipe before the god dies starts a new match that keeps the old king',()=>{
+ const {w,G,C,p}=crownSurvivor();
+ G.isGameOver=true;G.winnerPawn=p;G.usurpDemonKing();
+ const king=G.demonKing,name=king.name;
+ G.pawns.forEach(e=>e.isAlive=false);
+ G.checkVictoryCondition();
+ let card=w.documentText('story-card-modal');
+ assert.match(card,/Ván mới/);assert.match(card,/Chinh phạt quỷ vương/);assert.match(card,/100 bot mới/);assert.match(card,/Quỷ Vương cũ/);
+ assert.equal((card.match(/<button/g)||[]).length,2);
+ assert.doesNotMatch(card,/Khiêu chiến lại|Tiếm ngôi|BẮT ĐẦU TRẬN ĐẤU MỚI/);
+ assert.equal(G.conquerOffer,true);
+ assert.equal(G.conquerDemonKing(),true);
+ assert.equal(G.demonKing,king);assert.equal(G.demonKing.name,name);
+ assert.equal(G.pawns.length,100);assert.equal(G.pawns.filter(e=>e.isAlive).length,100);
+ assert.equal(G.isGameOver,false);assert.equal(G.conquerOffer,false);assert.equal(G.conquerDemonKing(),false);
+ const A=w.GameEntities.AncientSystem,boss=w.GameEntities.EntityManager.worldBoss;
+ assert.equal(boss.isAlive,true);assert.equal(A.awakened,false);assert.equal(A.demonKingFight,false);assert.equal(A.queue.length,0);assert.equal(A.total,1);
+ const survivor=G.pawns[0],Brain=w.GameAI.AIBrain;
+ G.pawns.forEach(e=>e.isAlive=e===survivor);survivor.level=15;survivor.unspentSkillPoints=0;survivor.passivePoolOpened=true;
+ G.winnerPawn=survivor;G.battleRoyaleResolved=true;G.resultOpen=false;G.isPaused=false;G.isGameOver=false;
+ G.monsters.filter(m=>m.tier===4).forEach(m=>m.isAlive=false);
+ C.handleDeath(survivor,boss);
+ const loot=A.successionLoot;
+ for(const item of [loot.weapon,loot.armor,...loot.potions])Brain.lootItem(survivor,item);
+ A.tick(20.1);
+ assert.equal(A.boss.isDemonKing,true);assert.equal(A.boss.name,name);assert.equal(A.queue.length,0);assert.equal(A.demonKingFight,true);
+ assert.equal(G.monsters.filter(m=>m.isAncient&&m.isAlive).length,0);
+ G.startNewMatch('keep');assert.equal(G.demonKing,king);
+ G.battleRoyaleResolved=true;G.pawns.forEach(e=>e.isAlive=false);G.resultOpen=false;G.isGameOver=false;G.isPaused=false;
+ G.checkVictoryCondition();
+ assert.match(w.documentText('story-card-modal'),/Chinh phạt quỷ vương/);
+ assert.equal(G.startNewMatch(),true);assert.equal(G.demonKing,null);
+ G.pawns.forEach(e=>e.isAlive=false);G.checkVictoryCondition();
+ card=w.documentText('story-card-modal');
+ assert.match(card,/BẮT ĐẦU TRẬN ĐẤU MỚI/);assert.doesNotMatch(card,/Chinh phạt/);
 });
 
 test('Battle Royale and the first ancient bosses do not offer the crown',()=>{
@@ -1849,8 +1977,37 @@ test('Battle Royale and the first ancient bosses do not offer the crown',()=>{
  assert.match(w.documentText('story-card-modal'),/btn-continue/);assert.doesNotMatch(w.documentText('story-card-modal'),/Tiếm ngôi/);
  const a=ancientScenario('void');a.m.currentHp=0;a.C.handleDeath(a.p,a.m);a.m.currentHp=0;a.C.handleDeath(a.p,a.m);
  assert.equal(a.G.isGameOver,false);assert.doesNotMatch(a.w.documentText('story-card-modal'),/Tiếm ngôi/);
- a.A.victoryPending=true;a.A.finalAt=a.A.clock;a.A.defeated=5;a.A.showVictory();
- assert.match(a.w.documentText('story-card-modal'),/đủ 5 boss/);assert.match(a.w.documentText('story-card-modal'),/Tiếm ngôi quỷ vương/);assert.match(a.w.documentText('story-card-modal'),/Ván mới/);
+ a.A.victoryPending=true;a.A.finalAt=a.A.clock;a.A.defeated=1;a.A.showVictory();
+ assert.match(a.w.documentText('story-card-modal'),/hai thanh máu/);assert.match(a.w.documentText('story-card-modal'),/Tiếm ngôi quỷ vương/);assert.match(a.w.documentText('story-card-modal'),/Ván mới/);
+});
+
+test('level bonuses follow mixed builds, exclude gear and compound each level',()=>{
+ const w=loadGame(),C=w.GameEntities.CombatSystem,G=w.GameManager,p=G.pawns[0];
+ p.personality={caution:0,aggression:0,patience:0,curiosity:0,loyalty:0};
+ Object.assign(p,{maxHp:1000,attack:100,defense:100,skillPower:100,critChance:.1,weapon:null,armor:null,helmet:null,boots:null});
+ const hpGains={fortify:90,assassin:32,archer:42,mage:26,restore:40};
+ for(const [build,gain] of Object.entries(hpGains)){
+  p.buildPoints={[build]:1};assert.equal(C.levelGrowth(p).hp,gain,build);
+ }
+ const attackGains={fortify:2,assassin:9,archer:7,mage:2,restore:4};
+ for(const [build,gain] of Object.entries(attackGains)){
+  p.buildPoints={[build]:1};assert.equal(C.levelGrowth(p).attack,gain,build);
+ }
+ const otherGains={fortify:{defense:9,skill:1,crit:.0005},assassin:{defense:1,skill:1,crit:.017},archer:{defense:3,skill:2,crit:.0115},mage:{defense:1,skill:9,crit:.0005},restore:{defense:4,skill:3,crit:.00025}};
+ for(const [build,expected] of Object.entries(otherGains)){
+  p.buildPoints={[build]:1};const gain=C.levelGrowth(p);
+  for(const [stat,value] of Object.entries(expected))assert.ok(Math.abs(gain[stat]-value)<1e-12,build+' '+stat);
+ }
+ p.buildPoints={fortify:1,assassin:1};const mixed=C.levelGrowth(p);
+ assert.equal(mixed.defense,5);assert.equal(mixed.skill,1);assert.ok(Math.abs(mixed.crit-.00875)<1e-12);
+ p.buildPoints={mage:1};assert.equal(C.levelGrowth(p).skill,9);
+ p.weapon={attack:1000,magicPower:1000,skillPower:1000,critChance:.5};assert.equal(C.levelGrowth(p).attack,2);assert.equal(C.levelGrowth(p).skill,9);assert.equal(C.levelGrowth(p).crit,.0005);p.weapon=null;
+ p.buildPoints={fortify:1,assassin:1};assert.equal(C.levelGrowth(p).hp,61);
+ p.armor={hp:500,defense:500};p.maxHp=1500;assert.equal(C.levelGrowth(p).hp,61);
+ p.buildPoints={fortify:1};assert.equal(C.levelGrowth(p).defense,9);
+ Object.assign(p,{maxHp:1000,currentHp:100,armor:null,level:1,currentExp:180});
+ w.GameAI.AIBrain.handleLevelingAndSkills=()=>{};
+ C.checkLevelUp(p);assert.equal(p.level,3);assert.equal(p.maxHp,1185);assert.equal(p.currentHp,1185);
 });
 
 test('level growth follows the build and a weapon swap keeps those stats',()=>{
@@ -1863,8 +2020,8 @@ test('level growth follows the build and a weapon swap keeps those stats',()=>{
  };
  const tank=raise({fortify:40,assassin:0,archer:0,mage:0,restore:0});
  const mage=raise({fortify:0,assassin:0,archer:0,mage:40,restore:0});
- assert.equal(tank.maxHp,920);assert.equal(tank.attack,35);assert.equal(tank.defense,81);assert.equal(tank.skillPower,0);
- assert.equal(mage.maxHp,464);assert.equal(mage.attack,35);assert.equal(mage.maxMana,385);assert.equal(mage.skillPower,76);
+ assert.equal(tank.maxHp,1624);assert.equal(tank.attack,35);assert.equal(tank.defense,134);assert.equal(tank.skillPower,0);
+ assert.equal(mage.maxHp,527);assert.equal(mage.attack,35);assert.equal(mage.maxMana,385);assert.equal(mage.skillPower,123);
  assert.ok(tank.maxHp>mage.maxHp);assert.ok(mage.skillPower>tank.skillPower);
  const live=w.GameManager.pawns[2];live.personality=blank;live.buildPoints={fortify:40,assassin:0,archer:0,mage:0,restore:0};
  live.x=1400;live.y=1400;const hp=live.maxHp,atk=live.attack;
