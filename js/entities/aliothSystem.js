@@ -182,25 +182,46 @@ window.GameEntities.AliothSystem = {
     for (const victim of victims) {
       if (this.protected(victim)) continue;
       const hit = this.nearest(victim.x, victim.y);
-      if (hit.dist <= 34) this.executeDevour(victim);
+      if (hit.dist <= 48) this.executeDevour(victim);
     }
   },
 
   executeDevour(victim) {
     if (!victim?.isAlive || this.protected(victim)) return;
     const V = window.GameRenderer?.VfxManager;
+    const G = window.GameManager;
+    const oldX = victim.x;
+    const oldY = victim.y;
+
+    V?.addEffect?.('impact', oldX, oldY, { radius: 65, color: '#e7c56a', life: 0.8 });
+    V?.addBurstParticles?.(oldX, oldY, '#f4d48a', 25);
+    V?.addBurstParticles?.(oldX, oldY, '#c4342d', 25);
+    V?.addBurstParticles?.(oldX, oldY, '#2c0b4d', 30);
+    V?.addDamageNumber?.(oldX, oldY - 30, 'BIẾN MẤT', 'crit');
+    window.GameEngine?.Audio?.play?.('death', victim, undefined, { tier: victim.tier });
+    window.GameUI?.CombatTicker?.log(`⚡ Alioth nuốt chửng ${victim.name} — Biến mất hoàn toàn!`);
+
+    // Bot lập tức biến mất hoàn toàn khỏi map (không để lại xác hay đồ rơi)
+    victim.isAlive = false;
+    victim.despawned = true;
     victim.currentHp = 0;
     victim.action = null;
     victim.attackState = null;
-    victim.isAlive = false;
-    V?.addEffect?.('impact', victim.x, victim.y, { radius: 54, color: '#e7c56a', life: 0.7 });
-    V?.addBurstParticles?.(victim.x, victim.y, '#f4d48a', 16);
-    V?.addBurstParticles?.(victim.x, victim.y, '#c4342d', 18);
-    V?.addDamageNumber?.(victim.x, victim.y - 30, 'CUỐN ĐI', 'crit');
-    window.GameEngine?.Audio?.play?.('death', victim, undefined, { tier: victim.tier });
-    window.GameUI?.CombatTicker?.log(`🐉 Alioth cuốn ${victim.name} theo thân rồng.`);
-    window.GameEntities.CombatSystem?.dropLootOnDeath?.(victim);
+    victim.targetEnemy = null;
+    victim.plan = null;
+    victim.chase = null;
+    victim.combatLease = 0;
+    victim.x = -9999;
+    victim.y = -9999;
+    victim.vx = 0;
+    victim.vy = 0;
+
     if (victim === window.GameEntities.EntityManager?.worldBoss) window.GameEntities.AncientSystem?.awaken?.(victim, this.alioth);
+
+    if (G) {
+      G.updateHUD?.();
+      G.checkVictoryCondition?.();
+    }
   },
 
   renderShadow(ctx) {
