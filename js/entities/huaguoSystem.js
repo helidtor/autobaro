@@ -81,7 +81,7 @@ window.GameEntities.HuaguoSystem = {
     pawn.isHiding = false;
     pawn.targetEnemy = null;
     pawn.objective = 'Bái kiến Hoa Quả Sơn: triệu hồi Tôn Ngộ Không';
-    pawn.thought = 'Phần thưởng lớn: đủ năm người thành tâm, Đại Thánh cưỡi mây diệt một long thần.';
+    pawn.thought = 'Một người cũng bắt đầu được nghi lễ. Càng đông càng nhanh, EXP chia đều.';
     if (dist > m.radius + 60) window.GameAI.AIBrain.moveToTarget(pawn, m.x, m.y + 40, dt);
     else { pawn.vx = 0; pawn.vy = 0; pawn.aimAngle = Math.atan2(m.y - pawn.y, m.x - pawn.x); }
   },
@@ -116,11 +116,11 @@ window.GameEntities.HuaguoSystem = {
     const pawns = (G?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
     this.pilgrims = pawns.filter(p => Math.hypot(p.x - m.x, p.y - m.y) < m.radius + 70 && !(p.combatLease > 0));
 
-    if (this.pilgrims.length >= 5) {
-      this.ritualTime += dt;
+    if (this.pilgrims.length >= 1) {
+      this.ritualTime += dt * this.pilgrims.length;
       for (const p of this.pilgrims) {
         p.objective = 'Bái kiến Tôn Ngộ Không tại Hoa Quả Sơn';
-        p.thought = 'Năm người đã đủ. Thành tâm khấn, Đại Thánh sẽ ra tay.';
+        p.thought = 'Càng đông người, nghi lễ càng nhanh. Phần thưởng kinh nghiệm chia đều.';
         p.vx = 0;
         p.vy = 0;
       }
@@ -152,12 +152,25 @@ window.GameEntities.HuaguoSystem = {
       angle: 0
     };
     this.ritualTime = 0;
-    for (const p of this.pilgrims) {
-      window.GameRenderer?.VfxManager?.addEmotionMote?.(p, '🙏', '#f6d48a');
-    }
-    window.GameUI?.CombatTicker?.log(`☁️ Năm người bái kiến thành công! Tôn Ngộ Không cưỡi cân đẩu vân xuất kích diệt ${target.name}!`);
+    this.rewardPilgrims();
+    window.GameUI?.CombatTicker?.log(`☁️ Bái kiến thành công! Tôn Ngộ Không cưỡi cân đẩu vân xuất kích diệt ${target.name}!`);
     window.GameEngine?.Audio?.play?.('ascension');
     window.GameRenderer?.VfxManager?.addEffect?.('rune', m.x, m.y, { radius: 160, color: '#f6d48a', life: 2 });
+  },
+
+  rewardPilgrims() {
+    const pilgrims = this.pilgrims.filter(p => p.isAlive);
+    if (!pilgrims.length) return;
+    const total = 600;
+    const share = Math.max(1, Math.round(total / pilgrims.length));
+    const C = window.GameEntities.CombatSystem;
+    for (const p of pilgrims) {
+      p.currentExp = (p.currentExp || 0) + share;
+      C?.checkLevelUp?.(p);
+      window.GameRenderer?.VfxManager?.addEmotionMote?.(p, '🙏', '#f6d48a');
+      window.GameRenderer?.VfxManager?.addDamageNumber?.(p.x, p.y - 30, '+' + share + ' EXP', 'heal');
+    }
+    window.GameUI?.CombatTicker?.log(`🎁 ${pilgrims.length} người bái kiến chia đều ${total} EXP — mỗi người +${share}.`);
   },
 
   updateWukong(dt) {
@@ -197,9 +210,10 @@ window.GameEntities.HuaguoSystem = {
         w.x += dx / dist * step;
         w.y += dy / dist * step;
         if (cap) {
-          cap.x = w.x - Math.cos(w.angle) * 70;
-          cap.y = w.y - Math.sin(w.angle) * 70;
-          cap.aimAngle = w.angle + Math.PI;
+          const lead = 150;
+          cap.x = w.x + Math.cos(w.angle) * lead;
+          cap.y = w.y + Math.sin(w.angle) * lead - 70;
+          cap.aimAngle = w.angle;
           const head = cap.spine?.[0];
           if (head) {
             head.x = cap.x;
@@ -291,10 +305,10 @@ window.GameEntities.HuaguoSystem = {
     this.drawMountain(ctx, m);
     this.drawMonkeys(ctx);
     this.drawClouds(ctx);
-    if (this.wukong) this.drawWukong(ctx, this.wukong);
+    if (this.wukong?.captive) this.drawChain(ctx, this.wukong.captive, this.wukong.x, this.wukong.y);
     this.drawCaptives(ctx, m);
+    if (this.wukong) this.drawWukong(ctx, this.wukong);
     this.drawRitual(ctx, m);
-    if (this.wukong?.captive) this.drawChain(ctx, this.wukong.captive, this.mountain.x, this.mountain.y + 8);
   },
 
   drawMountain(ctx, m) {
@@ -864,7 +878,7 @@ window.GameEntities.HuaguoSystem = {
       ctx.restore();
     };
 
-    const S = 1.25;
+    const S = 0.62;
     const state = w.state || 'fly';
     const t = w.t != null ? w.t : this.clock || 0;
     const ang = w.angle || 0;
@@ -908,7 +922,6 @@ window.GameEntities.HuaguoSystem = {
     pauldron(-18, -26, 0.9);
     skirt(t);
     torso(t);
-    head(t, state);
 
     if (strike && swinging && p < 0.5) swoosh(hand.x, hand.y, sa);
     staff(hand.x, hand.y, sa, back, front, glow);
@@ -918,6 +931,8 @@ window.GameEntities.HuaguoSystem = {
       arm(-15, -24, bx, by, true);
     }
     pauldron(FS.x, FS.y - 2, 1.05);
+
+    head(t, state);
 
     if (strike && p > 0.44 && p < 0.72) {
       sparks(hand.x + Math.cos(sa) * front, hand.y + Math.sin(sa) * front, t);
@@ -989,7 +1004,7 @@ window.GameEntities.HuaguoSystem = {
     ctx.font = 'bold 13px Arial';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#f6e7a8';
-    ctx.fillText(`Bái kiến ${this.pilgrims.length}/5  •  ${Math.round(pct * 100)}%`, 0, m.radius + 96);
+    ctx.fillText(`Bái kiến ${this.pilgrims.length} người (x${this.pilgrims.length})  •  ${Math.round(pct * 100)}%`, 0, m.radius + 96);
     ctx.restore();
   }
 };
