@@ -210,9 +210,9 @@ window.GameEntities.HuaguoSystem = {
         w.x += dx / dist * step;
         w.y += dy / dist * step;
         if (cap) {
-          const lead = 150;
-          cap.x = w.x + Math.cos(w.angle) * lead;
-          cap.y = w.y + Math.sin(w.angle) * lead - 70;
+          const trail = 150;
+          cap.x = w.x - Math.cos(w.angle) * trail;
+          cap.y = w.y - Math.sin(w.angle) * trail - 70;
           cap.aimAngle = w.angle;
           const head = cap.spine?.[0];
           if (head) {
@@ -236,7 +236,7 @@ window.GameEntities.HuaguoSystem = {
       const dx = m.x - w.x, dy = (m.y - 40) - w.y, dist = Math.hypot(dx, dy);
       w.angle = Math.atan2(dy, dx);
       if (dist > 30) {
-        const step = Math.min(dist, 600 * dt);
+        const step = Math.min(dist, 260 * dt);
         w.x += dx / dist * step;
         w.y += dy / dist * step;
       } else {
