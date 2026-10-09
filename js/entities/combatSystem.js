@@ -428,6 +428,7 @@ window.GameEntities.CombatSystem = {
       !window.GameEngine.MapTerrain.isInWater(e.x, e.y);
   },
   isEnemy(a, t) {
+    if (a?.isAlioth || t?.isAlioth) return false;
     return !!t?.isAlive && !t.isSplit && !a?.isSplit && !(a?.isMonster && t.isMonster) && t !== a && t !== a?.allyPawn && t.allyPawn !== a && (t.isPawn || t.isMonster);
   },
   weaponStyle(e) {
@@ -855,7 +856,7 @@ window.GameEntities.CombatSystem = {
     if (a.elapsed >= a.duration) {if(['attack','skill'].includes(a.kind)&&a.target?.isAlive&&this.canSee(a.target,e)&&(e.lastDamageDealtAt??-Infinity)<(a.startedAt??0))this.progressionEvent(a.target,e,'opening'); e.action = null; e.attackState = null; }
   },
   applyDamage(a, t, weapon, c = {}) {
-    if (!a || !this.canEngage(a,t) || t.invincible || t.relicInvulnerable>0 || !this.reserveCombat(a,t)) return 0;
+    if (!a || !this.canEngage(a,t) || t.invincible || t.isAlioth || a?.isAlioth || t.relicInvulnerable>0 || !this.reserveCombat(a,t)) return 0;
     if(t.phoenixEgg){const dealt=Math.max(1,c.baseDamage??this.combatStats(a).attack);t.phoenixEgg.hp-=dealt;a.lastHostileAt=t.lastHostileAt=window.GameManager.matchTime||0;window.GameRenderer.VfxManager.addDamageNumber(t.x,t.y,dealt,'normal');if(t.phoenixEgg.hp<=0){t.phoenixEgg=null;t.currentHp=0;this.handleDeath(a,t);}return dealt;}
     if(t.afterimageReady&&c.projectile&&!c.dot&&t.action?.kind==='dodge'){t.afterimageReady=0;return 0;}
     if (t.action?.kind === 'dodge' && t.action.elapsed < 0.3) {

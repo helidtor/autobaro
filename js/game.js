@@ -68,6 +68,7 @@ window.GameManager = {
     this.dropItems = window.GameEntities.EntityManager.dropItems;
     this.playerPawn = window.GameEntities.EntityManager.playerPawn;
     window.GameUI.BotRoster.init();
+    window.GameEntities.AliothSystem.init(this.width, this.height);
 
     // Gán listener sự kiện bàn phím & chuột
     this.bindInputs();
@@ -153,6 +154,7 @@ window.GameManager = {
     this.pawns=E.pawns;this.monsters=E.monsters;this.dropItems=E.dropItems;this.playerPawn=E.playerPawn;
     window.GameUI.BotRoster.init();
     this.spatialGrid.clear();
+    window.GameEntities.AliothSystem.reset(this.width, this.height);
     window.GameUI.DirectorControls.syncSpeed();
     document.getElementById('btn-toggle-mode').innerText='👁️ Chế độ: Đạo Diễn (Spectator)';
     document.getElementById('btn-toggle-mode').classList.remove('btn-player-mode');
@@ -181,6 +183,7 @@ window.GameManager = {
 
       if (e.repeat && ['Shift', 'h', 'q', 'e', 'r', 'f', 'v', 'p'].includes(e.key)) return;
       if (e.key.toLowerCase() === 'm') this.showMapOverview();
+      if(e.key.toLowerCase()==='a'&&this.isPlayerMode&&this.playerPawn?.isAlive)this.executePlayerAttack();
       if(e.key.toLowerCase()==='v'&&this.isPlayerMode&&this.playerPawn?.isAlive)this.executePlayerDodge();
       if(e.key.toLowerCase()==='p'&&!this.isPlayerMode){
         const camera=window.GameEngine.Camera;
@@ -412,6 +415,7 @@ window.GameManager = {
 
     // 5. Cập nhật Quái vật AI (Wandering, Aggro, Tấn công)
     this.updateMonsters(dt);
+    window.GameEntities.AliothSystem.update(dt);
     window.GameEntities.AncientSystem.tick(dt);
     window.GameEntities.CombatSystem.tickEffects(dt);
     window.GameEngine.Audio?.update(dt);
@@ -565,7 +569,7 @@ window.GameManager = {
     // 1. Vẽ Bản Đồ & Địa Hình (Cây cối, đầm lầy, đền cổ, bụi rậm)
     window.GameEngine.MapTerrain.render(ctx, window.GameEngine.Camera);
 
-    window.GameEntities.AncientSystem.render(ctx);window.GameEntities.CombatSystem.renderFields(ctx);
+    window.GameEntities.AncientSystem.render(ctx);window.GameEntities.AliothSystem.render(ctx);window.GameEntities.CombatSystem.renderFields(ctx);
     ctx.save();const arena=window.GameEntities.AncientSystem.arena;if(arena){ctx.beginPath();ctx.rect(arena.x,arena.y,arena.w,arena.h);ctx.clip();}
     window.GameEntities.RelicSystem.render(ctx);
     this.renderFocusRanges(ctx);
