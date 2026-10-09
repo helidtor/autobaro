@@ -103,7 +103,7 @@ window.GameEngine.MapTerrain = {
   for(const o of this.obstacles){
    for(let x=Math.floor((o.x-30)/100);x<=Math.floor((o.x+o.w+30)/100);x++)
     for(let y=Math.floor((o.y-30)/100);y<=Math.floor((o.y+o.h+30)/100);y++){
-     const k=x+','+y;if(!this.obstacleBuckets.has(k))this.obstacleBuckets.set(k,[]);this.obstacleBuckets.get(k).push(o);
+     const k=(x+32768)*65536+(y+32768);if(!this.obstacleBuckets.has(k))this.obstacleBuckets.set(k,[]);this.obstacleBuckets.get(k).push(o);
     }
   }
   const n=Math.ceil(this.MAP_WIDTH/this.cell),m=Math.ceil(this.MAP_HEIGHT/this.cell);
@@ -125,8 +125,8 @@ window.GameEngine.MapTerrain = {
   if(ignoreSoft)return !(x<r||y<r||x>this.MAP_WIDTH-r||y>this.MAP_HEIGHT-r);
   if(x<r||y<r||x>this.MAP_WIDTH-r||y>this.MAP_HEIGHT-r)return false;
   if(window.GameEntities.AncientSystem?.walls.some(o=>x>o.x-r&&x<o.x+o.w+r&&y>o.y-r&&y<o.y+o.h+r))return false;
-  return !(this.obstacleBuckets?.get(Math.floor(x/100)+','+Math.floor(y/100)) || []).some(o=>
-   !o.destroyed && x>o.x-r && x<o.x+o.w+r && y>o.y-r && y<o.y+o.h+r);
+  const bucket=this.obstacleBuckets?.get((Math.floor(x/100)+32768)*65536+(Math.floor(y/100)+32768));
+  return !(bucket&&bucket.some(o=>!o.destroyed && x>o.x-r && x<o.x+o.w+r && y>o.y-r && y<o.y+o.h+r));
  },
  nearestFree(x,y,r=9){
   if(this.ancientArena){const a=this.ancientArena;x=Math.max(a.x+r,Math.min(a.x+a.w-r,x));y=Math.max(a.y+r,Math.min(a.y+a.h-r,y));}
@@ -170,7 +170,8 @@ window.GameEngine.MapTerrain = {
    const crowd=C.crowdAt(e,tx,ty);
    for(const p of crowd)if(p!==e)for(const member of C.crowdAt(p,p.x,p.y))if(Math.hypot(p.x-tx,p.y-ty)<75)crowd.add(member);
    let blocked=!C.validMembers(crowd),center=[...crowd].filter(p=>p!==e);
-   const active=[...(G?.pawns||[]),...(G?.monsters||[])].filter(p=>p!==e&&p.isAlive&&p.combatLease>0&&Math.hypot(p.x-tx,p.y-ty)<120);
+   const active=[],units=[G?.pawns,G?.monsters];
+   for(let u=0;u<2;u++){const list=units[u]||[];for(let i=0;i<list.length;i++){const p=list[i];if(p!==e&&p.isAlive&&p.combatLease>0&&Math.hypot(p.x-tx,p.y-ty)<120)active.push(p);}}
    if(active.length&&!C.validMembers(new Set([...C.groupMembers(e),...active.flatMap(p=>C.groupMembers(p))]))){blocked=true;center=active;}
    if(blocked&&center.length){const cx=center.reduce((v,p)=>v+p.x,0)/center.length,cy=center.reduce((v,p)=>v+p.y,0)/center.length;
     const currentValid=C.validMembers(C.crowdAt(e,e.x,e.y))&&C.validMembers(new Set([...C.groupMembers(e),...active.filter(p=>Math.hypot(p.x-e.x,p.y-e.y)<120).flatMap(p=>C.groupMembers(p))]));
@@ -198,23 +199,34 @@ window.GameEngine.MapTerrain = {
  findPath(sx,sy,tx,ty,e=null){
   const start=this.closestCell(sx,sy,e),goal=this.closestCell(tx,ty,e);
   if(start<0||goal<0)return[];
+  const count=this.cols*this.rows;
+  if(this._navCount!==count){
+   this._navCount=count;this._g=new Float64Array(count);this._parent=new Int32Array(count);this._closed=new Uint8Array(count);this._travel=new Uint8Array(count);
+  }
+  const g=this._g,parent=this._parent,closed=this._closed,travel=this._travel,cols=this.cols,rows=this.rows,cell=this.cell;
+  const blocked=this.navBlocked,water=this.navWater,slow=this.navSlow,heap=this._heap||(this._heap=[]),dirs=this._dirs||(this._dirs=[1,0,-1,0,0,1,0,-1,1,1,1,-1,-1,1,-1,-1]);
+  const travelOk=j=>{
+   if(!e)return true;
+   const v=travel[j];if(v)return v===1;
+   const ok=this.canTravel(e,(j%cols+.5)*cell,(Math.floor(j/cols)+.5)*cell);
+   travel[j]=ok?1:2;return ok;
+  };
   const search=allowWater=>{
-   const count=this.cols*this.rows,g=new Float64Array(count);g.fill(Infinity);
-   const parent=new Int32Array(count);parent.fill(-1);const closed=new Uint8Array(count),heap=[];
-   const gx=goal%this.cols,gy=Math.floor(goal/this.cols);
-   const score=i=>{const dx=Math.abs(i%this.cols-gx),dy=Math.abs(Math.floor(i/this.cols)-gy);return g[i]+dx+dy+(Math.SQRT2-2)*Math.min(dx,dy);};
+   g.fill(Infinity);parent.fill(-1);closed.fill(0);if(e)travel.fill(0);heap.length=0;
+   const gx=goal%cols,gy=Math.floor(goal/cols);
+   const score=i=>{const dx=Math.abs(i%cols-gx),dy=Math.abs(Math.floor(i/cols)-gy);return g[i]+dx+dy+(Math.SQRT2-2)*Math.min(dx,dy);};
    const push=i=>{let j=heap.length;heap.push(i);while(j){const p=(j-1)>>1;if(score(heap[p])<=score(i))break;heap[j]=heap[p];j=p;}heap[j]=i;};
    const pop=()=>{const v=heap[0],end=heap.pop();if(heap.length){let j=0;while(j*2+1<heap.length){let k=j*2+1;if(k+1<heap.length&&score(heap[k+1])<score(heap[k]))k++;if(score(end)<=score(heap[k]))break;heap[j]=heap[k];j=k;}heap[j]=end;}return v;};
    g[start]=0;push(start);
    while(heap.length){
     const i=pop();if(closed[i])continue;closed[i]=1;
-    if(i===goal){const points=[];for(let at=goal;at!==start;at=parent[at]){if(at<0)return[];points.push({x:(at%this.cols+.5)*this.cell,y:(Math.floor(at/this.cols)+.5)*this.cell});}points.reverse();const first={x:(start%this.cols+.5)*this.cell,y:(Math.floor(start/this.cols)+.5)*this.cell};if(Math.hypot(first.x-sx,first.y-sy)>4)points.unshift(first);return points;}
-    const x=i%this.cols,y=Math.floor(i/this.cols);
-    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
-     const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=this.cols||ny>=this.rows)continue;
-     const j=ny*this.cols+nx;if(closed[j]||this.navBlocked[j]||(e&&!this.canTravel(e,(nx+.5)*this.cell,(ny+.5)*this.cell))||(!allowWater&&this.navWater[j]&&j!==goal))continue;
-     if(dx&&dy&&(this.navBlocked[y*this.cols+nx]||this.navBlocked[ny*this.cols+x]||(!allowWater&&(this.navWater[y*this.cols+nx]||this.navWater[ny*this.cols+x]))))continue;
-     const cost=g[i]+(dx&&dy?Math.SQRT2:1)*(this.navWater[j]?6:this.navSlow[j]?1.8:1);
+    if(i===goal){const points=[];for(let at=goal;at!==start;at=parent[at]){if(at<0)return[];points.push({x:(at%cols+.5)*cell,y:(Math.floor(at/cols)+.5)*cell});}points.reverse();const first={x:(start%cols+.5)*cell,y:(Math.floor(start/cols)+.5)*cell};if(Math.hypot(first.x-sx,first.y-sy)>4)points.unshift(first);return points;}
+    const x=i%cols,y=Math.floor(i/cols);
+    for(let d=0;d<16;d+=2){
+     const dx=dirs[d],dy=dirs[d+1],nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=cols||ny>=rows)continue;
+     const j=ny*cols+nx;if(closed[j]||blocked[j]||(e&&!travelOk(j))||(!allowWater&&water[j]&&j!==goal))continue;
+     if(dx&&dy&&(blocked[y*cols+nx]||blocked[ny*cols+x]||(!allowWater&&(water[y*cols+nx]||water[ny*cols+x]))))continue;
+     const cost=g[i]+(dx&&dy?Math.SQRT2:1)*(water[j]?6:slow[j]?1.8:1);
      if(cost<g[j]){g[j]=cost;parent[j]=i;push(j);}
     }
    }
@@ -290,15 +302,21 @@ window.GameEngine.MapTerrain = {
  },
  canTravel(e,x,y){
   if(this.ancientArena)return this.canStand(x,y,e.collisionRadius||9);
-  if(!this.templeAccess(e,x,y)||window.GameEntities.AncientSystem?.walls.some(o=>x>o.x-9&&x<o.x+o.w+9&&y>o.y-9&&y<o.y+o.h+9))return false;
+  const walls=window.GameEntities.AncientSystem?.walls;
+  if(!this.templeAccess(e,x,y)||!!(walls&&walls.some(o=>x>o.x-9&&x<o.x+o.w+9&&y>o.y-9&&y<o.y+o.h+9)))return false;
   if(e.isMonster)return this.monsterCanOccupy(e,x,y);
   if(!e.isPawn||e.isPlayerControlled)return true;
-  for(const a of [this.templeRuins,...this.lairs]){
+  const blocked=a=>{
+   if(!a)return false;
    const level=a.id==='temple'?15:10;
-   if(a.isCleared||e.level>=level||e.targetEnemy?.isFinalHunt&&e.targetEnemy.territory===a)continue;
-   const distance=Math.hypot(x-a.x,y-a.y),start=Math.hypot(e.x-a.x,e.y-a.y);
-   if(distance<a.radius+65 && !(start<a.radius+65&&distance>=start-1))return false;
-  }
+   if(a.isCleared||e.level>=level||e.targetEnemy?.isFinalHunt&&e.targetEnemy.territory===a)return false;
+   const distance=Math.hypot(x-a.x,y-a.y),limit=a.radius+65;
+   if(distance>=limit)return false;
+   const start=Math.hypot(e.x-a.x,e.y-a.y);
+   return !(start<limit&&distance>=start-1);
+  };
+  if(blocked(this.templeRuins))return false;
+  const lairs=this.lairs;for(let i=0;i<lairs.length;i++)if(blocked(lairs[i]))return false;
   return true;
  },
  monsterCanTarget(e,target){

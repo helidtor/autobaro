@@ -14,22 +14,27 @@ window.GameEngine.SpatialHash = {
   },
 
   clear: function() {
+    this._gen = (this._gen || 0) + 1;
+    if (!this._pool) this._pool = [];
+    this.grid.forEach(list => { list.length = 0; this._pool.push(list); });
     this.grid.clear();
   },
 
   _getKey: function(x, y) {
-    const cx = Math.floor(x / this.cellSize);
-    const cy = Math.floor(y / this.cellSize);
-    return `${cx},${cy}`;
+    return (Math.floor(x / this.cellSize) + 32768) * 65536 + (Math.floor(y / this.cellSize) + 32768);
   },
 
   insert: function(entity) {
     if (!entity || typeof entity.x !== 'number' || typeof entity.y !== 'number') return;
     const key = this._getKey(entity.x, entity.y);
-    if (!this.grid.has(key)) {
-      this.grid.set(key, []);
+    let bucket = this.grid.get(key);
+    if (!bucket) {
+      bucket = (this._pool && this._pool.pop()) || [];
+      this.grid.set(key, bucket);
     }
-    this.grid.get(key).push(entity);
+    bucket.push(entity);
+    entity._hashKey = key;
+    entity._hashGen = this._gen;
   },
 
   // Truy vấn tất cả thực thể trong bán kính radius
@@ -44,7 +49,7 @@ window.GameEngine.SpatialHash = {
 
     for (let cx = minCx; cx <= maxCx; cx++) {
       for (let cy = minCy; cy <= maxCy; cy++) {
-        const key = `${cx},${cy}`;
+        const key = (cx + 32768) * 65536 + (cy + 32768);
         const cell = this.grid.get(key);
         if (!cell) continue;
 
@@ -69,13 +74,9 @@ window.GameEngine.SpatialHashGrid = class SpatialHashGrid {
     this.cellSize = cellSize;
     this.grid = new Map();
   }
-  clear() { this.grid.clear(); }
-  _getKey(x, y) { return `${Math.floor(x / this.cellSize)},${Math.floor(y / this.cellSize)}`; }
-  insert(entity) {
-    const key = this._getKey(entity.x, entity.y);
-    if (!this.grid.has(key)) this.grid.set(key, []);
-    this.grid.get(key).push(entity);
-  }
+  clear() { window.GameEngine.SpatialHash.clear.call(this); }
+  _getKey(x, y) { return window.GameEngine.SpatialHash._getKey.call(this, x, y); }
+  insert(entity) { window.GameEngine.SpatialHash.insert.call(this, entity); }
   queryCircle(x, y, radius, filterFn = null) {
     return window.GameEngine.SpatialHash.queryCircle.call(this, x, y, radius, filterFn);
   }

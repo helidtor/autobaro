@@ -65,6 +65,15 @@ window.GameRenderer.ProceduralPawn = {
   render: function(ctx, pawn, appearance, isSelected) {
     if (!pawn || !pawn.isAlive) return;
     const time = performance.now() / 1000;
+    const zoom = window.GameEngine.Camera?.zoom || 1;
+    // Nhìn toàn bản đồ thì mỗi pawn chỉ còn vài pixel; bỏ aura bóng đổ và da procedural.
+    if (zoom < 0.45 && !isSelected) {
+      ctx.save();
+      ctx.fillStyle = pawn.level >= 15 ? '#9d78ff' : pawn.level >= 10 ? '#ffc832' : (appearance?.clothColor || '#d7c4a3');
+      ctx.beginPath(); ctx.arc(pawn.x, pawn.y - 8, pawn.isDemonKing ? 16 : 7, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      return;
+    }
     const isMoving = Math.hypot(pawn.vx || 0, pawn.vy || 0) > 1.5;
 
     if(pawn.level>=10)this.renderAura(ctx,pawn,time);

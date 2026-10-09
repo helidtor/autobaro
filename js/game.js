@@ -424,8 +424,10 @@ window.GameManager = {
     // 7. Cập nhật Camera (Lerp mượt, Auto-Director theo dõi điểm nóng)
 
 
-    // 8. Cập nhật Inspect Modal nếu đang mở
-    if (this.selectedEntity) {
+    // Bảng soi chỉ cần khớp mắt người; gọi thẳng updateContent vẫn cập nhật ngay.
+    this.inspectIdle = (this.inspectIdle || 0) + dt;
+    if (this.selectedEntity && this.inspectIdle >= 0.1) {
+      this.inspectIdle = 0;
       window.GameUI.InspectModal.updateContent();
     }
 
@@ -442,13 +444,21 @@ window.GameManager = {
     p.currentMana = Math.min(p.maxMana, p.currentMana + 8*(1+window.GameEntities.RelicSystem.equipment(p).reduce((v,d)=>v+(d.manaRegen||0),0)) * dt);
     p.emotionTick = (p.emotionTick || 0) + dt;
     if (p.emotionTick >= 0.1) {
-      const nearbyPawns = this.spatialGrid.queryCircle(p.x, p.y, window.GameEntities.CombatSystem.visionRange(p)).filter(e => e.isPawn && e !== p);
-      const nearbyMonsters = this.spatialGrid.queryCircle(p.x, p.y, window.GameEntities.CombatSystem.visionRange(p)).filter(e => e.isMonster);
+      const sensed = this.spatialGrid.queryCircle(p.x, p.y, window.GameEntities.CombatSystem.visionRange(p));
+      const nearbyPawns = sensed.filter(e => e.isPawn && e !== p);
+      const nearbyMonsters = sensed.filter(e => e.isMonster);
       window.GameAI.EmotionEngine.updatePawnEmotions(p, p.emotionTick, nearbyPawns, nearbyMonsters);
       p.emotionTick = 0;
     }
     if (p.isPlayerControlled || p.stunTimer > 0) return;
     if (window.GameEntities.AncientSystem.boss?.isDemonKing && window.GameEntities.RelicSystem.distract(p, dt)) return;
+    // Quyết định lại mỗi 0.1s. Giữa các mốc vẫn đi theo đường đã có. dt >= 0.1 thì nghĩ mỗi lần gọi.
+    p.thinkTimer = (p.thinkTimer || 0) - dt;
+    if (p.thinkTimer > 0 && !p.action) {
+      if (p.navPath?.length && p.navGoal) window.GameEngine.MapTerrain.navigate(p, p.navGoal.x, p.navGoal.y, dt);
+      return;
+    }
+    p.thinkTimer = 0.1;
     window.GameAI.AIBrain.updatePawnAI(p, dt, this.spatialGrid, window.GameEngine.MapTerrain);
   },
 
@@ -487,13 +497,19 @@ window.GameManager = {
     const C = window.GameEntities.CombatSystem;
     this.monsters.forEach(m => {
       if (!m.isAlive || m.isDemonKing) return;
+      m.senseTimer=(m.senseTimer||0)-dt;
       C.updateStatus(m, dt);
       m.currentMana = Math.min(m.maxMana, m.currentMana + 5 * dt);
       m.currentStamina = Math.min(m.maxStamina, m.currentStamina + 4 * dt);
       if(window.GameEntities.RelicSystem.distract(m,dt))return;
       if (m.action || m.stunTimer > 0 || m.relicInterrupt>0 || m.isSplit) return;
       const M=window.GameEngine.MapTerrain;
-      const targets = this.spatialGrid.queryCircle(m.x,m.y,C.visionRange(m)).filter(e=>e.isPawn&&C.canSee(m,e)&&C.canJoin(m,e)&&!M.isInWater(e.x,e.y)&&M.templeAccess(m,e.x,e.y)&&M.monsterCanTarget(m,e));
+      let targets;
+      if(m.senseTimer<=0||!m.sensedTargets){
+        m.senseTimer=0.1;
+        targets=this.spatialGrid.queryCircle(m.x,m.y,C.visionRange(m)).filter(e=>e.isPawn&&C.canSee(m,e)&&C.canJoin(m,e)&&!M.isInWater(e.x,e.y)&&M.templeAccess(m,e.x,e.y)&&M.monsterCanTarget(m,e));
+        m.sensedTargets=targets;
+      }else targets=m.sensedTargets.filter(e=>e.isAlive&&C.canJoin(m,e)&&!M.isInWater(e.x,e.y)&&M.templeAccess(m,e.x,e.y)&&M.monsterCanTarget(m,e));
       const alert=m.packAlert?.until>(this.matchTime||0)&&m.packAlert.target?.isAlive?m.packAlert.target:null;
       if(alert&&!targets.includes(alert)&&C.isEnemy(m,alert)&&C.canJoin(m,alert)&&!M.isInWater(alert.x,alert.y)&&M.monsterCanTarget(m,alert))targets.unshift(alert);
       if(m.tier>=3&&window.GameAI.BossBrain.update(m,targets,dt))return;
@@ -557,6 +573,14 @@ window.GameManager = {
     return true;
   },
 
+  // Thế giới nhìn thấy, cộng mép để vòng thần thoại / xích / vệt sét không bị cắt đột ngột.
+  worldVisible(x, y, pad = 220) {
+    const cam = window.GameEngine.Camera, zoom = Math.max(.05, cam.zoom || 1);
+    const hw = (cam.viewportWidth || this.canvas?.width || 1366) / 2 / zoom + pad;
+    const hh = (cam.viewportHeight || this.canvas?.height || 768) / 2 / zoom + pad;
+    return x >= cam.x - hw && x <= cam.x + hw && y >= cam.y - hh && y <= cam.y + hh;
+  },
+
   render: function() {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -574,28 +598,30 @@ window.GameManager = {
 
     // 3. Vẽ Trang Bị Rơi Dưới Đất (Paperdoll Drops & Cột Sáng Phẩm Chất)
     const time = performance.now() / 1000;
-    this.dropItems.forEach(item => {
-      window.GameRenderer.Paperdoll.renderDropItem(ctx, item, time);
-    });
+    const focus = window.GameEngine.Camera.targetEntity;
+    for (let i = 0; i < this.dropItems.length; i++) {
+      const item = this.dropItems[i];
+      if (this.worldVisible(item.x, item.y, 80)) window.GameRenderer.Paperdoll.renderDropItem(ctx, item, time);
+    }
 
     ctx.restore();
     // 4. Vẽ Quái Vật (Vector Thủ Công 50 Loài, Không Khối Vuông Rỗng)
-    this.monsters.forEach(m => {
-      if (m.isAlive && !m.isDemonKing) {
-        const isSelected = (this.selectedEntity === m);
-        window.GameRenderer.MonsterRenderer.render(ctx, m, isSelected);
+    for (let i = 0; i < this.monsters.length; i++) {
+      const m = this.monsters[i];
+      if (m.isAlive && !m.isDemonKing && (m === this.selectedEntity || m === focus || this.worldVisible(m.x, m.y))) {
+        window.GameRenderer.MonsterRenderer.render(ctx, m, this.selectedEntity === m);
       }
-    });
+    }
 
-    // 5. Vẽ 100 Pawn (RimWorld Đầy Đủ Giới Tính, Tuổi, Tóc, Râu, Biểu Cảm, Động Tác Vũ Khí)
-    this.pawns.forEach(p => {
-      if (p.isAlive) {
-        const isSelected = (this.selectedEntity === p);
-        window.GameRenderer.ProceduralPawn.render(ctx, p, p.appearance, isSelected);
+    // 5. Vẽ pawn trong khung hình. Zoom xa thì ProceduralPawn tự hạ chi tiết.
+    for (let i = 0; i < this.pawns.length; i++) {
+      const p = this.pawns[i];
+      if (p.isAlive && (p === this.selectedEntity || p === focus || this.worldVisible(p.x, p.y))) {
+        window.GameRenderer.ProceduralPawn.render(ctx, p, p.appearance, this.selectedEntity === p);
       }
-    });
+    }
     const demonKing = this.monsters.find(m => m.isAlive && m.isDemonKing);
-    if (demonKing) window.GameRenderer.ProceduralPawn.render(ctx, demonKing, demonKing.appearance, this.selectedEntity === demonKing);
+    if (demonKing && (demonKing === this.selectedEntity || demonKing === focus || this.worldVisible(demonKing.x, demonKing.y, 280))) window.GameRenderer.ProceduralPawn.render(ctx, demonKing, demonKing.appearance, this.selectedEntity === demonKing);
 
     ctx.save();if(arena){ctx.beginPath();ctx.rect(arena.x,arena.y,arena.w,arena.h);ctx.clip();}
     // 6. Vẽ Đạn đạo, Số Sát Thương, Hạt VFX & Cảm Xúc Mote
@@ -625,14 +651,14 @@ window.GameManager = {
     const alivePawnsCount = this.pawns.filter(p => p.isAlive).length;
     const aliveMonstersCount = this.monsters.filter(m => m.isAlive && !m.isDemonKing).length;
 
-    const elPawns = document.getElementById('hud-pawns-count');
-    if (elPawns) elPawns.innerText = `${alivePawnsCount} / 100`;
-
-    const elMonsters = document.getElementById('hud-monsters-count');
-    if (elMonsters) elMonsters.innerText = `${aliveMonstersCount}`;
-
-    const elTime = document.getElementById('hud-match-time');
-    if (elTime) elTime.innerText = window.GameUI.CombatTicker.getGameTimeString();
+    const paint=(id, text)=>{
+      const el=document.getElementById(id);
+      if(!el || el.textContent===text) return;
+      el.textContent=el.innerText=text;
+    };
+    paint('hud-pawns-count', alivePawnsCount+' / 100');
+    paint('hud-monsters-count', String(aliveMonstersCount));
+    paint('hud-match-time', window.GameUI.CombatTicker.getGameTimeString());
 
     const templeStatus=document.getElementById('hud-temple-status');
     if(templeStatus){
@@ -640,7 +666,8 @@ window.GameManager = {
       const ancient=window.GameEntities.AncientSystem.boss;
       const trial=window.GameEntities.AncientSystem;
       const prep=trial.pendingGod&&!trial.awakened?(this.demonKing?'Quỷ Vương • ':'Thượng Cổ • ')+Math.ceil(trial.wakeRemaining)+'s':'';
-      templeStatus.innerText=prep||(ancient?.isDemonKing&&ancient.isAlive?'Quỷ Vương • '+ancient.name:trial.nextAt!==null?'Boss '+(trial.defeated+1)+'/'+trial.total+' • '+Math.max(0,trial.nextAt-trial.clock).toFixed(1)+'s':ancient?.isAlive?'Thượng Cổ '+ancient.gauntletRound+'/'+window.GameEntities.AncientSystem.total+' • Phase '+ancient.phase:this.ancientDefeated?'Đã chinh phục Thượng Cổ':remaining?'Khóa • còn '+remaining+' Yêu Vương':window.GameEntities.EntityManager.worldBoss?.isAlive?'Đã mở cửa':'Đã hạ Yêu Thần');
+      const text=prep||(ancient?.isDemonKing&&ancient.isAlive?'Quỷ Vương • '+ancient.name:trial.nextAt!==null?'Boss '+(trial.defeated+1)+'/'+trial.total+' • '+Math.max(0,trial.nextAt-trial.clock).toFixed(1)+'s':ancient?.isAlive?'Thượng Cổ '+ancient.gauntletRound+'/'+window.GameEntities.AncientSystem.total+' • Phase '+ancient.phase:this.ancientDefeated?'Đã chinh phục Thượng Cổ':remaining?'Khóa • còn '+remaining+' Yêu Vương':window.GameEntities.EntityManager.worldBoss?.isAlive?'Đã mở cửa':'Đã hạ Yêu Thần');
+      if(templeStatus.textContent!==text) templeStatus.textContent=templeStatus.innerText=text;
     }
 
     // Cập nhật thanh HUD Player nếu ở chế độ người chơi

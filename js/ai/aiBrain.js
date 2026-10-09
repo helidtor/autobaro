@@ -15,6 +15,7 @@ window.GameAI.AiBrain = {
     for(const key of ['survivalTarget','finalDuel','defiantTarget','targetEnemy'])if(pawn[key]===pawn.allyPawn&&pawn[key])pawn[key]=pawn.pactTarget&&C.isEnemy(pawn,pawn.pactTarget)?pawn.pactTarget:null;
     for(const key of ['survivalTarget','finalDuel','defiantTarget','targetEnemy'])if(pawn[key]?.isSplit){const owner=pawn[key];pawn[key]=owner.clones?.filter(q=>q.isAlive&&C.canSee(pawn,q)).sort((a,b)=>Math.hypot(a.x-pawn.x,a.y-pawn.y)-Math.hypot(b.x-pawn.x,b.y-pawn.y))[0]||null;}
     pawn.decisionTime=(pawn.decisionTime||0)+dt;
+    pawn.senseTimer=(pawn.senseTimer||0)-dt;
     this.handleLevelingAndSkills(pawn);
     const drops=window.GameManager.dropItems||[];
     const foot=this.findBestItemToLoot(pawn,drops.filter(i=>Math.hypot(i.x-pawn.x,i.y-pawn.y)<28));
@@ -36,8 +37,18 @@ window.GameAI.AiBrain = {
       else{pawn.vx=pawn.vy=0;pawn.targetEnemy=null;}
       return;
     }
-    const nearby=spatialGrid.queryCircle(pawn.x,pawn.y,C.visionRange(pawn));
-    const threats=nearby.filter(e=>C.isEnemy(pawn,e)&&C.canSee(pawn,e));
+    // Tầm nhìn và đường thẳng tới từng mục tiêu rất đắt; làm mới mỗi 0.1s mô phỏng.
+    // Bước dt >= 0.1 vẫn quét lại ngay, nên một lần update(.1) không đổi quyết định.
+    let nearby,threats;
+    if(pawn.senseTimer<=0||!pawn.sensedNearby){
+      pawn.senseTimer=0.1;
+      nearby=spatialGrid.queryCircle(pawn.x,pawn.y,C.visionRange(pawn));
+      threats=nearby.filter(e=>e.isAlive&&C.isEnemy(pawn,e)&&C.canSee(pawn,e));
+      pawn.sensedNearby=nearby;pawn.sensedThreats=threats;
+    }else{
+      nearby=pawn.sensedNearby.filter(e=>e.isAlive&&!e.isCollected);
+      threats=pawn.sensedThreats.filter(e=>e.isAlive);
+    }
     this.observeThreats(pawn,threats);
     window.GameAI.EmotionEngine.observe(pawn,threats);
     const upgrade=this.findBestItemToLoot(pawn,nearby.filter(i=>i.slot==='weapon'&&Math.hypot(i.x-pawn.x,i.y-pawn.y)<=220));

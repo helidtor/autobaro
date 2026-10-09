@@ -268,8 +268,20 @@ window.GameEntities.CombatSystem = {
   return counted.length<=3||counted.length===4&&counted.every(p=>p.isPawn&&p.allyPawn!==p&&p.allyPawn?.isAlive&&counted.includes(p.allyPawn)&&p.allyPawn.allyPawn===p);
  },
  crowdAt(e,x,y){
-  const pawns=window.GameManager?.pawns||[];
-  return new Set([e,...pawns.filter(p=>p!==e&&p.isAlive&&Math.hypot(p.x-x,p.y-y)<75)]);
+  const pawns=window.GameManager?.pawns||[],set=new Set([e]),grid=window.GameManager?.spatialGrid;
+  const indexed=grid&&grid._gen&&grid.grid.size?grid:null;
+  if(indexed){
+   const near=indexed.queryCircle(x,y,75);
+   for(let i=0;i<near.length;i++){const p=near[i];if(p.isPawn&&p!==e&&p.isAlive&&Math.hypot(p.x-x,p.y-y)<75)set.add(p);}
+  }
+  for(let i=0;i<pawns.length;i++){
+   const p=pawns[i];
+   if(p===e||!p.isAlive||set.has(p))continue;
+   // Cùng ô với lần đưa vào lưới thì queryCircle đã xét. Ai vừa đổi ô, hoặc chưa được đưa vào, vẫn đo trực tiếp.
+   if(indexed&&p._hashGen===indexed._gen&&p._hashKey===indexed._getKey(p.x,p.y))continue;
+   if(Math.hypot(p.x-x,p.y-y)<75)set.add(p);
+  }
+  return set;
  },
  canApproach(e,target){
   if(!this.canJoin(e,target))return false;
@@ -286,7 +298,8 @@ window.GameEntities.CombatSystem = {
   };
   addGroup(e.combatGroup);
   // Connected nearby encounters are one battle, including chains of separate pairs.
-  const active=[...(G?.pawns||[]),...(G?.monsters||[])].filter(p=>p.isAlive&&(p.combatLease>0||p.action?.target));
+  const active=[],units=[G?.pawns,G?.monsters];
+  for(let u=0;u<2;u++){const list=units[u]||[];for(let i=0;i<list.length;i++){const p=list[i];if(p.isAlive&&(p.combatLease>0||p.action?.target))active.push(p);}}
   for(const origin of members){
     for(const p of active)if(Math.hypot(p.x-origin.x,p.y-origin.y)<120){addGroup(p.combatGroup);members.add(p);}
     const ally=origin.allyPawn;
