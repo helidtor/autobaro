@@ -79,14 +79,17 @@ window.GameAI.AiBrain = {
         this.engageCombat(pawn,boss,dt);return;
       }
       const farm=G.monsters.filter(m=>m.isAlive&&m.isFinalHunt).sort((a,b)=>a.huntOrder-b.huntOrder);
-      const target=farm.find(m=>this.canHunt(pawn,m)) || farm[0];
+      let target=farm.find(m=>this.canHunt(pawn,m));
+      if(!target && farm.length > 0 && (pawn.currentHp > pawn.maxHp * 0.4 || window.GameEntities.TrucLamSystem?.survivorEscortActive || window.GameEntities.HuaguoSystem?.wukong?.state==='assist')){
+        target = farm[0];
+      }
       if(target){
         pawn.objective='Farm cấp '+pawn.level+'/15: '+target.name;
         pawn.thought='Hạ Yêu Vương theo sức hiện tại; tích EXP và nhặt bình, cùng đoàn quân tiến đánh.';
         this.engageCombat(pawn,target,dt);
         return;
       }
-      const otherMonsters = G.monsters.filter(m => m.isAlive && !m.isDemonKing && m !== boss);
+      const otherMonsters = G.monsters.filter(m => m.isAlive && !m.isDemonKing && m !== boss && !m.isFinalHunt);
       if (otherMonsters.length > 0) {
         otherMonsters.sort((a, b) => Math.hypot(a.x - pawn.x, a.y - pawn.y) - Math.hypot(b.x - pawn.x, b.y - pawn.y));
         const mon = otherMonsters[0];
@@ -95,7 +98,7 @@ window.GameAI.AiBrain = {
         this.engageCombat(pawn, mon, dt);
         return;
       }
-      if (boss?.isAlive && !mapTerrain.remainingLords()) {
+      if (pawn.level >= 15 && boss?.isAlive && !mapTerrain.remainingLords()) {
         pawn.objective = (boss.tier===6?'Đấu với Thượng Cổ: ':'Đấu với Yêu Thần: ') + boss.name;
         pawn.thought = 'Không còn quái vật nào khác, toàn quân tiến vào quyết chiến!';
         this.engageCombat(pawn, boss, dt);
@@ -882,6 +885,8 @@ window.GameAI.AiBrain = {
     };
     const a=strength(pawn),b=strength(enemy);
     if(withAlly&&pawn.allyPawn?.isAlive){const ally=strength(pawn.allyPawn);a.dps+=ally.dps*.8;a.hp+=ally.hp*.6;}
+    if(window.GameEntities.TrucLamSystem?.survivorEscortActive){a.dps+=85;a.hp+=1200;}
+    if(window.GameEntities.HuaguoSystem?.wukong?.state==='assist'){a.dps+=110;a.hp+=1500;}
     const ours=a.dps*100/(100+b.defense),theirs=b.dps*100/(100+a.defense);
     const timeToKill=b.hp/Math.max(1,ours),timeToDie=a.hp/Math.max(1,theirs);
     return timeToDie/(timeToDie+timeToKill);

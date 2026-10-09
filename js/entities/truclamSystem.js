@@ -860,7 +860,6 @@ window.GameEntities.TrucLamSystem = {
             window.GameEngine?.Audio?.play?.('impact', target, 'blade');
 
             if (target.currentHp <= 0 && target.isAlive) {
-              target.isAlive = false;
               window.GameUI?.CombatTicker?.log(`🎋 ${g.name} trảm hạ ${target.name} theo lệnh ${owner.name}!`);
               window.GameEntities?.CombatSystem?.handleDeath(owner, target);
               if (owner.targetEnemy === target) owner.targetEnemy = null;
@@ -1007,7 +1006,6 @@ window.GameEntities.TrucLamSystem = {
         window.GameEngine?.Audio?.play?.('impact', target, 'spear');
 
         if (target.currentHp <= 0 && target.isAlive) {
-          target.isAlive = false;
           window.GameUI?.CombatTicker?.log(`🏇 Thiết Kỵ Tướng Quân đâm thương tiêu diệt ${target.name} theo lệnh chủ nhân!`);
           if (G && window.GameEntities?.CombatSystem) {
             window.GameEntities.CombatSystem.handleDeath(owner, target);
@@ -1047,7 +1045,6 @@ window.GameEntities.TrucLamSystem = {
           V?.addDamageNumber?.(target.x, target.y - 18, '-' + dmg, 'normal');
           V?.addBurstParticles?.(target.x, target.y, '#94a3b8', 6);
           if (target.currentHp <= 0 && target.isAlive) {
-            target.isAlive = false;
             window.GameUI?.CombatTicker?.log(`🛡️ Hộ Vệ Trúc Lâm chém hạ ${target.name} theo lệnh chủ nhân!`);
             if (G && window.GameEntities?.CombatSystem) {
               window.GameEntities.CombatSystem.handleDeath(owner, target);

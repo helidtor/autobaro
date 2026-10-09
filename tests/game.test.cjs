@@ -2052,3 +2052,15 @@ test('Truc Lam escort army targets owner target and transfers allegiance upon de
  assert.equal(idleMonster.currentHp, 300, 'Legion must NOT attack monster when owner has no target');
 });
 
+test('in 1-bot survivor mode with escort army, sole survivor does not freeze and actively engages final hunt lords', () => {
+ const w=loadGame(),G=w.GameManager,TL=w.GameEntities.TrucLamSystem,p=G.pawns[0];
+ G.pawns.forEach(e=>e.isAlive=e===p);
+ G.checkVictoryCondition();
+ G.continueAfterResult();
+ TL.update(0.1);
+ assert.equal(TL.survivorEscortActive, true);
+ G.update(0.1);
+ assert.ok(p.targetEnemy?.isFinalHunt, 'Pawn should actively target final hunt monster with escort army');
+ assert.match(p.objective, /Farm|cấp 15|Yêu Vương/);
+});
+
