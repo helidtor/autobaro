@@ -276,21 +276,77 @@ window.GameManager = {
     }
 
     // 3. Nếu ở Spectator Mode, click để Inspect hoặc Khóa Mục Tiêu
-    const clickedPawn = this.pawns.find(p => p.isAlive && Math.hypot(p.x - this.mouse.worldX, p.y - this.mouse.worldY) < 25);
-    const closestMonster = this.monsters.filter(m=>m.isAlive&&Math.hypot(m.x-this.mouse.worldX,m.y-this.mouse.worldY)<30*(m.scale||1)).sort((a,b)=>Math.hypot(a.x-this.mouse.worldX,a.y-this.mouse.worldY)-Math.hypot(b.x-this.mouse.worldX,b.y-this.mouse.worldY))[0];
-    if (clickedPawn && (!closestMonster || Math.hypot(clickedPawn.x-this.mouse.worldX,clickedPawn.y-this.mouse.worldY)<Math.hypot(closestMonster.x-this.mouse.worldX,closestMonster.y-this.mouse.worldY))) {
-      this.selectedEntity = clickedPawn;
-      window.GameUI.InspectModal.inspect(clickedPawn);
-      window.GameEngine.Camera.targetEntity = clickedPawn;
-      window.GameEngine.Camera.autoDirector = false;
-      return;
+    const candidates = [];
+    const wx = this.mouse.worldX, wy = this.mouse.worldY;
+
+    for (const p of this.pawns) {
+      if (p.isAlive) {
+        const d = Math.hypot(p.x - wx, p.y - wy);
+        if (d < 28) candidates.push({ entity: p, dist: d });
+      }
+    }
+    for (const m of this.monsters) {
+      if (m.isAlive) {
+        const d = Math.hypot(m.x - wx, m.y - wy);
+        if (d < 32 * (m.scale || 1)) candidates.push({ entity: m, dist: d });
+      }
+    }
+    const H = window.GameEntities.HuaguoSystem;
+    if (H?.wukong && H.wukong.isAlive !== false) {
+      const d = Math.hypot(H.wukong.x - wx, H.wukong.y - wy);
+      if (d < 50) candidates.push({ entity: H.wukong, dist: d });
+    }
+    const T = window.GameEntities.TrucLamSystem;
+    if (T?.emperor) {
+      const d = Math.hypot(T.emperor.x - wx, T.emperor.y - wy);
+      if (d < 50) candidates.push({ entity: T.emperor, dist: d });
+    }
+    for (const g of (T?.guardians || [])) {
+      if (g.isAlive) {
+        const d = Math.hypot(g.x - wx, g.y - wy);
+        if (d < 40) candidates.push({ entity: g, dist: d });
+      }
+    }
+    if (T?.legion?.active) {
+      if (T.legion.general) {
+        const d = Math.hypot(T.legion.general.x - wx, T.legion.general.y - wy);
+        if (d < 45) candidates.push({ entity: T.legion.general, dist: d });
+      }
+      for (const s of (T.legion.soldiers || [])) {
+        const d = Math.hypot(s.x - wx, s.y - wy);
+        if (d < 32) candidates.push({ entity: s, dist: d });
+      }
+    }
+    const A = window.GameEntities.AliothSystem;
+    for (const dragon of (A?.dragons || [])) {
+      if (dragon.isAlive && !dragon.captured) {
+        const head = dragon.spine?.[0] || dragon;
+        const dHead = Math.hypot(head.x - wx, head.y - wy);
+        if (dHead < 52) candidates.push({ entity: dragon, dist: dHead });
+        else if (dragon.spine) {
+          for (let s = 1; s < dragon.spine.length; s += 2) {
+            const seg = dragon.spine[s];
+            const dSeg = Math.hypot(seg.x - wx, seg.y - wy);
+            if (dSeg < 32) {
+              candidates.push({ entity: dragon, dist: dSeg });
+              break;
+            }
+          }
+        }
+      }
+    }
+    const Cloud = window.GameEntities.CloudSystem;
+    if (Cloud?.cloud && Cloud.cloud.isAlive !== false) {
+      const dCloud = Math.hypot(Cloud.cloud.x - wx, Cloud.cloud.y - wy);
+      if (dCloud < (Cloud.cloud.radius || 175)) candidates.push({ entity: Cloud.cloud, dist: dCloud });
     }
 
-    const clickedMonster = closestMonster;
-    if (clickedMonster) {
-      this.selectedEntity = clickedMonster;
-      window.GameUI.InspectModal.inspect(clickedMonster);
-      window.GameEngine.Camera.targetEntity = clickedMonster;
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => a.dist - b.dist);
+      const picked = candidates[0].entity;
+      this.selectedEntity = picked;
+      window.GameUI.InspectModal.inspect(picked);
+      window.GameEngine.Camera.targetEntity = picked;
       window.GameEngine.Camera.autoDirector = false;
       return;
     }
@@ -378,16 +434,20 @@ window.GameManager = {
     this.lastTime = timestamp;
     const dt = Math.min(0.1, dtRaw) * (this.isPaused ? 0 : this.gameSpeed);
 
-    if (!this.isPaused && !this.isGameOver) {
-      this.matchTime += dt;
-      this.update(dt);
-    }
+    try {
+      if (!this.isPaused && !this.isGameOver) {
+        this.matchTime += dt;
+        this.update(dt);
+      }
 
-    window.GameEngine.Camera.update(Math.min(.1,dtRaw),undefined,this.pawns,this.monsters,window.GameEntities.EntityManager.worldBoss);
-    window.GameEngine.Audio.sync();
-    window.GameUI.BotRoster.update(Math.min(.1,dtRaw));
-    this.render();
-    this.updateHUD();
+      window.GameEngine.Camera.update(Math.min(.1,dtRaw),undefined,this.pawns,this.monsters,window.GameEntities.EntityManager.worldBoss);
+      window.GameEngine.Audio?.sync?.();
+      window.GameUI?.BotRoster?.update?.(Math.min(.1,dtRaw));
+      this.render();
+      this.updateHUD();
+    } catch (err) {
+      console.error('Lỗi trong gameLoop:', err);
+    }
 
     requestAnimationFrame((t) => this.gameLoop(t));
   },
@@ -611,6 +671,9 @@ window.GameManager = {
     window.GameEntities.CloudSystem.render(ctx);
     window.GameEntities.HuaguoSystem.render(ctx);
     window.GameEntities.TrucLamSystem.render(ctx);
+    if (this.selectedEntity && !this.selectedEntity.isPawn && !this.monsters.includes(this.selectedEntity)) {
+      this.renderSelectedSpecial(ctx, this.selectedEntity, time);
+    }
 
     ctx.save();if(arena){ctx.beginPath();ctx.rect(arena.x,arena.y,arena.w,arena.h);ctx.clip();}
     // 6. Vẽ Đạn đạo, Số Sát Thương, Hạt VFX & Cảm Xúc Mote
@@ -633,6 +696,21 @@ window.GameManager = {
       ctx.font='bold '+12/camera.zoom+'px Arial';ctx.textAlign='center';ctx.fillStyle=color;ctx.strokeStyle='#15232c';ctx.lineWidth=3/camera.zoom;
       ctx.strokeText(label+' • '+radius,e.x,e.y-radius-8/camera.zoom);ctx.fillText(label+' • '+radius,e.x,e.y-radius-8/camera.zoom);
     }
+    ctx.restore();
+  },
+
+  renderSelectedSpecial: function(ctx, e, time) {
+    if (!e || typeof e.x !== 'number' || typeof e.y !== 'number') return;
+    ctx.save();
+    const rad = e.radius || 35;
+    const pulse = Math.sin(time * 5) * 4;
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.ellipse(e.x, e.y + 10, rad + pulse, (rad + pulse) * 0.5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
     ctx.restore();
   },
 

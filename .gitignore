@@ -9,3 +9,6 @@ coverage/
 Thumbs.db
 .vscode/
 .idea/
+.codegraph/
+pnpm-lock.yaml
+pnpm-workspace.yaml

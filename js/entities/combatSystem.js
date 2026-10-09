@@ -847,7 +847,9 @@ window.GameEntities.CombatSystem = {
     if(a.skillId==='w_whirlwind'&&(e.skills.find(s=>s.id===a.skillId)?.tier||1)>=2&&a.released&&a.target?.isAlive){const angle=Math.atan2(a.target.y-e.y,a.target.x-e.x);window.GameEngine.MapTerrain.moveEntity(e,Math.cos(angle)*15*dt,Math.sin(angle)*15*dt);}
     if (['attack','skill'].includes(a.kind)&&window.GameEngine.MapTerrain.isInWater(e.x,e.y)) {e.action=null;e.attackState=null;return;}
     if (e.stunTimer > 0 && !e.isBerserk) { e.action = null; e.attackState = null; return; }
-    a.elapsed += dt; e.attackState.progress = Math.min(1, a.elapsed / a.duration);
+    a.elapsed += dt;
+    if (e.attackState) e.attackState.progress = Math.min(1, a.elapsed / a.duration);
+    else e.attackState = { isAttacking: true, progress: Math.min(1, a.elapsed / a.duration) };
     if (a.kind === 'dodge') {
       const p = Math.min(1, a.elapsed / 0.3), ease = 1 - (1 - p) ** 2;
       window.GameEngine.MapTerrain.moveEntity(e,a.originX+a.dodgeX*ease-e.x,a.originY+a.dodgeY*ease-e.y);
@@ -985,6 +987,7 @@ window.GameEntities.CombatSystem = {
     if(victim.isMonster&&killer?.isPawn)for(const pawn of window.GameManager.pawns||[])if(pawn!==killer&&pawn.isAlive&&(pawn.targetEnemy===victim||pawn.plan?.target===victim))window.GameAI.AIBrain.noteGrudge(pawn,killer,'kill');
     this.rememberBotKill(killer,victim);
     this.dropLootOnDeath(victim);
+    window.GameEntities.TrucLamSystem?.handleVictimDeath?.(victim, killer);
     if(victim.isAncient)window.GameEntities.AncientSystem.finish(killer,victim);
     else if(victim===window.GameEntities.EntityManager.worldBoss)window.GameEntities.AncientSystem.awaken(victim,killer);
     window.GameUI.CombatTicker.log('💀 ' + victim.name + ' bị hạ bởi ' + (killer?.name || 'Thiên tai') + '.');

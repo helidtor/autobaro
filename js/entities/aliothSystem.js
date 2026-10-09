@@ -98,7 +98,9 @@ window.GameEntities.AliothSystem = {
         index: i,
         name: cfg.name,
         title: cfg.title,
+        tierName: 'Long Thần Thượng Cổ (Boss Thiên Tai)',
         element: cfg.element,
+        isSpecial: true,
         isAlioth: true,
         isAlive: true,
         invincible: true,
@@ -109,7 +111,31 @@ window.GameEntities.AliothSystem = {
         aimAngle: cfg.angle,
         speed: cfg.speed,
         turnSpeed: cfg.turnSpeed,
-        radius: 36,
+        radius: 40,
+        maxHp: 10000,
+        currentHp: 10000,
+        attack: 180,
+        defense: 80,
+        weapon: {
+          name: 'Long Trảo & Thần Long Tức',
+          tier: 'god',
+          attack: 180,
+          desc: 'Móng vuốt xé rách không gian và hơi thở nguyên tố hủy diệt vạn vật.'
+        },
+        armor: {
+          name: 'Thần Long Nghịch Lân',
+          tier: 'god',
+          defense: 80,
+          desc: 'Lớp vảy rồng cứng hơn thần thiết, chống chịu mọi đòn tấn công thông thường.'
+        },
+        skills: [
+          { id: 'dragon_' + cfg.element, def: { name: cfg.element === 'fire' ? 'Chân Hỏa Long Tức' : cfg.element === 'lightning' ? 'Cuồng Lôi Thiên Kiếp' : 'Địa Chấn Nham Sơn', desc: cfg.element === 'fire' ? 'Phun bão lửa thiêu đốt phía trước.' : cfg.element === 'lightning' ? 'Sét đánh giật liên hoàn hai bên thân rồng.' : 'Quật đuôi nhô núi đá nhọn hất tung đối thủ.' } }
+        ],
+        passives: [
+          { id: 'dragon_immortal', name: 'Bất Tử Thiên Tai', desc: 'Thần thú bay lượn trên bầu trời, chỉ có Tôn Ngộ Không mới có thể chế ngự và kéo về núi.' }
+        ],
+        objective: 'Tuần hành bầu trời, gieo rắc bão nguyên tố',
+        thought: 'Uy áp rồng thiêng bao trùm khắp đấu trường!',
         targetX: this.mapW / 2,
         targetY: this.mapH / 2,
         targetTimer: 0,
@@ -135,7 +161,7 @@ window.GameEntities.AliothSystem = {
 
   pickTargetFromNearestBots(dragon, mapW, mapH) {
     const G = window.GameManager;
-    const pawns = (G?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
+    const pawns = (G?.pawns || []).filter(p => p.isAlive && !this.protected(p));
 
     if (!pawns.length) {
       const t = this.clock * 0.4 + dragon.phase;
@@ -176,12 +202,18 @@ window.GameEntities.AliothSystem = {
     if (!entity?.isAlive || entity.isAlioth || entity.isCloud || entity.isSplit) return true;
     if (entity.captured) return true;
     if (entity.isAncient || entity.isAncientClone || entity.isDemonKing) return true;
+    if (entity.isPawn && (window.GameManager?.battleRoyaleResolved || window.GameManager?.finalShowdown || entity.finalDuel || (window.GameManager?.pawns?.filter(p => p.isAlive).length || 0) <= 2)) return true;
+    if (window.GameManager?.battleRoyaleResolved && entity.isFinalHunt) return true;
     return entity === window.GameEntities.EntityManager?.worldBoss;
   },
 
   nearest(x, y) {
     let best = null, dist = Infinity, bestDragon = null;
     for (const dragon of this.dragons) {
+      if (!dragon.isAlive || dragon.captured || dragon.inDuel) continue;
+      const dHead = Math.hypot(dragon.x - x, dragon.y - y);
+      if (dHead > 480 && dHead - 400 > dist) continue;
+
       for (const point of dragon.spine) {
         const d = Math.hypot(point.x - x, point.y - y);
         if (d < dist) { dist = d; best = point; bestDragon = dragon; }
@@ -192,11 +224,12 @@ window.GameEntities.AliothSystem = {
 
   avoid(pawn, dt) {
     if (!pawn?.isAlive || !this.dragons.length) return false;
+    if (window.GameManager?.battleRoyaleResolved) return false;
     const hit = this.nearest(pawn.x, pawn.y);
     const M = window.GameEngine.MapTerrain;
 
     // Tránh né rồng
-    if (hit.point && hit.dist <= 300) {
+    if (hit.point && hit.dist <= 90) {
       pawn.plan = null;
       pawn.targetEnemy = null;
       pawn.chase = null;
@@ -233,33 +266,74 @@ window.GameEntities.AliothSystem = {
     for (const dragon of this.dragons) {
       if (!dragon.isAlive || dragon.captured) continue;
 
-      dragon.targetTimer = (dragon.targetTimer || 0) - dt;
-      if (dragon.targetTimer <= 0) {
-        dragon.targetTimer = 0.8 + Math.random() * 0.6;
-        this.pickTargetFromNearestBots(dragon, mapW, mapH);
+      const H = window.GameEntities.HuaguoSystem;
+      const wukong = H?.wukong;
+      const duelingWukong = wukong?.state === 'duel' && wukong.target === dragon;
+      dragon.inDuel = duelingWukong;
+
+      let desiredAngle;
+
+      if (duelingWukong) {
+        // Rồng tập trung chiến đấu với Tôn Ngộ Không
+        dragon.targetX = wukong.x;
+        dragon.targetY = wukong.y;
+
+        const dxW = wukong.x - dragon.x;
+        const dyW = wukong.y - dragon.y;
+        const distW = Math.hypot(dxW, dyW) || 1;
+        const angToW = Math.atan2(dyW, dxW);
+
+        // Uốn lượn vờn quanh Ngộ Không
+        const combatWave = Math.sin(this.clock * 3.8 + dragon.index) * 0.52;
+        desiredAngle = angToW + combatWave;
+
+        let duelSpeed = distW > 105 ? 160 : 75;
+        if (dragon.biteLunge > 0) {
+          dragon.biteLunge -= dt;
+          desiredAngle = angToW; // Lao thẳng vào cắn Ngộ Không
+          duelSpeed = 240;
+        }
+
+        // Xoay đầu nhạy bén về phía Ngộ Không
+        let diff = desiredAngle - dragon.aimAngle;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        dragon.aimAngle += Math.sign(diff) * Math.min(Math.abs(diff), 3.4 * dt);
+
+        dragon.vx = Math.cos(dragon.aimAngle) * duelSpeed;
+        dragon.vy = Math.sin(dragon.aimAngle) * duelSpeed;
+
+        if (dragon.element === 'fire') {
+          dragon.isBreathingFire = Math.sin(this.clock * 2.8) > 0.05;
+        }
+      } else {
+        dragon.targetTimer = (dragon.targetTimer || 0) - dt;
+        if (dragon.targetTimer <= 0) {
+          dragon.targetTimer = 0.8 + Math.random() * 0.6;
+          this.pickTargetFromNearestBots(dragon, mapW, mapH);
+        }
+
+        // 1. Góc lái đầu rồng mượt mà
+        const dx = dragon.targetX - dragon.x;
+        const dy = dragon.targetY - dragon.y;
+        desiredAngle = Math.atan2(dy, dx);
+
+        const margin = 280;
+        if (dragon.x < margin) desiredAngle = Math.atan2(dy, Math.abs(dx) + 300);
+        else if (dragon.x > mapW - margin) desiredAngle = Math.atan2(dy, -Math.abs(dx) - 300);
+        if (dragon.y < margin) desiredAngle = Math.atan2(Math.abs(dy) + 300, dx);
+        else if (dragon.y > mapH - margin) desiredAngle = Math.atan2(-Math.abs(dy) - 300, dx);
+
+        let diff = desiredAngle - dragon.aimAngle;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+
+        const slither = Math.sin(this.clock * 3.6 + dragon.seed) * 0.45;
+        dragon.aimAngle += Math.sign(diff) * Math.min(Math.abs(diff), dragon.turnSpeed * dt) + slither * dt;
+
+        dragon.vx = Math.cos(dragon.aimAngle) * dragon.speed;
+        dragon.vy = Math.sin(dragon.aimAngle) * dragon.speed;
       }
-
-      // 1. Góc lái đầu rồng mượt mà
-      const dx = dragon.targetX - dragon.x;
-      const dy = dragon.targetY - dragon.y;
-      let desiredAngle = Math.atan2(dy, dx);
-
-      const margin = 280;
-      if (dragon.x < margin) desiredAngle = Math.atan2(dy, Math.abs(dx) + 300);
-      else if (dragon.x > mapW - margin) desiredAngle = Math.atan2(dy, -Math.abs(dx) - 300);
-      if (dragon.y < margin) desiredAngle = Math.atan2(Math.abs(dy) + 300, dx);
-      else if (dragon.y > mapH - margin) desiredAngle = Math.atan2(-Math.abs(dy) - 300, dx);
-
-      let diff = desiredAngle - dragon.aimAngle;
-      while (diff < -Math.PI) diff += Math.PI * 2;
-      while (diff > Math.PI) diff -= Math.PI * 2;
-
-      const slither = Math.sin(this.clock * 3.6 + dragon.seed) * 0.45;
-      dragon.aimAngle += Math.sign(diff) * Math.min(Math.abs(diff), dragon.turnSpeed * dt) + slither * dt;
-
-      // 2. Di chuyển đầu rồng
-      dragon.vx = Math.cos(dragon.aimAngle) * dragon.speed;
-      dragon.vy = Math.sin(dragon.aimAngle) * dragon.speed;
       dragon.x += dragon.vx * dt;
       dragon.y += dragon.vy * dt;
 
@@ -370,7 +444,7 @@ window.GameEntities.AliothSystem = {
       }
     });
 
-    const pawns = (G?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
+    const pawns = (G?.pawns || []).filter(p => p.isAlive && !this.protected(p));
     for (const p of pawns) {
       const d = Math.hypot(p.x - head.x, p.y - head.y);
       if (d <= reach) {
@@ -441,7 +515,7 @@ window.GameEntities.AliothSystem = {
       V?.addBurstParticles?.(targetX, targetY, '#38bdf8', 12);
       V?.addEffect?.('impact', targetX, targetY, { radius: 38, color: '#38bdf8', life: 0.35 });
 
-      const victims = (G?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
+      const victims = (G?.pawns || []).filter(p => p.isAlive && !this.protected(p));
       for (const p of victims) {
         if (Math.hypot(p.x - targetX, p.y - targetY) <= 45) {
           const dmg = Math.round(16 + Math.random() * 10);
@@ -530,11 +604,21 @@ window.GameEntities.AliothSystem = {
   devour() {
     const G = window.GameManager;
     if (!G || !this.dragons.length) return;
-    const victims = [...(G.pawns || []), ...(G.monsters || [])];
-    for (const victim of victims) {
-      if (this.protected(victim)) continue;
-      const hit = this.nearest(victim.x, victim.y);
-      if (hit.dist <= 48) this.executeDevour(victim, hit.dragon);
+    const livingDragons = this.dragons.filter(d => d.isAlive && !d.captured && !d.inDuel);
+    if (!livingDragons.length) return;
+
+    for (const dragon of livingDragons) {
+      const head = dragon.spine?.[0];
+      if (!head) continue;
+      const candidates = G.spatialGrid
+        ? G.spatialGrid.queryCircle(head.x, head.y, 55, e => e.isAlive && !this.protected(e))
+        : [...(G.pawns || []), ...(G.monsters || [])].filter(e => e.isAlive && !this.protected(e) && Math.hypot(e.x - head.x, e.y - head.y) <= 48);
+
+      for (const victim of candidates) {
+        if (Math.hypot(victim.x - head.x, victim.y - head.y) <= 48) {
+          this.executeDevour(victim, dragon);
+        }
+      }
     }
   },
 
@@ -567,6 +651,8 @@ window.GameEntities.AliothSystem = {
     victim.y = -9999;
     victim.vx = 0;
     victim.vy = 0;
+
+    window.GameEntities.TrucLamSystem?.handleVictimDevoured?.(victim, oldX, oldY);
 
     if (victim === window.GameEntities.EntityManager?.worldBoss) {
       window.GameEntities.AncientSystem?.awaken?.(victim, dragon || this.alioth);
@@ -802,7 +888,7 @@ window.GameEntities.AliothSystem = {
 
   drawHead(ctx, kit, dragon, head, scale, deep, belly, gold, mane, time) {
     const isFireRoar = dragon.element === 'fire' && dragon.isBreathingFire;
-    const jaw = isFireRoar ? 0.38 : 0.18 + Math.sin(time * 2.2) * 0.08;
+    const jaw = dragon.inDuel ? (0.38 + Math.sin(time * 8.5) * 0.14) : (isFireRoar ? 0.38 : 0.18 + Math.sin(time * 2.2) * 0.08);
     const whisker = Math.sin(time * 3) * 6;
     ctx.save();
     this.place(ctx, head);

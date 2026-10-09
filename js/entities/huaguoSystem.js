@@ -15,7 +15,7 @@ window.GameEntities.HuaguoSystem = {
   capturedDragons: [],
   clock: 0,
   ritualTime: 0,
-  ritualNeeded: 8,
+  ritualNeeded: 5,
   cooldown: 0,
   mapW: 5200,
   mapH: 5200,
@@ -62,26 +62,39 @@ window.GameEntities.HuaguoSystem = {
     this.init(mapWidth, mapHeight);
   },
 
-  // Điểm ưu tiên cho AI: bái kiến là phần thưởng (triệu hồi Đại Thánh diệt rồng), nên xếp trên farm/loot thường.
+  // Điểm ưu tiên cho AI: bái kiến là phần thưởng (triệu hồi Đại Thánh diệt rồng hoặc thỉnh Tiểu Ngộ Không trợ chiến), nên xếp trên farm/loot thường.
   pilgrimageScore(pawn) {
     const m = this.mountain;
     if (!m || !pawn?.isAlive || this.wukong || this.cooldown > 0) return 0;
-    if (!(window.GameEntities.AliothSystem?.dragons || []).some(d => d.isAlive)) return 0;
+    if (window.GameManager?.battleRoyaleResolved) return 0;
+    const alivePawns = (window.GameManager?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
+    if (alivePawns.length <= 1) return 0;
+    if (pawn.currentHp < pawn.maxHp * 0.35) return 0;
     const dist = Math.hypot(pawn.x - m.x, pawn.y - m.y);
-    if (dist > 2600) return 0;
+    if (dist > 4500) return 0;
     const M = window.GameEngine.MapTerrain;
     if (M && !M.canTravel(pawn, m.x, m.y)) return 0;
-    return 320 - dist / 40;
+    return Math.max(100, Math.round(280 - dist / 30));
   },
 
   seekPilgrimage(pawn, dt) {
     const m = this.mountain;
     if (!m) return;
+    if (this.wukong || window.GameManager?.battleRoyaleResolved || (window.GameManager?.pawns || []).filter(p => p.isAlive && !p.isDemonKing).length <= 1) {
+      pawn.plan = null;
+      pawn.evaluateAt = 0;
+      return;
+    }
     const dist = Math.hypot(pawn.x - m.x, pawn.y - m.y);
     pawn.isHiding = false;
     pawn.targetEnemy = null;
-    pawn.objective = 'Bái kiến Hoa Quả Sơn: triệu hồi Tôn Ngộ Không';
-    pawn.thought = 'Một người cũng bắt đầu được nghi lễ. Càng đông càng nhanh, EXP chia đều.';
+    const hasDragons = (window.GameEntities.AliothSystem?.dragons || []).some(d => d.isAlive && !d.captured);
+    pawn.objective = hasDragons
+      ? 'Bái kiến Hoa Quả Sơn: triệu hồi Tôn Ngộ Không'
+      : 'Bái kiến Hoa Quả Sơn: thỉnh Tiểu Ngộ Không trợ chiến (2 phút)';
+    pawn.thought = hasDragons
+      ? 'Một người cũng bắt đầu được nghi lễ. Càng đông càng nhanh, EXP chia đều.'
+      : 'Bái kiến Hoa Quả Sơn để nhờ Tiểu Ngộ Không xuất sơn trợ giúp trong 2 phút!';
     if (dist > m.radius + 60) window.GameAI.AIBrain.moveToTarget(pawn, m.x, m.y + 40, dt);
     else { pawn.vx = 0; pawn.vy = 0; pawn.aimAngle = Math.atan2(m.y - pawn.y, m.x - pawn.x); }
   },
@@ -116,6 +129,16 @@ window.GameEntities.HuaguoSystem = {
       this.updateWukong(dt);
       return;
     }
+
+    // Tự động xuất kích khi trận đấu chỉ còn 1 bot sống sót (chế độ người sống sót cuối)
+    const alivePawns = (G?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
+    const oneBotLeft = (G?.battleRoyaleResolved && !G?.resultOpen) || (alivePawns.length === 1 && !G?.resultOpen);
+    if (oneBotLeft && alivePawns.length === 1) {
+      const remainingDragons = (window.GameEntities.AliothSystem?.dragons || []).filter(d => d.isAlive && !d.captured);
+      this.summonWukongSurvivor(remainingDragons[0] || null);
+      return;
+    }
+
     if (this.cooldown > 0) return;
 
     // Đếm bot bái kiến: đứng trong vòng núi, không giao tranh.
@@ -124,9 +147,12 @@ window.GameEntities.HuaguoSystem = {
 
     if (this.pilgrims.length >= 1) {
       this.ritualTime += dt * this.pilgrims.length;
+      const hasDragons = (window.GameEntities.AliothSystem?.dragons || []).some(d => d.isAlive && !d.captured);
       for (const p of this.pilgrims) {
-        p.objective = 'Bái kiến Tôn Ngộ Không tại Hoa Quả Sơn';
-        p.thought = 'Càng đông người, nghi lễ càng nhanh. Phần thưởng kinh nghiệm chia đều.';
+        p.objective = hasDragons ? 'Bái kiến Tôn Ngộ Không tại Hoa Quả Sơn' : 'Bái kiến thỉnh Tiểu Ngộ Không trợ chiến (2 phút)';
+        p.thought = hasDragons
+          ? 'Càng đông người, nghi lễ càng nhanh. Phần thưởng kinh nghiệm chia đều.'
+          : 'Thành tâm bái kiến, Tiểu Ngộ Không sắp xuất sơn trợ chiến 2 phút!';
         p.vx = 0;
         p.vy = 0;
       }
@@ -138,30 +164,184 @@ window.GameEntities.HuaguoSystem = {
 
   summonWukong() {
     const G = window.GameManager;
-    const dragons = (window.GameEntities.AliothSystem?.dragons || []).filter(d => d.isAlive);
-    if (!dragons.length) {
-      this.ritualTime = 0;
-      window.GameUI?.CombatTicker?.log('🐒 Bầy khỉ reo hò, nhưng không còn long thần nào để Đại Thánh ra tay.');
-      this.cooldown = 30;
-      return;
-    }
-    const target = dragons[Math.floor(Math.random() * dragons.length)];
+    const dragons = (window.GameEntities.AliothSystem?.dragons || []).filter(d => d.isAlive && !d.captured);
     const m = this.mountain;
-    this.wukong = {
+    if (dragons.length > 0) {
+      // Còn rồng: Tôn Ngộ Không xuất kích dẹp tan Long Thần
+      const target = dragons[Math.floor(Math.random() * dragons.length)];
+      this.wukong = this.createWukongEntity(target, 'rise', 1.2);
+      this.ritualTime = 0;
+      this.rewardPilgrims();
+      window.GameUI?.CombatTicker?.log(`☁️ Bái kiến thành công! Tôn Ngộ Không cưỡi cân đẩu vân xuất kích diệt ${target.name}!`);
+    } else {
+      // Đã diệt hết rồng: thỉnh Tôn Ngộ Không nhỏ hơn 1 tý (Tiểu Ngộ Không) trợ giúp trong 2 phút
+      const pilgrim = this.pilgrims.find(p => p.isAlive) || G?.winnerPawn || (G?.pawns || []).find(p => p.isAlive);
+      this.wukong = this.createMiniWukongEntity(pilgrim);
+      this.ritualTime = 0;
+      this.rewardPilgrims();
+      window.GameUI?.CombatTicker?.log(`🐵 Bái kiến thành công! Tiểu Ngộ Không xuất sơn phò tá ${pilgrim?.name || 'dũng sĩ'} tiêu diệt quái thú trong 2 phút!`);
+    }
+    window.GameEngine?.Audio?.play?.('ascension');
+    window.GameRenderer?.VfxManager?.addEffect?.('rune', m.x, m.y, { radius: 160, color: '#f6d48a', life: 2 });
+  },
+
+  createMiniWukongEntity(pilgrim) {
+    const m = this.mountain;
+    return {
+      id: 'wukong_mini',
+      name: 'Tiểu Ngộ Không',
+      title: 'Phân Thân Đại Thánh • Hộ Mệnh 2 Phút',
+      tierName: 'Phân Thân Thần Thông (2 Phút)',
+      isSpecial: true,
+      isWukong: true,
+      isMini: true,
+      scale: 0.50, // Nhỏ hơn 1 tý (0.50 so với 0.62)
+      isAlive: true,
+      x: m.x,
+      y: m.y - 30,
+      vx: 0,
+      vy: 0,
+      radius: 32,
+      owner: pilgrim || null,
+      target: null,
+      state: 'assist',
+      life: 120, // Thời lượng trợ giúp 2 phút = 120s
+      maxLife: 120,
+      timer: 120,
+      angle: 0,
+      assistClock: 0,
+      assistStrikeTimer: 0.4,
+      maxHp: 99999,
+      currentHp: 99999,
+      maxStamina: 100,
+      currentStamina: 100,
+      maxMana: 100,
+      currentMana: 100,
+      attack: 666,
+      defense: 666,
+      speed: 480,
+      level: 72,
+      weapon: {
+        name: 'Gậy Như Ý (Phân Thân Thần Thiết)',
+        tier: 'god',
+        attack: 666,
+        desc: 'Bản sao thần binh Như Ý linh động, vung gậy liên hoàn quét sạch yêu ma quái thú.'
+      },
+      armor: {
+        name: 'Tiểu Hoàng Kim Giáp',
+        tier: 'god',
+        defense: 350,
+        hp: 30000,
+        desc: 'Hoàng kim giáp hộ thân nhỏ gọn, linh hoạt đằng vân giá vũ.'
+      },
+      helmet: {
+        name: 'Kim Cô Giáp Mão',
+        tier: 'god',
+        defense: 200,
+        desc: 'Vòng Kim Cô sáng chói ngự trên đỉnh đầu phân thân Đại Thánh.'
+      },
+      boots: {
+        name: 'Tiểu Cân Đẩu Vân',
+        tier: 'god',
+        speed: 480,
+        desc: 'Đám mây Cân Đẩu Vân nhỏ giúp bám sát và hộ tống dũng sĩ.'
+      },
+      skills: [
+        { id: 'wukong_mini_spin', def: { name: 'Xoay Gậy Trợ Chiến', desc: 'Xoay gậy vạn biến tạo luồng kim quang đẩy lùi và đánh tan quái thú.' } },
+        { id: 'wukong_mini_strike', def: { name: 'Gậy Như Ý Giáng Đòn', desc: 'Lướt tới vung gậy giáng sấm sét gây sát thương vào kẻ thù xung quanh dũng sĩ.' } },
+        { id: 'wukong_mini_escort', def: { name: 'Hộ Thể Kim Quang', desc: 'Trừ bỏ sợ hãi, tăng cường dũng khí và bảo vệ người triệu hồi trong 2 phút.' } }
+      ],
+      passives: [
+        { id: 'wukong_mini_pact', name: 'Hộ Mệnh 2 Phút', desc: 'Phò tá dũng sĩ trong thời hạn 2 phút (120 giây), sau đó đằng vân trở về Hoa Quả Sơn.' },
+        { id: 'wukong_mini_body', name: 'Kim Cương Bất Hoại', desc: 'Thân thể phân thân miễn nhiễm mọi sát thương và khống chế.' }
+      ],
+      objective: `Phò tá ${pilgrim?.name || 'dũng sĩ'} diệt quái (còn 120s)`,
+      thought: 'Tiểu Ngộ Không xuất sơn, yêu quái mau mau đền mạng!'
+    };
+  },
+
+  summonWukongSurvivor(dragon) {
+    const m = this.mountain;
+    if (!m) return;
+    this.wukong = this.createWukongEntity(dragon || null, dragon ? 'rise' : 'assist', dragon ? 1.0 : 0);
+    if (dragon) {
+      window.GameUI?.CombatTicker?.log(`☁️ Chỉ còn 1 người sống sót! Tôn Ngộ Không xuất kích dẹp tan các Long Thần trên đấu trường!`);
+    } else {
+      window.GameUI?.CombatTicker?.log(`☁️ Tôn Ngộ Không xuất kích từ Hoa Quả Sơn, bay đến trợ chiến đánh quái!`);
+    }
+    window.GameEngine?.Audio?.play?.('ascension');
+    window.GameRenderer?.VfxManager?.addEffect?.('rune', m.x, m.y, { radius: 160, color: '#f6d48a', life: 2 });
+  },
+
+  createWukongEntity(target, state = 'rise', timer = 1.2) {
+    const m = this.mountain;
+    return {
+      id: 'wukong_sun',
+      name: 'Tôn Ngộ Không',
+      title: 'Tề Thiên Đại Thánh • Mỹ Hầu Vương',
+      tierName: 'Đấu Chiến Thắng Phật',
+      isSpecial: true,
+      isWukong: true,
+      isAlive: true,
       x: m.x,
       y: m.y - 40,
       vx: 0,
       vy: 0,
-      target,
-      state: 'rise',
-      timer: 1.2,
-      angle: 0
+      radius: 40,
+      target: target || null,
+      state,
+      timer,
+      angle: 0,
+      assistClock: 0,
+      assistStrikeTimer: 0.5,
+      maxHp: 99999,
+      currentHp: 99999,
+      maxStamina: 100,
+      currentStamina: 100,
+      maxMana: 100,
+      currentMana: 100,
+      attack: 999,
+      defense: 999,
+      speed: 520,
+      level: 99,
+      weapon: {
+        name: 'Gậy Như Ý (Định Hải Thần Châm)',
+        tier: 'god',
+        attack: 999,
+        desc: 'Thần Khí tối thượng nặng 13.500 cân, tùy tâm biến hóa to nhỏ, quét sạch yêu ma cản đường.'
+      },
+      armor: {
+        name: 'Tỏa Tử Hoàng Kim Giáp',
+        tier: 'god',
+        defense: 500,
+        hp: 50000,
+        desc: 'Áo giáp vàng kim đúc từ thần khí Long Cung, vạn kiếp bất hoại, tỏa ánh sáng rực rỡ.'
+      },
+      helmet: {
+        name: 'Phụng Dực Tử Kim Quan & Kim Cô',
+        tier: 'god',
+        defense: 300,
+        desc: 'Mão lông phượng hoàng tử kim cùng vòng Kim Cô ngự đỉnh thần uy chấn nhiếp tam giới.'
+      },
+      boots: {
+        name: 'Ngẫu Ty Bộ Vân Lý & Cân Đẩu Vân',
+        tier: 'god',
+        speed: 520,
+        desc: 'Hài mây bước gió, cưỡi Cân Đẩu Vân một lần lộn vòng bay mười vạn tám ngàn dặm.'
+      },
+      skills: [
+        { id: 'wukong_staff_spin', def: { name: 'Vòng Xoay Thần Tốc (Spinning Staff)', desc: 'Xoay gậy 360 độ tạo đĩa kim quang thần tốc, cản phá mọi đòn tấn công và phản sát thương.' } },
+        { id: 'wukong_cloud_somersault', def: { name: 'Cân Đẩu Lộn Vòng (Somersault Slam)', desc: 'Lộn vòng trên mây giáng gậy Như Ý sấm sét ngàn cân đập tan đầu mục tiêu.' } },
+        { id: 'wukong_dragon_lock', def: { name: 'Khóa Cổ Phục Long (Dragon Restraint)', desc: 'Phóng dài gậy Như Ý khóa chặt cổ Long Thần, kéo về giam giữ tại Động Thủy Liêm.' } },
+        { id: 'wukong_assist_escort', def: { name: 'Thần Binh Phò Trợ (Imperial Escort)', desc: 'Hộ tống người sống sót cuối cùng, trừ bỏ sợ hãi, vung gậy dọn sạch quái vật.' } }
+      ],
+      passives: [
+        { id: 'wukong_immortal', name: 'Kim Cương Bất Hoại Thân', desc: 'Thân thể tôi luyện trong lò Bát Quái, miễn nhiễm mọi khống chế và sát thương tử vong.' },
+        { id: 'wukong_golden_eyes', name: 'Hỏa Nhãn Kim Tinh', desc: 'Mắt thần nhìn thấu mọi ngụy trang, phát hiện tàng hình và điểm yếu của vạn vật.' }
+      ],
+      objective: 'Cưỡi Cân Đẩu Vân tuần du tam giới',
+      thought: 'Lão Tôn xuất thế, yêu ma quỷ quái đâu mau ra nghênh tiếp!'
     };
-    this.ritualTime = 0;
-    this.rewardPilgrims();
-    window.GameUI?.CombatTicker?.log(`☁️ Bái kiến thành công! Tôn Ngộ Không cưỡi cân đẩu vân xuất kích diệt ${target.name}!`);
-    window.GameEngine?.Audio?.play?.('ascension');
-    window.GameRenderer?.VfxManager?.addEffect?.('rune', m.x, m.y, { radius: 160, color: '#f6d48a', life: 2 });
   },
 
   rewardPilgrims() {
@@ -173,6 +353,10 @@ window.GameEntities.HuaguoSystem = {
     for (const p of pilgrims) {
       p.currentExp = (p.currentExp || 0) + share;
       C?.checkLevelUp?.(p);
+      if (p.plan?.kind === 'pilgrimage') {
+        p.plan = null;
+        p.evaluateAt = 0;
+      }
       window.GameRenderer?.VfxManager?.addEmotionMote?.(p, '🙏', '#f6d48a');
       window.GameRenderer?.VfxManager?.addDamageNumber?.(p.x, p.y - 30, '+' + share + ' EXP', 'heal');
     }
@@ -182,14 +366,39 @@ window.GameEntities.HuaguoSystem = {
   updateWukong(dt) {
     const w = this.wukong;
     if (!w) return;
+    const G = window.GameManager;
     w.timer -= dt;
 
     if (w.state === 'rise') {
       w.y -= 90 * dt;
-      if (w.timer <= 0) { w.state = 'fly'; w.timer = 12; }
+      if (w.timer <= 0) {
+        w.state = w.target ? 'fly' : 'assist';
+        w.timer = 12;
+      }
     } else if (w.state === 'fly') {
       const t = w.target;
-      if (!t?.isAlive) { w.state = 'return'; w.timer = 8; return; }
+      if (!t?.isAlive || t?.captured) {
+        const A = window.GameEntities.AliothSystem;
+        const remainingDragons = (A?.dragons || []).filter(d => d.isAlive && !d.captured);
+        const alivePawns = (G?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
+        const oneBotLeft = (G?.battleRoyaleResolved && !G?.resultOpen) || (alivePawns.length === 1 && !G?.resultOpen);
+        if (oneBotLeft && remainingDragons.length > 0) {
+          w.target = remainingDragons[0];
+          w.timer = 14;
+          return;
+        } else if (oneBotLeft) {
+          w.target = null;
+          w.state = 'assist';
+          w.assistClock = 0;
+          w.assistStrikeTimer = 0.5;
+          return;
+        }
+        w.state = 'return';
+        w.timer = 8;
+        return;
+      }
+      w.objective = 'Truy đuổi ' + (t.name || 'Long Thần');
+      w.thought = 'Cưỡi Cân Đẩu Vân xé gió bắt rồng về Hoa Quả Sơn!';
       const dx = t.x - w.x, dy = (t.y - 30) - w.y, dist = Math.hypot(dx, dy);
       w.angle = Math.atan2(dy, dx);
       if (dist > 40) {
@@ -198,16 +407,35 @@ window.GameEntities.HuaguoSystem = {
         w.y += dy / dist * step;
       } else {
         w.state = 'duel';
-        w.timer = 5.2;
+        w.timer = 5.5;
         w.beat = 0;
         w.beatT = 0;
+        w.duelClock = 0;
       }
       if (w.timer <= 0) { w.state = 'return'; w.timer = 8; }
     } else if (w.state === 'duel') {
       const t = w.target;
       if (!t?.isAlive) { w.state = 'return'; w.timer = 8; return; }
-      const beats = [1.0, 1.1, 1.0, 1.0, 1.1];
-      w.beatT += dt;
+      w.duelClock = (w.duelClock || 0) + dt;
+      w.objective = 'Quyết chiến ' + (t.name || 'Long Thần');
+      w.thought = 'Gậy Như Ý vung vạn biến, xoay gậy thần tốc, giáng đòn sấm sét!';
+
+      // Ngộ Không cưỡi Cân Đẩu Vân giao tranh áp sát đầu rồng
+      const dx = t.x - w.x, dy = t.y - w.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const angleToDragon = Math.atan2(dy, dx);
+      w.angle = angleToDragon;
+
+      // Quỹ đạo bay vờn chiến đấu quanh đầu rồng (~75-95px)
+      const combatOrbit = w.duelClock * 2.5;
+      const targetDist = 78 + Math.sin(w.duelClock * 3.8) * 15;
+      const idealX = t.x - Math.cos(angleToDragon + Math.sin(combatOrbit) * 0.4) * targetDist;
+      const idealY = t.y - Math.sin(angleToDragon + Math.sin(combatOrbit) * 0.4) * targetDist;
+      w.x += (idealX - w.x) * Math.min(1, 9 * dt);
+      w.y += (idealY - w.y) * Math.min(1, 9 * dt);
+
+      const beats = [1.1, 1.1, 1.1, 1.1, 1.1];
+      w.beatT = (w.beatT || 0) + dt;
       if (w.beatT >= beats[w.beat]) {
         this.duelBeat(w, t);
         w.beatT = 0;
@@ -240,12 +468,54 @@ window.GameEntities.HuaguoSystem = {
         }
       } else {
         if (cap) this.imprisonDragon(cap);
-        w.state = 'return';
-        w.timer = 2;
         w.captive = null;
+
+        const alivePawns = (G?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
+        const oneBotLeft = (G?.battleRoyaleResolved && !G?.resultOpen) || (alivePawns.length === 1 && !G?.resultOpen);
+
+        if (oneBotLeft) {
+          const A = window.GameEntities.AliothSystem;
+          const remainingDragons = (A?.dragons || []).filter(d => d.isAlive && !d.captured);
+          if (remainingDragons.length > 0) {
+            // Còn rồng: tiếp tục dẹp con rồng tiếp theo
+            w.target = remainingDragons[0];
+            w.state = 'fly';
+            w.timer = 14;
+            window.GameUI?.CombatTicker?.log(`☁️ Tôn Ngộ Không tiếp tục xuất kích dẹp ${remainingDragons[0].name}!`);
+          } else {
+            // Dẹp xong toàn bộ rồng: bay tới trợ giúp bot đánh quái
+            w.target = null;
+            w.state = 'assist';
+            w.assistClock = 0;
+            w.assistStrikeTimer = 0.5;
+            const survivor = G?.winnerPawn?.isAlive ? G.winnerPawn : alivePawns[0];
+            window.GameUI?.CombatTicker?.log(`🐵 Đại Thánh đã dẹp tan toàn bộ Long Thần! Tiến đến trợ chiến cho ${survivor?.name || 'người sống sót'} đánh quái!`);
+          }
+        } else {
+          w.state = 'return';
+          w.timer = 2;
+        }
       }
-      if (w.timer <= 0) { w.state = 'return'; w.timer = 2; }
+      if (w.timer <= 0 && w.state === 'drag') { w.state = 'return'; w.timer = 2; }
     } else if (w.state === 'return') {
+      const alivePawns = (G?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
+      const oneBotLeft = (G?.battleRoyaleResolved && !G?.resultOpen) || (alivePawns.length === 1 && !G?.resultOpen);
+      if (oneBotLeft && alivePawns.length === 1 && !w.isMini) {
+        const A = window.GameEntities.AliothSystem;
+        const remainingDragons = (A?.dragons || []).filter(d => d.isAlive && !d.captured);
+        if (remainingDragons.length > 0) {
+          w.target = remainingDragons[0];
+          w.state = 'fly';
+          w.timer = 14;
+          return;
+        } else {
+          w.target = null;
+          w.state = 'assist';
+          w.assistClock = 0;
+          w.assistStrikeTimer = 0.5;
+          return;
+        }
+      }
       const m = this.mountain;
       const dx = m.x - w.x, dy = (m.y - 40) - w.y, dist = Math.hypot(dx, dy);
       w.angle = Math.atan2(dy, dx);
@@ -254,10 +524,119 @@ window.GameEntities.HuaguoSystem = {
         w.x += dx / dist * step;
         w.y += dy / dist * step;
       } else {
-        window.GameUI?.CombatTicker?.log('☁️ Tôn Ngộ Không trở về Hoa Quả Sơn nghỉ ngơi.');
+        window.GameUI?.CombatTicker?.log(`☁️ ${w.name} trở về Hoa Quả Sơn nghỉ ngơi.`);
         this.wukong = null;
         this.clouds = [];
-        this.cooldown = 45;
+        this.cooldown = 20;
+      }
+    } else if (w.state === 'assist') {
+      const host = (w.owner?.isAlive ? w.owner : null) || (G?.winnerPawn?.isAlive ? G.winnerPawn : null) || (G?.pawns || []).find(p => p.isAlive && !p.isDemonKing);
+      if (!host?.isAlive) {
+        w.state = 'return';
+        w.timer = 6;
+        return;
+      }
+
+      // Đếm ngược thời gian trợ giúp 2 phút (120s) nếu là Tiểu Ngộ Không
+      if (w.isMini) {
+        w.life = (w.life ?? 120) - dt;
+        w.objective = (w.inCombat ? 'Trợ chiến diệt quái' : `Hộ tống ${host.name}`) + ` • Còn ${Math.max(0, Math.ceil(w.life))}s`;
+        w.thought = `Tiểu Ngộ Không trợ chiến trong 2 phút (còn ${Math.max(0, Math.ceil(w.life))} giây)!`;
+        if (w.life <= 0) {
+          w.state = 'return';
+          w.timer = 5;
+          window.GameUI?.CombatTicker?.log('☁️ Hết 2 phút trợ chiến, Tiểu Ngộ Không đằng vân trở về Hoa Quả Sơn nghỉ ngơi!');
+          return;
+        }
+      }
+
+      // Ưu tiên dẹp rồng nếu vẫn còn rồng sót lại (chỉ áp dụng cho Đại Thánh chính)
+      if (!w.isMini) {
+        const A = window.GameEntities.AliothSystem;
+        const dragons = (A?.dragons || []).filter(d => d.isAlive && !d.captured);
+        if (dragons.length > 0) {
+          w.target = dragons[0];
+          w.state = 'fly';
+          w.timer = 14;
+          window.GameUI?.CombatTicker?.log(`☁️ Phát hiện ${dragons[0].name}, Tôn Ngộ Không lập tức bay đi dẹp rồng!`);
+          return;
+        }
+      }
+
+      w.assistClock = (w.assistClock || 0) + dt;
+      w.assistStrikeTimer = (w.assistStrikeTimer || 0) - dt;
+
+      // Tìm mục tiêu quái hoặc kẻ thù giao tranh với host
+      let targetEnemy = host.targetEnemy?.isAlive ? host.targetEnemy : null;
+      if (!targetEnemy) {
+        const threatEnemies = (G?.pawns || []).filter(p => p.isAlive && p !== host && !p.isDemonKing && Math.hypot(p.x - host.x, p.y - host.y) < 450 && (p.targetEnemy === host || host.targetEnemy === p));
+        if (threatEnemies.length > 0) {
+          targetEnemy = threatEnemies[0];
+        } else {
+          const candidates = (G?.monsters || []).filter(m => m.isAlive && !m.isDemonKing && Math.hypot(m.x - host.x, m.y - host.y) < 700);
+          if (candidates.length > 0) {
+            candidates.sort((a, b) => Math.hypot(a.x - host.x, a.y - host.y) - Math.hypot(b.x - host.x, b.y - host.y));
+            targetEnemy = candidates[0];
+          }
+        }
+      }
+
+      w.inCombat = !!targetEnemy?.isAlive;
+
+      if (targetEnemy?.isAlive) {
+        // NGỘ KHÔNG ĐÁNH QUÁI / ĐỊCH CÙNG BOT
+        const dxM = targetEnemy.x - w.x;
+        const dyM = targetEnemy.y - w.y;
+        w.angle = Math.atan2(dyM, dxM);
+
+        // Vờn quanh quái vật ở cự ly chiến đấu (~58-72px)
+        const orbit = w.assistClock * 3.2;
+        const orbitDist = w.isMini ? 58 : 72;
+        const targetX = targetEnemy.x - Math.cos(w.angle + Math.sin(orbit) * 0.45) * orbitDist;
+        const targetY = targetEnemy.y - Math.sin(w.angle + Math.sin(orbit) * 0.45) * orbitDist;
+        w.x += (targetX - w.x) * Math.min(1, 10 * dt);
+        w.y += (targetY - w.y) * Math.min(1, 10 * dt);
+
+        w.beatT = (w.beatT || 0) + dt;
+        if (w.assistStrikeTimer <= 0) {
+          w.assistStrikeTimer = (w.isMini ? 0.75 : 0.85) + Math.random() * 0.25;
+          w.beat = ((w.beat || 0) + 1) % 5;
+          w.beatT = 0;
+
+          const V = window.GameRenderer?.VfxManager;
+          const C = window.GameEntities.CombatSystem;
+
+          const baseDmg = w.isMini ? Math.round(40 + Math.random() * 22) : Math.round(48 + Math.random() * 24);
+          const dealt = C ? C.applyDamage(host, targetEnemy, null, { baseDamage: baseDmg, skill: true, effect: 'gậy_như_ý' }) : baseDmg;
+
+          const actorName = w.isMini ? 'TIỂU NGỘ KHÔNG' : 'ĐẠI THÁNH';
+          V?.addEffect?.('impact', targetEnemy.x, targetEnemy.y, { radius: w.isMini ? 65 : 80, color: '#f6d48a', life: 0.45 });
+          V?.addBurstParticles?.(targetEnemy.x, targetEnemy.y, '#f6d48a', w.isMini ? 14 : 18);
+          V?.addDamageNumber?.(targetEnemy.x, targetEnemy.y - 25, `${actorName}: -${dealt || baseDmg}`, 'crit');
+          window.GameEngine?.Audio?.play?.('impact', w, 'steel');
+
+          if (targetEnemy.tier <= 4) {
+            const pushAngle = Math.atan2(targetEnemy.y - w.y, targetEnemy.x - w.x);
+            window.GameEngine?.MapTerrain?.moveEntity(targetEnemy, Math.cos(pushAngle) * 16, Math.sin(pushAngle) * 16);
+          }
+
+          if (Math.random() < 0.25) {
+            window.GameUI?.CombatTicker?.log(`🐵 ${w.name} vung gậy Như Ý trợ kích, giáng ${dealt || baseDmg} sát thương vào ${targetEnemy.name}!`);
+          }
+        }
+      } else {
+        // KHÔNG CÓ QUÁI: HỘ TỐNG BAY CẠNH BOT
+        w.assistStrikeTimer = 0.3;
+        const escortAngle = this.clock * 1.6;
+        const escortDist = w.isMini ? 45 : 55;
+        const targetX = host.x + Math.cos(escortAngle) * escortDist;
+        const targetY = host.y - 30 + Math.sin(escortAngle * 2) * 12;
+        w.x += (targetX - w.x) * Math.min(1, 8 * dt);
+        w.y += (targetY - w.y) * Math.min(1, 8 * dt);
+        w.angle = host.aimAngle || 0;
+
+        host.fear = Math.max(0, (host.fear || 0) - 25 * dt);
+        host.confidence = Math.min(100, (host.confidence || 50) + 15 * dt);
       }
     }
 
@@ -271,27 +650,39 @@ window.GameEntities.HuaguoSystem = {
 
   duelBeat(w, dragon) {
     const V = window.GameRenderer?.VfxManager;
-    const names = ['gậy quét ngang', 'nhảy lên giáng đòn', 'đâm xuyên mây', 'lộn vòng né đòn', 'gậy dài khóa cổ'];
     w.swing = (w.beat % 5) / 5;
     const dx = dragon.x - w.x, dy = dragon.y - w.y;
     const dist = Math.hypot(dx, dy) || 1;
-    const away = Math.atan2(dy, dx);
-    if (w.beat % 2 === 1) {
-      w.x -= dx / dist * 90;
-      w.y -= dy / dist * 90;
-      dragon.x += dx / dist * 40;
-      dragon.y += dy / dist * 40;
-      V?.addBurstParticles?.(dragon.x, dragon.y, dragon.colors?.gold || '#f97316', 18);
-      window.GameUI?.CombatTicker?.log(`🐉 ${dragon.name} phản kháng, hất Đại Thánh lùi lại!`);
+
+    if (w.beat === 0) {
+      dragon.biteLunge = 0.55;
+      V?.addBurstParticles?.(w.x + Math.cos(w.angle) * 45, w.y + Math.sin(w.angle) * 45, '#fde047', 22);
+      window.GameEngine?.Audio?.play?.('impact', w, 'steel');
+      window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không xoay gậy thần tốc, chặn đứng đợt tấn công của ${dragon.name}!`);
+    } else if (w.beat === 1) {
+      dragon.x += dx / dist * 35;
+      dragon.y += dy / dist * 35;
+      V?.addEffect?.('impact', dragon.x, dragon.y, { radius: 95, color: '#f6d48a', life: 0.5 });
+      V?.addBurstParticles?.(dragon.x, dragon.y, dragon.colors?.gold || '#f97316', 22);
+      window.GameEngine?.Audio?.play?.('impact', w, 'steel');
+      window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không vung gậy liên hoàn chém rách mây trời!`);
+    } else if (w.beat === 2) {
+      w.x -= dx / dist * 45;
+      w.y -= dy / dist * 45;
+      dragon.x += dx / dist * 65;
+      dragon.y += dy / dist * 65;
+      V?.addEffect?.('impact', dragon.x, dragon.y, { radius: 125, color: '#f59e0b', life: 0.8 });
+      V?.addBurstParticles?.(dragon.x, dragon.y, '#f59e0b', 30);
+      window.GameEngine?.Audio?.play?.('impact', w, 'heavy');
+      window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không nhảy lộn vòng, giáng đòn sấm sét vào ${dragon.name}!`);
+    } else if (w.beat === 3) {
+      dragon.biteLunge = 0.45;
+      V?.addBurstParticles?.(dragon.x, dragon.y, '#fde047', 25);
+      window.GameEngine?.Audio?.play?.('impact', w, 'steel');
+      window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không xoay gậy vạn biến rồi quét ngang ngàn cân!`);
     } else {
-      w.x += dx / dist * 30;
-      w.y += dy / dist * 30;
-      V?.addEffect?.('impact', dragon.x, dragon.y, { radius: 90, color: '#f6d48a', life: 0.5 });
-      V?.addBurstParticles?.(dragon.x, dragon.y, '#f6d48a', 16);
+      window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không phóng gậy dài, khóa chặt cổ ${dragon.name}!`);
     }
-    w.angle = away;
-    window.GameEngine?.Audio?.play?.('impact', w, 'steel');
-    window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không ${names[w.beat % names.length]} vào ${dragon.name}!`);
   },
 
   captureDragon(dragon) {
@@ -901,6 +1292,45 @@ window.GameEntities.HuaguoSystem = {
       }
       ctx.restore();
     };
+    const spinWheel = (hx, hy, ang, radius) => {
+      ctx.save();
+      ctx.translate(hx, hy);
+      const grad = ctx.createRadialGradient(0, 0, radius * 0.15, 0, 0, radius);
+      grad.addColorStop(0, 'rgba(254, 240, 138, 0.25)');
+      grad.addColorStop(0.65, 'rgba(245, 158, 11, 0.45)');
+      grad.addColorStop(0.92, 'rgba(251, 191, 36, 0.7)');
+      grad.addColorStop(1, 'rgba(217, 119, 6, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, TAU);
+      ctx.fill();
+
+      ctx.lineCap = 'round';
+      for (let k = 0; k < 3; k++) {
+        ctx.strokeStyle = 'rgba(253, 224, 71,' + (0.8 - k * 0.22) + ')';
+        ctx.lineWidth = 4.5 - k * 1.2;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius - 2 + k * 2, ang - 1.5 - k * 0.25, ang + 0.2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, radius - 2 + k * 2, ang + Math.PI - 1.5 - k * 0.25, ang + Math.PI + 0.2);
+        ctx.stroke();
+      }
+
+      for (let i = 1; i <= 3; i++) {
+        const ghostAng = ang - i * 0.32;
+        const alpha = 0.35 - i * 0.08;
+        ctx.save();
+        ctx.rotate(ghostAng);
+        ctx.fillStyle = 'rgba(224, 64, 46,' + alpha + ')';
+        ctx.fillRect(-radius * 0.88, -3.5, radius * 1.76, 7);
+        ctx.fillStyle = 'rgba(254, 240, 138,' + (alpha * 1.3) + ')';
+        ctx.fillRect(-radius * 0.88, -4.5, 18, 9);
+        ctx.fillRect(radius * 0.88 - 18, -4.5, 18, 9);
+        ctx.restore();
+      }
+      ctx.restore();
+    };
     const sparks = (x, y, t) => {
       ctx.save();
       ctx.strokeStyle = '#fff3b0';
@@ -917,25 +1347,61 @@ window.GameEntities.HuaguoSystem = {
       ctx.restore();
     };
 
-    const S = 0.62;
+    const S = w.scale || (w.isMini ? 0.50 : 0.62);
     const state = w.state || 'fly';
     const t = w.t != null ? w.t : this.clock || 0;
     const ang = w.angle || 0;
     const dir = Math.cos(ang) >= 0 ? 1 : -1;
     const tilt = Math.atan2(Math.sin(ang), Math.abs(Math.cos(ang)));
-    const strike = state === 'strike' || state === 'duel';
+    const strike = state === 'strike' || state === 'duel' || (state === 'assist' && w.inCombat);
 
-    let legs, sa, back = 60, front = 100, hand, glow = 8, p = 0, swinging = false;
+    let legs, sa, back = 60, front = 100, hand, glow = 8, swinging = false;
+    let isSpinning = false, spinAngle = 0;
+    const animT = (w.duelClock || w.assistClock || t);
     const FS = { x: 17, y: -24 };
+
     if (strike) {
-      legs = [[-7, 24, -22, 38, -26, 57], [7, 24, 30, 34, 34, 57]];
-      const beatAngs = [-2.2, 0.4, -1.0, 1.2, -0.2];
-      const targetSa = beatAngs[(w.beat || 0) % beatAngs.length];
-      p = w.swing != null ? clamp(w.swing, 0, 1) : 0.5;
-      sa = lerp(-1.2, targetSa, p);
       swinging = true;
-      back = 42; front = 122; glow = 18;
-      hand = { x: FS.x + Math.cos(sa) * 30, y: FS.y + Math.sin(sa) * 30 };
+      const beat = (w.beat != null ? w.beat : 0) % 5;
+      const beatT = w.beatT != null ? w.beatT : 0;
+
+      if (beat === 0 || beat === 3) {
+        // ĐỘNG TÁC XOAY GẬY THẦN TỐC (Spinning staff wheel)
+        isSpinning = true;
+        const spinSpeed = 26; // Rad/s (~4.1 vòng xoay mỗi giây)
+        spinAngle = (animT * spinSpeed) % TAU;
+        sa = spinAngle;
+        back = 80; front = 80; glow = 24;
+        hand = { x: FS.x + 12, y: FS.y + 10 };
+        legs = [[-10, 24, -24, 38, -30, 56], [8, 24, 28, 36, 32, 57]];
+      } else if (beat === 1) {
+        // VUNG GẬY LIÊN TỤC MƯỢT MÀ (Continuous rapid flurry of multi-angle slashes)
+        const wave = Math.sin(animT * 13);
+        const wave2 = Math.cos(animT * 6.5);
+        sa = -0.55 + wave * 1.5 + wave2 * 0.25;
+        back = 45; front = 125; glow = 20;
+        hand = { x: FS.x + Math.cos(sa) * 28, y: FS.y + Math.sin(sa) * 28 };
+        legs = [[-8, 24, -22, 38, -26, 57], [7, 24, 30, 34, 34, 57]];
+      } else if (beat === 2) {
+        // NHẢY LỘN VÒNG NỆN GẬY TỪ TRÊN CAO (Somersault overhead slam)
+        const sub = clamp(beatT / 1.1, 0, 1);
+        if (sub < 0.52) {
+          const up = sub / 0.52;
+          sa = lerp(-0.7, -2.5, ease(up));
+        } else {
+          const down = (sub - 0.52) / 0.48;
+          sa = lerp(-2.5, 0.85, Math.min(1, down * down * 2.2));
+        }
+        back = 40; front = 138; glow = 24;
+        hand = { x: FS.x + Math.cos(sa) * 30, y: FS.y + Math.sin(sa) * 30 };
+        legs = [[-12, 24, -18, 34, -22, 54], [10, 24, 32, 38, 28, 58]];
+      } else {
+        // GẬY DÀI KHÓA CỔ RỒNG (Lock / Restrain)
+        sa = 0.22 + Math.sin(animT * 6) * 0.1;
+        back = 35; front = 150; glow = 24;
+        hand = { x: FS.x + 22, y: FS.y + 6 };
+        legs = [[-7, 24, -24, 38, -28, 57], [7, 24, 26, 36, 26, 57]];
+      }
     } else if (state === 'drag') {
       legs = [[-7, 24, -24, 38, -28, 57], [7, 24, 26, 36, 26, 57]];
       sa = 0.35; back = 30; front = 130; glow = 14;
@@ -964,20 +1430,26 @@ window.GameEntities.HuaguoSystem = {
     skirt(t);
     torso(t);
 
-    if (strike && swinging && p < 0.5) swoosh(hand.x, hand.y, sa);
-    staff(hand.x, hand.y, sa, back, front, glow);
-    arm(FS.x, FS.y, hand.x, hand.y, false);
-    if (strike) {
-      const bx = hand.x + Math.cos(sa) * 24, by = hand.y + Math.sin(sa) * 24;
-      arm(-15, -24, bx, by, true);
+    if (isSpinning) {
+      spinWheel(hand.x, hand.y, spinAngle, 85);
+      staff(hand.x, hand.y, sa, back, front, glow);
+      arm(FS.x, FS.y, hand.x, hand.y, false);
+      arm(-15, -24, hand.x - 14, hand.y + 6, true);
+      sparks(hand.x + Math.cos(spinAngle) * 82, hand.y + Math.sin(spinAngle) * 82, animT);
+      sparks(hand.x - Math.cos(spinAngle) * 82, hand.y - Math.sin(spinAngle) * 82, animT + 1);
+    } else {
+      if (strike && swinging) swoosh(hand.x, hand.y, sa);
+      staff(hand.x, hand.y, sa, back, front, glow);
+      arm(FS.x, FS.y, hand.x, hand.y, false);
+      if (strike) {
+        const bx = hand.x + Math.cos(sa) * 24, by = hand.y + Math.sin(sa) * 24;
+        arm(-15, -24, bx, by, true);
+        sparks(hand.x + Math.cos(sa) * front, hand.y + Math.sin(sa) * front, animT);
+      }
     }
     pauldron(FS.x, FS.y - 2, 1.05);
 
     head(t, state);
-
-    if (strike && p > 0.44 && p < 0.72) {
-      sparks(hand.x + Math.cos(sa) * front, hand.y + Math.sin(sa) * front, t);
-    }
     ctx.restore();
   },
 
@@ -1033,6 +1505,8 @@ window.GameEntities.HuaguoSystem = {
   drawRitual(ctx, m) {
     if (this.wukong || this.ritualTime <= 0) return;
     const pct = Math.min(1, this.ritualTime / this.ritualNeeded);
+    const hasDragons = (window.GameEntities.AliothSystem?.dragons || []).some(d => d.isAlive && !d.captured);
+    const goalText = hasDragons ? 'Triệu hồi Đại Thánh' : 'Thỉnh Tiểu Ngộ Không (2p)';
     ctx.save();
     ctx.translate(m.x, m.y + 34);
     ctx.strokeStyle = 'rgba(246, 212, 138, 0.35)';
@@ -1047,7 +1521,7 @@ window.GameEntities.HuaguoSystem = {
     ctx.font = 'bold 13px Arial';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#f6e7a8';
-    ctx.fillText(`Bái kiến ${this.pilgrims.length} người (x${this.pilgrims.length})  •  ${Math.round(pct * 100)}%`, 0, m.radius + 96);
+    ctx.fillText(`Bái kiến ${this.pilgrims.length} người (x${this.pilgrims.length})  •  ${goalText}  •  ${Math.round(pct * 100)}%`, 0, m.radius + 96);
     ctx.restore();
   }
 };

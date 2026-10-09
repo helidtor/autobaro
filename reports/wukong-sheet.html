@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Tôn Ngộ Không - Preview</title>
+<style>
+  body {
+    margin: 0;
+    padding: 30px;
+    background: #1a221d;
+    color: #e5e7eb;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  h1 {
+    margin: 0 0 6px 0;
+    font-size: 26px;
+    color: #f6d48a;
+    letter-spacing: 0.5px;
+  }
+  .desc {
+    color: #9ca3af;
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 420px);
+    gap: 20px;
+  }
+  .card {
+    background: #243329;
+    border: 1px solid #374151;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+  }
+  .card-title {
+    font-weight: bold;
+    font-size: 15px;
+    color: #f6e7a8;
+    margin-bottom: 4px;
+  }
+  .card-sub {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+  }
+  canvas {
+    display: block;
+    background: radial-gradient(circle at center, #2e4438 0%, #1c2b22 100%);
+    border-radius: 6px;
+    border: 1px solid #1f2937;
+  }
+  .details {
+    margin-top: 24px;
+    background: #243329;
+    border: 1px solid #374151;
+    border-radius: 10px;
+    padding: 16px 22px;
+    max-width: 1300px;
+  }
+  .details h3 {
+    margin: 0 0 10px 0;
+    color: #f6d48a;
+    font-size: 16px;
+  }
+  .details ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #cbd5e1;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+  <h1>🐒 Tôn Ngộ Không — Tạo Hình Mới (HuaguoSystem)</h1>
+  <div class="desc">Bản vẽ Canvas 2D theo nguyên mẫu giáp vàng kim • đai đỏ ngọc • gậy Như Ý viền vàng • Cân Đẩu Vân phóng to 2.2×</div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">1. Xuất Kích / Bay Tới (Rise / Fly)</div>
+      <div class="card-sub">Cưỡi Cân Đẩu Vân hướng về phía trước, gậy Như Ý vác chéo</div>
+      <canvas id="c1" width="420" height="300"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">2. Vung Gậy Trảm Rồng (Strike)</div>
+      <div class="card-sub">Trạng thái tấn công: gậy Như Ý vung mạnh -0.9 rad giáng đòn</div>
+      <canvas id="c2" width="420" height="300"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">3. Lôi Rồng Về Núi (Drag + Xích)</div>
+      <div class="card-sub">Xích vàng mắt xích kéo long thần về cửa động Hoa Quả Sơn</div>
+      <canvas id="c3" width="420" height="300"></canvas>
+    </div>
+  </div>
+
+  <div class="details">
+    <h3>Chi tiết tạo hình cập nhật:</h3>
+    <ul>
+      <li><b>Kích thước:</b> Phóng to <b>2.2×</b> so với bản cũ (nổi bật trên chiến trường 5200×5200).</li>
+      <li><b>Trang phục & Giáp trụ:</b> Giáp vàng kim hộ tâm chia múi, đai đỏ ngọc bích, váy giáp chiến bào màu nâu hổ, ủng vàng hộ chân.</li>
+      <li><b>Áo choàng:</b> Choàng lụa đỏ bay phấp phới phía sau lưng tạo cảm giác uy dũng khi bay.</li>
+      <li><b>Khuôn mặt:</b> Khuôn mặt khỉ da cam, chỏm lông nâu, đôi tai khỉ tròn, mắt sắc nét.</li>
+      <li><b>Kim Cô & Mão:</b> Vòng Kim Cô vàng kim bo quanh trán, đỉnh mão đính lông vũ đỏ phượng hoàng.</li>
+      <li><b>Vũ khí:</b> Định Hải Thần Châm (Gậy Như Ý) thân gradient nâu đỏ bọc vàng kim 2 đầu, đổi tư thế vung khi chém.</li>
+      <li><b>Tọa kỵ:</b> Cân Đẩu Vân mây trắng bồng bềnh 3 khối xếp tầng dưới chân.</li>
+      <li><b>Âm thanh:</b> Tích hợp nhạc <code>ascension</code> / <code>thangThien</code> (ngũ cung ngân vang) khi hoàn tất nghi lễ.</li>
+    </ul>
+  </div>
+
+<script src="../js/entities/huaguoSystem.js"></script>
+<script>
+  const H = window.GameEntities.HuaguoSystem;
+
+  function renderCard(canvasId, state, angle) {
+    const cv = document.getElementById(canvasId);
+    const ctx = cv.getContext('2d');
+    const w = {
+      x: 210,
+      y: 175,
+      angle: angle,
+      state: state
+    };
+    H.drawWukong(ctx, w);
+  }
+
+  renderCard('c1', 'fly', 0.15);
+  renderCard('c2', 'strike', 0.15);
+  renderCard('c3', 'drag', Math.PI * 0.95);
+</script>
+</body>
+</html>

@@ -24,6 +24,9 @@ window.GameEntities.CloudSystem = {
     this.cloud = {
       id: 'loki_cloud',
       name: 'Đám Mây Hư Không Alioth',
+      title: 'Thực Thể Hư Không • Kẻ Nuốt Chửng',
+      tierName: 'Dị Tượng Vũ Trụ (Bất Tử)',
+      isSpecial: true,
       isCloud: true,
       isAlive: true,
       invincible: true,
@@ -36,6 +39,32 @@ window.GameEntities.CloudSystem = {
       speed: 34,
       radius: 175,
       visualRadius: 180,
+      maxHp: 999999,
+      currentHp: 999999,
+      attack: 9999,
+      defense: 9999,
+      weapon: {
+        name: 'Vực Sâu Hư Không',
+        tier: 'god',
+        attack: 9999,
+        desc: 'Hắc ám hỗn độn nuốt chửng mọi sinh linh lướt qua, xóa sổ hoàn toàn khỏi dòng thời gian.'
+      },
+      armor: {
+        name: 'Vụ Bào Hư Vô',
+        tier: 'god',
+        defense: 9999,
+        desc: 'Sương mù bóng tối phi vật chất, miễn nhiễm mọi dạng sát thương và hiệu ứng vật lý, phép thuật.'
+      },
+      skills: [
+        { id: 'cloud_devour', def: { name: 'Thôn Phệ Thời Gian (Devour)', desc: 'Lướt qua bất kỳ sinh vật nào sẽ nuốt chửng ngay lập tức, khiến mục tiêu biến mất hoàn toàn.' } },
+        { id: 'cloud_lightning', def: { name: 'Tia Sét Tím Hư Không (Void Arc)', desc: 'Phóng những tia sét tím rạch nát không gian xung quanh đám mây.' } }
+      ],
+      passives: [
+        { id: 'cloud_invincible', name: 'Thân Thể Hư Vô Bất Tử', desc: 'Trôi chậm xuyên qua mọi địa hình, không thể bị tấn công hay ngăn cản bằng bất cứ thứ gì.' },
+        { id: 'cloud_dread', name: 'Uy Áp Nghẹt Thở', desc: 'Gieo rắc kinh hoàng cực độ, khiến mọi bot đứng gần phải tháo chạy tán loạn.' }
+      ],
+      objective: 'Trôi chậm săn mồi, nuốt chửng thực tại',
+      thought: 'Khí tức Hư Không bao trùm, vạn vật chạm vào đều tan biến!',
       aimAngle: 0,
       turnSpeed: 0.8,
       prey: null,
@@ -95,7 +124,18 @@ window.GameEntities.CloudSystem = {
         c.targetX = 400 + Math.random() * (mapW - 800);
         c.targetY = 400 + Math.random() * (mapH - 800);
       }
-    } else { c.targetX = c.prey.x; c.targetY = c.prey.y; }
+    } else {
+      c.targetX = c.prey.x;
+      c.targetY = c.prey.y;
+    }
+
+    if (c.prey?.isAlive) {
+      c.objective = 'Truy bắt và nuốt chửng ' + c.prey.name;
+      c.thought = 'Con mồi trong tầm ngắm. Hư Không đang từ từ khép lại!';
+    } else {
+      c.objective = 'Trôi dạt khắp chiến trường tìm kiếm con mồi';
+      c.thought = 'Uy áp nghẹt thở, nuốt chửng mọi thứ trên đường đi!';
+    }
 
     const dx = c.targetX - c.x, dy = c.targetY - c.y, dist = Math.hypot(dx, dy);
     const targetAngle = Math.atan2(dy, dx);
@@ -164,6 +204,7 @@ window.GameEntities.CloudSystem = {
     victim.y = -9999;
     victim.vx = 0;
     victim.vy = 0;
+    window.GameEntities.TrucLamSystem?.handleVictimDevoured?.(victim, oldX, oldY);
     G?.updateHUD?.();
     G?.checkVictoryCondition?.();
   },

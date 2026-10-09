@@ -27,10 +27,14 @@ window.GameUI.InspectModal = {
     if (!this.currentEntity || !this.panelEl) return;
     const e = this.currentEntity;
 
-    if (e.isPawn) {
+    if (e.isSpecial || e.isWukong || e.isEmperor || e.isGuardian || e.isLegion || e.isAlioth || e.isCloud) {
+      this.renderSpecialInspect(e);
+    } else if (e.isPawn) {
       this.renderPawnInspect(e);
     } else if (e.isMonster) {
       this.renderMonsterInspect(e);
+    } else {
+      this.renderSpecialInspect(e);
     }
   },
 
@@ -40,7 +44,8 @@ window.GameUI.InspectModal = {
     const count=this.activeSkills(this.currentEntity).length+window.GameEntities.CombatSystem.passiveList(this.currentEntity).length;
     const tabs=[['overview','Tổng quan'],['equipment','Trang bị'],['skills','Kỹ năng '+count]].map(([id,label])=>'<button type="button" data-inspect-action="'+id+'" aria-pressed="'+(this.tab===id)+'" onclick="window.GameUI.InspectModal.selectTab(\''+id+'\')">'+label+'</button>').join('');
     const markup='<div class="inspect-top">'+html.slice(0,split)+'<nav class="inspect-tabs" aria-label="Thông tin đối tượng">'+tabs+'</nav></div><div class="inspect-content">'+html.slice(split)+'</div>';
-    const kind=this.currentEntity.isPawn?'pawn':'monster';
+    const isSpecialEntity = this.currentEntity.isSpecial || this.currentEntity.isWukong || this.currentEntity.isEmperor || this.currentEntity.isGuardian || this.currentEntity.isAlioth || this.currentEntity.isLegion || this.currentEntity.isCloud;
+    const kind=this.currentEntity.isPawn?'pawn':(isSpecialEntity?'special':'monster');
     const content=this.panelEl.querySelector?.('.inspect-content');
     this.panelEl.dataset.tab=this.tab;
     if(!content||this.panelEl.dataset.kind!==kind){
@@ -49,7 +54,9 @@ window.GameUI.InspectModal = {
     // Keep interactive nodes mounted while live stats and cooldowns change.
     const template=document.createElement('template');template.innerHTML=markup;
     for(const selector of ['.inspect-header > div','.inspect-subtitle']){
-      this.panelEl.querySelector(selector).innerHTML=template.content.querySelector(selector).innerHTML;
+      const el = this.panelEl.querySelector(selector);
+      const src = template.content.querySelector(selector);
+      if (el && src) el.innerHTML = src.innerHTML;
     }
     this.panelEl.querySelectorAll('.inspect-tabs button').forEach(button=>{
       button.setAttribute('aria-pressed',button.dataset.inspectAction===this.tab);
@@ -58,9 +65,14 @@ window.GameUI.InspectModal = {
     const sections=template.content.querySelector('.inspect-content').children;
     for(let i=0;i<sections.length;i++){
       const current=content.children[i],next=sections[i];
+      if(!current || !next) continue;
       current.className=next.className;
       if(current.querySelector('.personality-details')){
-        for(const selector of ['.inspect-status','.personality-content'])current.querySelector(selector).innerHTML=next.querySelector(selector).innerHTML;
+        for(const selector of ['.inspect-status','.personality-content']){
+          const el = current.querySelector(selector);
+          const src = next.querySelector(selector);
+          if (el && src) el.innerHTML = src.innerHTML;
+        }
       }else current.innerHTML=next.innerHTML;
     }
   },
@@ -120,6 +132,8 @@ window.GameUI.InspectModal = {
     am_original_2:'Sao chép và cường hóa kỹ năng thứ hai của đối thủ.'
   },
   skillDescription(e,s,passive=false){
+    if(s.desc)return s.desc;
+    if(s.def?.desc)return s.def.desc;
     if(this.skillSummaries[s.id])return this.skillSummaries[s.id];
     const c=passive?s:window.GameEntities.CombatSystem.getSkillConfig(e,s);
     const text=passive?(s.ranks?.[(s.tier||1)-1]?.desc||s.desc):c.desc;
@@ -132,29 +146,45 @@ window.GameUI.InspectModal = {
       .replace(/\bAoE\b/g,'sát thương diện rộng').replace(/\bstamina\b/gi,'thể lực').replace(/\bCD\b/g,'hồi chiêu');
   },
   scalingDescription(e,s,passive=false){
-    const C=window.GameEntities.CombatSystem,c=passive?C.passiveConfig(e,s):C.getSkillConfig(e,s);
-    const names={damage:'Sát thương tổng',counter:'Phản công',heal:'Hồi máu tổng',guard:'Sát thương đỡ tối đa',shield:'Khiên',distance:'Khoảng lướt',speed:'Tăng tốc',onHit:'Cộng mỗi đòn',regen:'Hồi trong combat mỗi giây',burst:'Đợt hồi khi nguy hiểm',reserve:'Giới hạn máu tích',radius:'Phạm vi'};
-    const stats={attack:'ATK',defense:'DEF',hp:e.isAncient||e.isAncientClone?'máu tối đa của bot gốc':'máu tối đa',mana:'mana tối đa',speed:'tốc chạy cơ bản',skill:'sức kỹ năng'};
-    return Object.entries(c.scaling||{}).map(([key,f])=>{
-      const value=key==='damage'?c.damage:key==='onHit'?c.magicOnHit:c[key+'Amount'];
-      const limited=Number.isFinite(value)&&value+.01<C.scaledValue(e,{...f,cap:undefined});
-      const actual=Number.isFinite(value)?' ≈ '+Number(value.toFixed(1))+(limited?' (đã giới hạn)':''):'';
-      return names[key]+': '+f.base+' + '+Number((f.ratio*100).toFixed(2))+'% '+stats[f.stat]+actual;
-    }).join(' • ');
+    if(e.isSpecial || (!s.def?.t1 && !s.ranks)) return '';
+    try {
+      const C=window.GameEntities.CombatSystem,c=passive?C.passiveConfig(e,s):C.getSkillConfig(e,s);
+      if(!c || !c.scaling) return '';
+      const names={damage:'Sát thương tổng',counter:'Phản công',heal:'Hồi máu tổng',guard:'Sát thương đỡ tối đa',shield:'Khiên',distance:'Khoảng lướt',speed:'Tăng tốc',onHit:'Cộng mỗi đòn',regen:'Hồi trong combat mỗi giây',burst:'Đợt hồi khi nguy hiểm',reserve:'Giới hạn máu tích',radius:'Phạm vi'};
+      const stats={attack:'ATK',defense:'DEF',hp:e.isAncient||e.isAncientClone?'máu tối đa của bot gốc':'máu tối đa',mana:'mana tối đa',speed:'tốc chạy cơ bản',skill:'sức kỹ năng'};
+      return Object.entries(c.scaling||{}).map(([key,f])=>{
+        const value=key==='damage'?c.damage:key==='onHit'?c.magicOnHit:c[key+'Amount'];
+        const limited=Number.isFinite(value)&&value+.01<C.scaledValue(e,{...f,cap:undefined});
+        const actual=Number.isFinite(value)?' ≈ '+Number(value.toFixed(1))+(limited?' (đã giới hạn)':''):'';
+        return names[key]+': '+f.base+' + '+Number((f.ratio*100).toFixed(2))+'% '+stats[f.stat]+actual;
+      }).join(' • ');
+    } catch { return ''; }
   },
   skillCard(e,s,passive=false){
-    const c=passive?s:window.GameEntities.CombatSystem.getSkillConfig(e,s),remaining=Math.max(0,s.cooldownTimer||0);
+    let c = s;
+    if(!passive) {
+      if(s.def?.type==='ancient_skill'||s.def?.t1) {
+        c = window.GameEntities.CombatSystem.getSkillConfig(e,s);
+      } else {
+        c = s.def || s;
+      }
+    }
+    const remaining=Math.max(0,s.cooldownTimer||0);
     const duration=Math.max(c.cooldown||0,remaining),progress=duration?Math.max(0,Math.min(100,(1-remaining/duration)*100)):100;
     const cooldown=c.cooldown?c.cooldown.toFixed(1).replace('.0','')+' giây':'Liên tục';
+    const scaling = this.scalingDescription(e,s,passive);
     return '<div class="inspect-skill-item '+(remaining?'skill-cooling':'skill-ready')+'" style="--skill-progress:'+progress+'%">'+
-      '<span class="skill-name">'+(s.def?.name||s.name)+(passive?' · Nội tại':'')+'</span><div class="skill-desc">'+this.skillDescription(e,s,passive)+'</div><div class="skill-desc">'+this.scalingDescription(e,s,passive)+'</div>'+
+      '<span class="skill-name">'+(s.def?.name||s.name)+(passive?' · Nội tại':'')+'</span><div class="skill-desc">'+this.skillDescription(e,s,passive)+'</div>'+(scaling?'<div class="skill-desc">'+scaling+'</div>':'')+
       '<div class="skill-cooldown">'+(c.cooldown?'Hồi chiêu: ':'')+cooldown+(remaining?' · Còn '+remaining.toFixed(1)+' giây':'')+'</div>'+
       '<div class="skill-progress" role="progressbar" aria-label="Hồi chiêu '+(s.def?.name||s.name)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(progress)+'"></div></div>';
   },
   weaponDetails(w,label='Vũ khí'){
-    if(!w)return '<div class="item-slot">⚔️ Vũ khí: <b>Tay không</b></div>';
+    if(!w)return '<div class="item-slot">⚔️ '+label+': <b>Không có</b></div>';
+    const obj = typeof w === 'object' ? w : { name: String(w), tier: 'supreme' };
     const fields=[['attack','Tấn công'],['magicPower','Sức mạnh phép'],['skillPower','Sức kỹ năng'],['defense','Phòng ngự'],['magicDefense','Kháng phép'],['hp','Máu tối đa'],['manaMax','Mana tối đa'],['staminaMax','Thể lực tối đa'],['hpRegen','Hồi máu'],['moveBonus','Tốc di chuyển',true],['range','Tầm đánh'],['speed','Tốc đánh'],['critChance','Chí mạng',true],['lifeSteal','Hút máu',true],['cooldownReduction','Giảm hồi chiêu',true]];
-    return '<div class="weapon-details"><div class="equipment-label">'+label+'</div><div class="item-slot"><b class="equipment-name" style="color:'+window.GameData.Equipments.TIER_COLORS[w.tier]+'">'+w.name+'</b></div><div class="skill-summary">'+(window.GameData.Equipments.TIER_NAMES[w.tier]||w.tier)+'</div><dl class="weapon-stats">'+fields.filter(([key])=>typeof w[key]==='number').map(([key,label,percent])=>'<div><dt>'+label+'</dt><dd>'+ (percent?Math.round(w[key]*100)+'%':key==='speed'?w[key]+'×':w[key])+'</dd></div>').join('')+'</dl>'+this.equipmentEffects(w)+'</div>';
+    const color = (window.GameData?.Equipments?.TIER_COLORS?.[obj.tier]) || '#f59e0b';
+    const tierName = (window.GameData?.Equipments?.TIER_NAMES?.[obj.tier]) || obj.tierName || obj.tier || 'Thần Binh';
+    return '<div class="weapon-details"><div class="equipment-label">'+label+'</div><div class="item-slot"><b class="equipment-name" style="color:'+color+'">'+obj.name+'</b></div><div class="skill-summary">'+tierName+'</div><dl class="weapon-stats">'+fields.filter(([key])=>typeof obj[key]==='number').map(([key,lbl,percent])=>'<div><dt>'+lbl+'</dt><dd>'+ (percent?Math.round(obj[key]*100)+'%':key==='speed'?obj[key]+'×':obj[key])+'</dd></div>').join('')+'</dl>'+this.equipmentEffects(obj)+'</div>';
   },
   equipmentEffects(w){
     const effects=[w.passive,w.effect||w.reviveOnce?w.desc:null];
@@ -285,6 +315,73 @@ window.GameUI.InspectModal = {
       <div class="inspect-section pane-skills"><div class="section-title">Kỹ năng quái (${actives.length+passives.length})</div><div class="skill-summary">${actives.length} chủ động • ${passives.length} nội tại</div>
         ${actives.map(s=>this.skillCard(m,s)).join('')||'<div class="skill-desc">Không có kỹ năng chủ động</div>'}
         ${passives.map(s=>this.skillCard(m,s,true)).join('')}
+      </div>
+    `);
+  },
+
+  renderSpecialInspect: function(e) {
+    const actives=this.activeSkills(e),passives=window.GameEntities.CombatSystem.passiveList(e);
+    const count=actives.length+passives.length;
+    const stats={
+      attack: e.attack || 0,
+      defense: e.defense || 0,
+      speed: e.speed || 0,
+      range: e.range || (e.weapon?.range || 45)
+    };
+    const hpPct = Math.min(100, Math.max(0, (e.currentHp / (e.maxHp || 1)) * 100));
+    const weapon = e.weaponObj || e.equippedWeapon || e.weapon;
+
+    this.setContent(`
+      <div class="inspect-header">
+        <div>
+          <div class="inspect-level">${e.title || e.tierName || "Thần Thoại"}</div>
+          <div class="inspect-title">${e.name}</div>
+        </div>
+        <button class="inspect-close" data-inspect-action="close" aria-label="Đóng bảng thông tin" onclick="window.GameUI.InspectModal.inspect(null)">✕</button>
+      </div>
+
+      <div class="inspect-subtitle">
+        <span class="badge badge-tier" style="background:#3b1e54;color:#fde047;border:1px solid #ca8a04;">${e.tierName || e.title || "Nhân Vật Đặc Biệt"}</span>
+        ${e.isAlive ? '<span class="badge" style="background:#064e3b;color:#6ee7b7;border:1px solid #059669;">Đang Hoạt Động</span>' : '<span class="badge" style="background:#7f1d1d;color:#fca5a5;">Đã Bị Đánh Bại</span>'}
+        ${e.isMini && e.life > 0 ? `<span class="badge" style="background:#1e3a8a;color:#93c5fd;border:1px solid #3b82f6;">⏱️ Hộ Mệnh: ${Math.max(0, Math.ceil(e.life))}s</span>` : ''}
+      </div>
+
+      <div class="inspect-section pane-overview">
+        <div class="inspect-bar-label">Máu: ${Math.round(e.currentHp)} / ${e.maxHp} ${e.maxHp >= 99999 ? '• Bất Tử Thần Thể' : ''}</div>
+        <div class="bar-container"><div class="bar-fill bar-hp" style="width: ${hpPct}%"></div></div>
+        ${e.maxStamina ? `
+        <div class="inspect-bar-label">Thể Lực: ${Math.round(e.currentStamina)} / ${e.maxStamina}</div>
+        <div class="bar-container"><div class="bar-fill bar-stamina" style="width: ${(e.currentStamina / e.maxStamina) * 100}%"></div></div>` : ''}
+        ${e.maxMana ? `
+        <div class="inspect-bar-label">Mana: ${Math.round(e.currentMana)} / ${e.maxMana}</div>
+        <div class="bar-container"><div class="bar-fill bar-mana" style="width: ${(e.currentMana / e.maxMana) * 100}%"></div></div>` : ''}
+      </div>
+
+      <div class="inspect-section pane-overview">
+        <div class="section-title">Chỉ Số Thực Chiến</div>
+        <div>Tấn công: <b>${stats.attack}</b> • Phòng ngự: <b>${stats.defense}</b></div>
+        <div>Tốc độ chạy: <b>${stats.speed}</b> • Tầm đánh: <b>${stats.range}</b></div>
+        ${e.element ? `<div>Nguyên tố bản mệnh: <b>${e.element === 'fire' ? '🔥 Chân Hỏa' : e.element === 'lightning' ? '⚡ Thiên Lôi' : '⛰️ Thổ Nham'}</b></div>` : ''}
+        <div class="inspect-intent">
+          <div class="section-title">Mục tiêu & Tâm niệm</div>
+          <div class="bot-objective">${e.objective || e.title || "Thực thi thiên mệnh"}</div>
+          <p class="bot-thought">${e.thought || e.desc || "Quan sát chiến trường."}</p>
+        </div>
+      </div>
+
+      <div class="inspect-section pane-equipment">
+        <div class="section-title">Pháp Bảo & Trang Bị</div>
+        ${weapon ? this.weaponDetails(weapon, 'Vũ khí / Pháp bảo') : '<div class="empty-slot">Vũ khí · Không trang bị</div>'}
+        ${e.armor ? this.weaponDetails(e.armor, 'Chiến giáp / Hoàng bào') : ''}
+        ${e.helmet ? this.weaponDetails(e.helmet, 'Mũ miện / Kim cô') : ''}
+        ${e.boots ? this.weaponDetails(e.boots, 'Hài mây / Chiến mã') : ''}
+      </div>
+
+      <div class="inspect-section pane-skills">
+        <div class="section-title">Thần Thông & Kỹ Năng (${count})</div>
+        <div class="skill-summary">${actives.length} chủ động • ${passives.length} nội tại</div>
+        ${actives.map(s => this.skillCard(e, s)).join('') || '<div class="skill-desc">Không có kỹ năng chủ động</div>'}
+        ${passives.map(s => this.skillCard(e, s, true)).join('')}
       </div>
     `);
   }

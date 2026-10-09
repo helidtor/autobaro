@@ -1,0 +1,276 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Thiền Viện Trúc Lâm - Hoàng Thượng Ban Chiếu & Xuất Quân Từ Cổng Thành</title>
+<style>
+  body {
+    margin: 0;
+    padding: 30px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  h1 {
+    margin: 0 0 6px 0;
+    font-size: 26px;
+    color: #fef08a;
+    letter-spacing: 0.5px;
+  }
+  .desc {
+    color: #94a3b8;
+    margin-bottom: 22px;
+    font-size: 14px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 400px);
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+  }
+  .card-title {
+    font-weight: bold;
+    font-size: 15px;
+    color: #fde047;
+    margin-bottom: 4px;
+  }
+  .card-sub {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+  }
+  canvas {
+    display: block;
+    background: radial-gradient(circle at center, #1e3a2b 0%, #0f1e16 100%);
+    border-radius: 6px;
+    border: 1px solid #1e293b;
+  }
+  .details {
+    margin-top: 10px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 18px 24px;
+    max-width: 1240px;
+  }
+  .details h3 {
+    margin: 0 0 10px 0;
+    color: #fde047;
+    font-size: 16px;
+  }
+  .details ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #cbd5e1;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+  <h1>🎋 Thiền Viện Trúc Lâm — Hoàng Thượng Ban Chiếu & Thiết Kỵ Xuất Cổng Thành</h1>
+  <div class="desc">Fix lỗi quan tướng biến mất (g.speed) • Animation Hoàng Thượng ngự giá ban chiếu thư • Mở Cổng Nam thành viện điều Thiết Kỵ phò tá 8 phút</div>
+
+  <!-- HÀNG 1: HOÀNG THƯỢNG BAN CHIẾU & XUẤT QUÂN TỪ CỔNG THÀNH -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">1. Hoàng Thượng Ban Chiếu Thư (Decree)</div>
+      <div class="card-sub">Hoàng Bào Long Cổ • Mũ Bình Thiên rủ ngọc châu • Hào quang rồng vàng & Chiếu thư</div>
+      <canvas id="c_emperor" width="400" height="260"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">2. Mở Cổng Nam & Xuất Quân (Gate Portal March)</div>
+      <div class="card-sub">Cổng Nam rực sáng • Thiết Kỵ Tướng Quân dẫn đầu xuất quan phi nước đại</div>
+      <canvas id="c_march" width="400" height="260"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">3. Đoàn Quân Phò Tá Chủ Nhân (Escort Formation)</div>
+      <div class="card-sub">Thiết Kỵ Tướng Quân cắm cờ lệnh Trúc Lâm + 2 Hộ Vệ (Giáo / Kiếm) bảo hộ 8 phút</div>
+      <canvas id="c_legion" width="400" height="260"></canvas>
+    </div>
+  </div>
+
+  <!-- HÀNG 2: BA VỊ QUAN TƯỚNG TRẤN VIỆN -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">4. Trấn Viện Tướng Quân (Courtyard Guardian)</div>
+      <div class="card-sub">Giáp vàng kim • Áo choàng đỏ • Thanh Long Đại Đao • Râu dài tam chòm</div>
+      <canvas id="c1" width="400" height="260"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">5. Tiền Phong Tướng Quân (Vanguard General)</div>
+      <div class="card-sub">Giáp bạc sáng • Áo choàng thiên thanh • Bát Trượng Mâu tua đỏ • Ria mép tướng tài</div>
+      <canvas id="c2" width="400" height="260"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">6. Hộ Pháp Tướng Quân (Dharmapala General)</div>
+      <div class="card-sub">Giáp đồng vảy cá • Áo choàng ngọc bích • Kim Qua Chùy bát giác • Râu quai nón</div>
+      <canvas id="c3" width="400" height="260"></canvas>
+    </div>
+  </div>
+
+  <div class="details">
+    <h3>Quy trình hoạt động & Sửa lỗi đã thực hiện:</h3>
+    <ul>
+      <li><b>Sửa lỗi quan tướng biến mất:</b> Bổ sung thông số <code>speed: 115 / 135 / 105</code> cho cả 3 tướng, thêm kiểm tra <code>Number.isFinite</code> chống tọa độ <code>NaN</code> khi bot tiếp cận. Tướng phản kích đầy đủ hiệu ứng và âm thanh.</li>
+      <li><b>Hoàng Thượng Ngự Giá Ban Chiếu (The Emperor Decrees):</b> Sau khi 3 tướng bị khuất phục, Hoàng Thượng xuất hiện trên Chánh Điện Trúc Lâm, phát sáng hào quang rồng vàng, giơ cao Chiếu Thư Vàng và ban lời chiếu chỉ xuất quân.</li>
+      <li><b>Mở Cổng Nam Xuất Quân (March from South Gate):</b> Cổng Nam (tọa độ world <code>x: 1020, y: 1670</code>) rực sáng hào quang, mở cổng thành. Thiết Kỵ Tướng Quân trên chiến mã phi nước đại cùng 2 binh sĩ hộ vệ xuất quan tiến thẳng tới hội quân cùng người chiến thắng.</li>
+      <li><b>Thiết Kỵ Chi Viện 8 Phút:</b> Đến nơi hội quân, tướng quân cúi chào nhận chủ nhân, hiển thị đồng hồ đếm lùi <code>(8:00)</code> và tự động truy đuổi tiêu diệt quái vật bảo vệ bot.</li>
+    </ul>
+  </div>
+
+<script>
+  window.GameEntities = window.GameEntities || {};
+  window.GameUI = window.GameUI || { CombatTicker: { log: () => {} } };
+  window.GameManager = window.GameManager || { pawns: [] };
+</script>
+<script src="../js/entities/truclamSystem.js"></script>
+<script>
+  const TL = window.GameEntities.TrucLamSystem;
+  TL.init(5200, 5200);
+  TL.clock = 2.4;
+
+  // 1. Hoàng Thượng Ban Chiếu
+  function renderEmperorCard() {
+    const cv = document.getElementById('c_emperor');
+    const ctx = cv.getContext('2d');
+    ctx.save();
+    ctx.translate(cv.width / 2, cv.height / 2 + 55);
+    ctx.scale(1.5, 1.5);
+    ctx.translate(-cv.width / 2, -(cv.height / 2 + 55));
+
+    const emp = {
+      ...TL.emperor,
+      x: cv.width / 2,
+      y: cv.height / 2 + 55,
+      speech: 'Trẫm chuẩn y! Thiết Kỵ xuất Cổng Nam phò tá!'
+    };
+    TL.decreeEvent = { active: true, phase: 'decree' };
+    TL.drawEmperor(ctx, emp);
+    ctx.restore();
+  }
+
+  // 2. Mở Cổng Nam Xuất Quân
+  function renderGateMarchCard() {
+    const cv = document.getElementById('c_march');
+    const ctx = cv.getContext('2d');
+    ctx.save();
+    ctx.translate(cv.width / 2, cv.height / 2 + 10);
+    ctx.scale(1.4, 1.4);
+    ctx.translate(-cv.width / 2, -(cv.height / 2 + 10));
+
+    // Vẽ cổng thành rực sáng
+    TL.decreeEvent = { active: true, phase: 'march', gateX: cv.width / 2, gateY: cv.height * 0.35 };
+    TL.gate = { x: cv.width / 2, y: cv.height * 0.35 };
+    TL.drawMonasteryGate(ctx);
+
+    // Kỵ binh phi nước đại từ cổng
+    const leg = {
+      marching: true,
+      life: 480,
+      general: {
+        x: cv.width / 2,
+        y: cv.height * 0.58,
+        aimAngle: -Math.PI / 2,
+        gallopPhase: 3.2
+      },
+      soldiers: [
+        {
+          id: 'tl_guard_1',
+          name: 'Trúc Lâm Tiền Vệ',
+          x: cv.width / 2 - 42,
+          y: cv.height * 0.72,
+          aimAngle: -Math.PI / 2,
+          weapon: 'spear'
+        },
+        {
+          id: 'tl_guard_2',
+          name: 'Trúc Lâm Hậu Vệ',
+          x: cv.width / 2 + 42,
+          y: cv.height * 0.72,
+          aimAngle: -Math.PI / 2,
+          weapon: 'sword'
+        }
+      ]
+    };
+    TL.drawMountedGeneral(ctx, leg.general, leg);
+    TL.drawEscortSoldier(ctx, leg.soldiers[0]);
+    TL.drawEscortSoldier(ctx, leg.soldiers[1]);
+    ctx.restore();
+  }
+
+  // 3. Đoàn Quân Phò Tá Chủ Nhân
+  function renderLegionCard() {
+    const cv = document.getElementById('c_legion');
+    const ctx = cv.getContext('2d');
+    ctx.save();
+    ctx.translate(cv.width / 2, cv.height / 2 + 15);
+    ctx.scale(1.4, 1.4);
+    ctx.translate(-cv.width / 2, -(cv.height / 2 + 15));
+
+    const leg = {
+      marching: false,
+      life: 474,
+      general: {
+        x: cv.width * 0.42,
+        y: cv.height * 0.48,
+        aimAngle: 0.15,
+        gallopPhase: 1.8
+      },
+      soldiers: [
+        {
+          id: 'tl_guard_1',
+          name: 'Trúc Lâm Tiền Vệ',
+          x: cv.width * 0.18,
+          y: cv.height * 0.62,
+          aimAngle: 0.2,
+          weapon: 'spear'
+        },
+        {
+          id: 'tl_guard_2',
+          name: 'Trúc Lâm Hậu Vệ',
+          x: cv.width * 0.78,
+          y: cv.height * 0.62,
+          aimAngle: -0.1,
+          weapon: 'sword'
+        }
+      ]
+    };
+    TL.drawMountedGeneral(ctx, leg.general, leg);
+    TL.drawEscortSoldier(ctx, leg.soldiers[0]);
+    TL.drawEscortSoldier(ctx, leg.soldiers[1]);
+    ctx.restore();
+  }
+
+  // 4, 5, 6. Ba vị quan tướng
+  function renderGuardianCard(canvasId, guardianIndex) {
+    const cv = document.getElementById(canvasId);
+    const ctx = cv.getContext('2d');
+    ctx.save();
+    ctx.translate(cv.width / 2, cv.height / 2 + 30);
+    ctx.scale(1.7, 1.7);
+    ctx.translate(-cv.width / 2, -(cv.height / 2 + 30));
+
+    const g = { ...TL.guardians[guardianIndex], x: cv.width / 2, y: cv.height / 2 + 30 };
+    g.aimAngle = 0.25;
+    g.swingTimer = 0.2;
+    TL.drawGuardianPawn(ctx, g);
+    ctx.restore();
+  }
+
+  renderEmperorCard();
+  renderGateMarchCard();
+  renderLegionCard();
+  renderGuardianCard('c1', 0);
+  renderGuardianCard('c2', 1);
+  renderGuardianCard('c3', 2);
+</script>
+</body>
+</html>

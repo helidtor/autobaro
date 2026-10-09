@@ -79,11 +79,37 @@ window.GameAI.AiBrain = {
         this.engageCombat(pawn,boss,dt);return;
       }
       const farm=G.monsters.filter(m=>m.isAlive&&m.isFinalHunt).sort((a,b)=>a.huntOrder-b.huntOrder);
-      const target=farm.find(m=>this.canHunt(pawn,m));
-      if(target){pawn.objective='Farm cấp '+pawn.level+'/15: '+target.name;pawn.thought='Hạ Yêu Vương theo sức hiện tại; tích EXP và nhặt bình, chưa đối đầu Yêu Thần.';this.engageCombat(pawn,target,dt);return;}
-      pawn.targetEnemy=null;pawn.objective=pawn.level<15?'Chuẩn bị săn Yêu Vương, đạt cấp 15':'Chiến trường đã được chinh phục';
-      pawn.thought='Đánh giá lại sức mạnh, tìm bình hoặc trang bị trước khi tiếp tục.';
-      if(item)this.seekLoot(pawn,item,dt);return;
+      const target=farm.find(m=>this.canHunt(pawn,m)) || farm[0];
+      if(target){
+        pawn.objective='Farm cấp '+pawn.level+'/15: '+target.name;
+        pawn.thought='Hạ Yêu Vương theo sức hiện tại; tích EXP và nhặt bình, cùng đoàn quân tiến đánh.';
+        this.engageCombat(pawn,target,dt);
+        return;
+      }
+      const otherMonsters = G.monsters.filter(m => m.isAlive && !m.isDemonKing && m !== boss);
+      if (otherMonsters.length > 0) {
+        otherMonsters.sort((a, b) => Math.hypot(a.x - pawn.x, a.y - pawn.y) - Math.hypot(b.x - pawn.x, b.y - pawn.y));
+        const mon = otherMonsters[0];
+        pawn.objective = 'Săn quái: ' + mon.name;
+        pawn.thought = 'Tiến đánh quái vật trên đấu trường cùng đoàn quân.';
+        this.engageCombat(pawn, mon, dt);
+        return;
+      }
+      if (boss?.isAlive && !mapTerrain.remainingLords()) {
+        pawn.objective = (boss.tier===6?'Đấu với Thượng Cổ: ':'Đấu với Yêu Thần: ') + boss.name;
+        pawn.thought = 'Không còn quái vật nào khác, toàn quân tiến vào quyết chiến!';
+        this.engageCombat(pawn, boss, dt);
+        return;
+      }
+      if (item) {
+        this.seekLoot(pawn, item, dt);
+        return;
+      }
+      pawn.targetEnemy = null;
+      pawn.objective = pawn.level<15 ? 'Chuẩn bị săn Yêu Vương, đạt cấp 15' : 'Tuần du chiến trường';
+      pawn.thought = 'Đánh giá lại sức mạnh, tìm đối thủ hoặc trang bị trước khi tiếp tục.';
+      this.wanderAround(pawn, dt);
+      return;
     }
     if(!this.limitsPawnFights(pawn))this.handleCoalition(pawn,threats);
     if(pawn.pactTarget&&this.pursueCoalition(pawn,threats,dt))return;
@@ -146,11 +172,13 @@ window.GameAI.AiBrain = {
       pawn.evaluateAt=pawn.decisionTime+.3;
       const choices=[];
       if(loot){const score=this.lootPriority(pawn,loot,threats)+(pawn.style==='looter'?40:0);if(score>0)choices.push({kind:'loot',target:loot,score});}
-      const pilgrimage=window.GameEntities.HuaguoSystem?.pilgrimageScore?.(pawn);
-      if(pilgrimage>0)choices.push({kind:'pilgrimage',score:pilgrimage});
-      const trucLam=window.GameEntities.TrucLamSystem?.challengeScore?.(pawn);
-      if(trucLam>0)choices.push({kind:'truc_lam',score:trucLam});
       const farmingFirst=this.limitsPawnFights(pawn);
+      const closeEnemy = enemies.find(e => Math.hypot(e.x - pawn.x, e.y - pawn.y) < 180 && this.duelEligible(pawn, e));
+      const closeMonster = threats.find(e => e.isMonster && Math.hypot(e.x - pawn.x, e.y - pawn.y) < 140);
+      const pilgrimage = (!closeEnemy && !(farmingFirst && closeMonster)) ? window.GameEntities.HuaguoSystem?.pilgrimageScore?.(pawn) : 0;
+      if(pilgrimage>0)choices.push({kind:'pilgrimage',score:pilgrimage,target:window.GameEntities.HuaguoSystem.mountain});
+      const trucLam=!farmingFirst && !enemies.length && window.GameEntities.TrucLamSystem?.challengeScore?.(pawn);
+      if(trucLam>0)choices.push({kind:'truc_lam',score:trucLam});
       for(const m of G.monsters){if(!this.canHunt(pawn,m))continue;
         const dist=Math.hypot(m.x-pawn.x,m.y-pawn.y),chance=this.calculateWinRate(pawn,m);if(dist<450&&!C.canApproach(pawn,m))continue;
         choices.push({kind:'farm',target:m,score:(farmingFirst?140:60)+chance*55+P.caution*.25+(pawn.style==='farmer'?40:0)+(pawn.style==='looter'?0:0)+Math.min(35,m.expReward/8)+P.greed*m.tier*2-dist/(15+P.curiosity*.2)});}
@@ -172,8 +200,9 @@ window.GameAI.AiBrain = {
       if(choices[1]&&choices[0].score-choices[1].score<8){const tie=[choices[0],choices[1]].sort((a,b)=>String(a.target?.id||'').localeCompare(String(b.target?.id||'')));choices[0]=tie[0];}
       const current=pawn.plan&&choices.find(c=>c.kind===pawn.plan.kind&&c.target===pawn.plan.target);
       const chosen=current&&current.score+30>=(choices[0]?.score||0)?current:choices[0];
-      pawn.decisionReason=chosen?(chosen.kind==='duel'?'Chiến ý và lợi thế trước đối thủ':farmingFirst?(G.matchTime<60?'Phút đầu: farm, chưa chủ động đánh bot':'Cấp dưới mặt bằng: farm trước khi tìm bot'):'Mục tiêu phù hợp sức mạnh và tính cách'):'Chưa có mục tiêu: khám phá';
-      pawn.plan=chosen?{...chosen,until:pawn.decisionTime+(chosen.kind==='ambush'?12:Math.max(2,(pawn.decisionInterval||1)*(1+P.patience/50)))}:null;
+      pawn.decisionReason=chosen?(chosen.kind==='duel'?'Chiến ý và lợi thế trước đối thủ':chosen.kind==='pilgrimage'?'Bái kiến Hoa Quả Sơn: tìm kiếm cơ duyên':farmingFirst?(G.matchTime<60?'Phút đầu: farm, chưa chủ động đánh bot':'Cấp dưới mặt bằng: farm trước khi tìm bot'):'Mục tiêu phù hợp sức mạnh và tính cách'):'Chưa có mục tiêu: khám phá';
+      const planDur = chosen?.kind==='ambush'?12:chosen?.kind==='pilgrimage'?25:chosen?.kind==='truc_lam'?20:Math.max(2,(pawn.decisionInterval||1)*(1+P.patience/50));
+      pawn.plan=chosen?{...chosen,until:pawn.decisionTime+planDur}:null;
     }
     if(pawn.plan){const {kind,target}=pawn.plan;
       if(kind==='loot'){this.seekLoot(pawn,target,dt);return;}

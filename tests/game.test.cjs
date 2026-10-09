@@ -290,6 +290,9 @@ test('result popup pauses once, closes and sole survivor targets the living boss
   assert.equal(G.continueAfterResult(),true);G.update(.1);
   assert.notEqual(p.targetEnemy,boss);assert.match(p.objective,/Farm|cấp 15|Yêu Vương/);
   assert.equal(G.resultOpen,false);G.checkVictoryCondition();assert.equal(G.resultOpen,false);
+  p.isAlive=false;G.checkVictoryCondition();
+  assert.equal(G.isGameOver,true);assert.equal(G.isPaused,true);assert.equal(G.resultOpen,true);
+  assert.match(w.documentText('story-card-modal'),/Không có người sống sót/);
 });
 
 test('bridges count as dry terrain; inspection exposes skills, cooldown and intent',()=>{
@@ -300,6 +303,31 @@ test('bridges count as dry terrain; inspection exposes skills, cooldown and inte
   assert.match(w.documentText('inspect-panel'),/Kỹ năng quái/);assert.match(w.documentText('inspect-panel'),/Hồi chiêu/);
   I.inspect(G.pawns[0]);assert.match(w.documentText('inspect-panel'),/Suy nghĩ & mục tiêu/);
   assert.match(w.documentText('inspect-panel'),/Bình máu/);
+  // Special characters inspection & click selection
+  const T=w.GameEntities.TrucLamSystem,H=w.GameEntities.HuaguoSystem;
+  G.mouse.worldX=T.emperor.x;G.mouse.worldY=T.emperor.y;G.handleCanvasClick();
+  assert.equal(G.selectedEntity,T.emperor);assert.match(w.documentText('inspect-panel'),/Trúc Lâm Thánh Hoàng/);
+  H.summonWukong();
+  G.mouse.worldX=H.wukong.x;G.mouse.worldY=H.wukong.y;G.handleCanvasClick();
+  assert.equal(G.selectedEntity,H.wukong);assert.match(w.documentText('inspect-panel'),/Tôn Ngộ Không/);assert.match(w.documentText('inspect-panel'),/Gậy Như Ý/);
+
+  // Sau khi hết rồng, vẫn có thể bái kiến để triệu hồi Tiểu Ngộ Không (scale 0.50, 120s)
+  const A=w.GameEntities.AliothSystem;
+  (A?.dragons||[]).forEach(d=>{d.isAlive=false;d.captured=true;});
+  H.wukong=null;H.cooldown=0;
+  assert.ok(H.pilgrimageScore(G.pawns[0])>0,'vẫn bái kiến được khi đã dẹp hết rồng');
+  H.summonWukong();
+  assert.equal(H.wukong.isMini,true);
+  assert.equal(H.wukong.scale,0.50);
+  assert.equal(H.wukong.life,120);
+  G.mouse.worldX=H.wukong.x;G.mouse.worldY=H.wukong.y;G.handleCanvasClick();
+  assert.equal(G.selectedEntity,H.wukong);
+  assert.match(w.documentText('inspect-panel'),/Tiểu Ngộ Không/);
+  assert.match(w.documentText('inspect-panel'),/Hộ Mệnh/);
+  H.updateWukong(20);
+  assert.equal(Math.round(H.wukong.life),100);
+  H.updateWukong(101);
+  assert.equal(H.wukong.state,'return');
 });
 
 test('monsters share a faction and a projectile can miss a moving target',()=>{
@@ -1840,7 +1868,7 @@ test('losing to the king offers a rematch and a fresh match clears the crown',()
  for(const item of [loot.weapon,loot.armor,...loot.potions])Brain.lootItem(next,item);w.GameEntities.AncientSystem.tick(20.1);
  assert.equal(w.GameEntities.AncientSystem.boss.isDemonKing,true);assert.equal(G.monsters.filter(m=>m.isDemonKing&&m.isAlive).length,1);
  G.startNewMatch();assert.equal(G.demonKing,null);
- const fresh=G.pawns[0],plain=w.GameEntities.EntityManager.worldBoss;G.pawns.forEach(e=>e.isAlive=e===fresh);C.handleDeath(fresh,plain);
+ const fresh=G.pawns[0],plain=w.GameEntities.EntityManager.worldBoss;if(plain.defId==='eternal_solar_phoenix')plain.phoenixReborn=true;G.pawns.forEach(e=>e.isAlive=e===fresh);C.handleDeath(fresh,plain);
  assert.equal(G.dropItems.filter(d=>d.tier==='god').length,3);assert.equal(G.dropItems.filter(d=>d.successionPrep).length,0);assert.equal(w.GameEntities.AncientSystem.demonKingFight,false);
 });
 
@@ -1912,3 +1940,115 @@ test('heavy armor slows movement, god bodies vary, and the crown keeps build sta
  const snap=G.captureDemonKing(p),king=G.materializeDemonKing(snap,{x:10,y:10});
  assert.equal(snap.skillPower,44);assert.equal(snap.hpRegen,1.7);assert.equal(king.skillPower,44);assert.equal(king.hpRegen,1.7);
 });
+
+test('Truc Lam monastery has 3 guardian generals, bot challenge AI, level reward and 8-minute mounted legion',()=>{
+ const w=loadGame(),G=w.GameManager,TL=w.GameEntities.TrucLamSystem,p=G.pawns[0];
+ assert.ok(TL);
+ assert.equal(TL.guardians.length,3);
+ assert.ok(TL.guardians.every(g=>g.isAlive&&g.isGuardian));
+ assert.ok(TL.guardians.every(g=>typeof g.speed==='number'&&g.speed>0));
+ assert.ok(TL.emperor);
+ assert.match(TL.emperor.title, /Hoàng Thượng/);
+
+ p.x=TL.temple.x;p.y=TL.temple.y;p.currentHp=p.maxHp;
+ const score=TL.challengeScore(p);
+ assert.ok(score>200,'monastery priority score should be high');
+ assert.doesNotThrow(()=>TL.render(G.ctx));
+
+ // Bot strikes guardian and coordinates stay finite (not NaN)
+ const targetG = TL.guardians[0];
+ TL.botStrikeGuardian(p, targetG, 0.1);
+ assert.ok(Number.isFinite(targetG.x)&&Number.isFinite(targetG.y));
+ assert.ok(targetG.currentHp < targetG.maxHp);
+
+ for(const g of TL.guardians){
+  g.currentHp = 0;
+  g.isAlive = false;
+ }
+ TL.checkMonasteryCleared(p);
+ assert.ok(TL.guardians.every(g=>!g.isAlive));
+ assert.ok(TL.decreeEvent?.active);
+ assert.equal(TL.decreeEvent.phase,'decree');
+ assert.match(TL.emperor.speech,/chiếu|chuẩn y|Xuất Cổng Nam/i);
+
+ // Giai đoạn 1: Hoàng Thượng ban chiếu (1s)
+ TL.update(1);
+ assert.equal(TL.decreeEvent.phase,'decree');
+ assert.doesNotThrow(()=>TL.render(G.ctx));
+
+ // Giai đoạn 2: Cổng thành mở, xuất quân (2.5s)
+ TL.update(1.5);
+ assert.equal(TL.decreeEvent.phase,'march');
+ assert.ok(TL.legion?.marching);
+ assert.doesNotThrow(()=>TL.render(G.ctx));
+
+ // Hoàn tất hành quân tới hội quân cùng bot
+ TL.update(3);
+ assert.equal(TL.decreeEvent.active,false);
+ assert.equal(TL.legion.marching,false);
+ assert.ok(TL.legion?.active);
+ assert.equal(TL.legion.soldiers.length,2);
+ assert.equal(TL.legion.general.name,'Thiết Kỵ Tướng Quân');
+ assert.doesNotThrow(()=>TL.render(G.ctx));
+});
+
+test('when only one bot remains, all Truc Lam generals and legion escort and protect the survivor', () => {
+ const w=loadGame(),G=w.GameManager,TL=w.GameEntities.TrucLamSystem,p=G.pawns[0];
+ G.pawns.forEach(e=>e.isAlive=e===p);
+ G.battleRoyaleResolved=true;
+ G.resultOpen=false;
+
+ TL.update(0.1);
+ assert.equal(TL.survivorEscortActive,true);
+ assert.equal(TL.survivor,p);
+ assert.ok(TL.guardians.every(g=>g.isAlive&&g.isEscort));
+ assert.ok(TL.legion?.active);
+ assert.equal(TL.legion.general.name,'Thiết Kỵ Tướng Quân');
+ assert.doesNotThrow(()=>TL.render(G.ctx));
+});
+
+test('Truc Lam escort army targets owner target and transfers allegiance upon death or devour', () => {
+ const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,TL=w.GameEntities.TrucLamSystem,[botA,botB,botC]=G.pawns;
+ botA.x=1000;botA.y=1000;botA.isAlive=true;
+ botB.x=1100;botB.y=1000;botB.isAlive=true;
+ botC.x=1200;botC.y=1000;botC.isAlive=true;
+
+ // Kích hoạt đoàn quân cho botA
+ TL.legion = {
+   active: true,
+   owner: botA,
+   life: 480,
+   marching: false,
+   general: { id: 'tl_gen', name: 'Thiết Kỵ Tướng Quân', x: 1000, y: 1000, speed: 165, attack: 48, attackCooldown: 0 },
+   soldiers: [{ id: 'tl_s1', name: 'Trúc Lâm Tiền Vệ', x: 1000, y: 1000, speed: 140, attack: 24, attackCooldown: 0 }]
+ };
+
+ // 1. BotA đang đánh quái vật targetEnemy -> đoàn quân target đánh quái đó
+ const monster = G.monsters[0];
+ monster.x = 1030; monster.y = 1000; monster.currentHp = 500; monster.maxHp = 500; monster.isAlive = true;
+ botA.targetEnemy = monster;
+
+ TL.updateLegion(0.1);
+ assert.ok(TL.legion.general.aimAngle !== undefined);
+ assert.ok(monster.currentHp < 500, 'Legion general should attack target that owner is fighting');
+
+ // 2. BotA bị BotB hạ gục -> đoàn quân chuyển giao chủ nhân cho BotB
+ C.handleDeath(botB, botA);
+ assert.equal(TL.legion.owner, botB, 'Legion should transfer allegiance to killer BotB');
+
+ // 3. BotB bị Đám mây Hư Không nuốt chửng -> đoàn quân chuyển giao cho bot gần nhất (BotC)
+ const Cloud = w.GameEntities.CloudSystem;
+ Cloud.executeDevour(botB);
+ assert.equal(TL.legion.owner, botC, 'Legion should transfer to nearest living BotC after owner is devoured');
+
+ // 4. Khi chủ nhân KHÔNG target quái vật -> đoàn quân không được tự ý đi đánh quái
+ botC.targetEnemy = null;
+ botC.action = null;
+ botC.plan = null;
+ const idleMonster = G.monsters[1];
+ idleMonster.x = 1050; idleMonster.y = 1000; idleMonster.currentHp = 300; idleMonster.maxHp = 300; idleMonster.isAlive = true;
+ TL.legion.general.attackCooldown = 0;
+ TL.updateLegion(0.1);
+ assert.equal(idleMonster.currentHp, 300, 'Legion must NOT attack monster when owner has no target');
+});
+
