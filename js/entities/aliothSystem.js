@@ -1,439 +1,330 @@
 /**
- * aliothSystem.js - Thực thể Hư Không Alioth (Loki)
- * Đám mây bão đen tím bất tử, trôi chậm khắp bản đồ, nuốt chửng mọi sinh vật chạm phải.
+ * aliothSystem.js - Alioth, long thần riêng, không thuộc đàn quái.
+ * Thân rắn kiểu châu Á bám một vòng bay khép kín khắp map.
+ * Đầu dẫn, các đốt sau lấy mẫu lùi dọc đường bay nên thân uốn theo quỹ đạo.
  */
 window.GameEntities = window.GameEntities || {};
 
 window.GameEntities.AliothSystem = {
   alioth: null,
-  smokePuffs: [],
-  lightningBolts: [],
+  spine: [],
+  sparks: [],
   clock: 0,
-  roarCooldown: 0,
+  travel: 0,
+  path: null,
+  pathCum: null,
+  pathLen: 0,
+  mapW: 0,
+  mapH: 0,
+  speed: 240,
+  segments: 34,
+  spacing: 18,
 
-  init: function(mapWidth, mapHeight) {
-    this.smokePuffs = [];
-    this.lightningBolts = [];
+  init(mapWidth, mapHeight) {
+    this.sparks = [];
     this.clock = 0;
-    this.roarCooldown = 0;
-
-    // Spawn ở một góc xa ngẫu nhiên trên bản đồ
-    const corners = [
-      { x: 250, y: 250 },
-      { x: mapWidth - 250, y: 250 },
-      { x: 250, y: mapHeight - 250 },
-      { x: mapWidth - 250, y: mapHeight - 250 }
-    ];
-    const spawn = corners[Math.floor(Math.random() * corners.length)];
-
+    this.travel = 0;
+    this.spine = [];
+    this.buildPath(mapWidth, mapHeight);
+    this.travel = this.pathLen * 0.18;
+    const head = this.sample(this.travel);
     this.alioth = {
       id: 'alioth_entity',
-      name: 'Thực Thể Hư Không Alioth',
+      name: 'Alioth',
+      title: 'Long Thần',
       isAlioth: true,
       isAlive: true,
       invincible: true,
-      x: spawn.x,
-      y: spawn.y,
+      x: head.x,
+      y: head.y,
       vx: 0,
       vy: 0,
-      targetX: mapWidth / 2,
-      targetY: mapHeight / 2,
-      speed: 32, // Rất chậm
-      radius: 95, // Bán kính nuốt chửng
-      visualRadius: 150, // Bán kính hiển thị sương khói
-      aimAngle: 0,
-      turnSpeed: 0.8,
-      preyTarget: null,
-      retargetTimer: 0,
-      jawOpenProgress: 0.3,
-      isMonster: true,
-      tier: 6,
-      tierName: 'Thượng Cổ',
-      scale: 1.8,
-      currentHp: 999999,
-      maxHp: 999999,
-      attack: 999,
-      defense: 999,
-      speed: 32,
-      isAlioth: true
+      aimAngle: Math.atan2(head.ty, head.tx),
+      speed: this.speed,
+      radius: 36
     };
-
-    // Khởi tạo các cụm khói mây quanh tâm Alioth
-    for (let i = 0; i < 36; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const dist = Math.random() * 110;
-      this.smokePuffs.push({
-        relX: Math.cos(angle) * dist,
-        relY: Math.sin(angle) * dist,
-        baseR: 35 + Math.random() * 45,
-        rot: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 0.8,
-        pulseSpeed: 1.5 + Math.random() * 2,
-        pulseOffset: Math.random() * Math.PI * 2,
-        shade: Math.random() < 0.4 ? '#180a29' : Math.random() < 0.7 ? '#2a0e44' : '#0d0416',
-        alpha: 0.55 + Math.random() * 0.35
-      });
-    }
-
-    if (window.GameUI && window.GameUI.CombatTicker) {
-      window.GameUI.CombatTicker.log('🌌 [CẢNH BÁO] Thực Thể Hư Không Alioth đã xuất hiện và bắt đầu nuốt chửng dòng thời gian!');
-    }
+    this.rebuildSpine();
+    window.GameUI?.CombatTicker?.log('🐉 Long thần Alioth cất cánh và bay tuần tra khắp đấu trường.');
   },
 
-  reset: function(mapWidth, mapHeight) {
+  reset(mapWidth, mapHeight) {
     this.init(mapWidth, mapHeight);
   },
 
-  avoid: function(pawn, dt) {
-    const a = this.alioth;
-    if (!a || !a.isAlive) return false;
-    const dist = Math.hypot(pawn.x - a.x, pawn.y - a.y);
-    if (dist > 360) return false;
+  buildPath(mapW, mapH) {
+    const marks = [
+      [.16, .22], [.40, .12], [.66, .18], [.86, .34],
+      [.90, .56], [.74, .80], [.48, .90], [.24, .78],
+      [.10, .56], [.12, .36]
+    ].map(([x, y]) => ({ x: x * mapW, y: y * mapH }));
+    const steps = marks.length * 28;
+    const path = [];
+    for (let i = 0; i < steps; i++) path.push(this.catmull(marks, (i / steps) * marks.length));
+    const cum = [0];
+    for (let i = 1; i < path.length; i++) cum.push(cum[i - 1] + Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y));
+    const close = Math.hypot(path[0].x - path[path.length - 1].x, path[0].y - path[path.length - 1].y);
+    path.push({ ...path[0] });
+    cum.push(cum[cum.length - 1] + close);
+    this.path = path;
+    this.pathCum = cum;
+    this.pathLen = cum[cum.length - 1] || 1;
+    this.mapW = mapW;
+    this.mapH = mapH;
+  },
 
+  catmull(points, t) {
+    const n = points.length;
+    const i = Math.floor(t) % n;
+    const f = t - Math.floor(t);
+    const p0 = points[(i - 1 + n) % n], p1 = points[i], p2 = points[(i + 1) % n], p3 = points[(i + 2) % n];
+    const f2 = f * f, f3 = f2 * f;
+    const axis = k => 0.5 * ((2 * p1[k]) + (-p0[k] + p2[k]) * f + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * f2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * f3);
+    return { x: axis('x'), y: axis('y') };
+  },
+
+  pointAlong(dist) {
+    const len = this.pathLen || 1;
+    dist = ((dist % len) + len) % len;
+    const cum = this.pathCum;
+    let lo = 1, hi = cum.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (cum[mid] < dist) lo = mid + 1;
+      else hi = mid;
+    }
+    const span = cum[lo] - cum[lo - 1] || 1;
+    const f = (dist - cum[lo - 1]) / span;
+    const a = this.path[lo - 1], b = this.path[lo];
+    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
+  },
+
+  sample(dist) {
+    const base = this.pointAlong(dist);
+    const ahead = this.pointAlong(dist + 16);
+    let tx = ahead.x - base.x, ty = ahead.y - base.y;
+    const mag = Math.hypot(tx, ty) || 1;
+    tx /= mag; ty /= mag;
+    const nx = -ty, ny = tx;
+    const wave = Math.sin(dist * 0.017 + this.clock * 2.4) * 24;
+    return { x: base.x + nx * wave, y: base.y + ny * wave, tx, ty, nx, ny };
+  },
+
+  rebuildSpine() {
+    const spine = [];
+    for (let i = 0; i < this.segments; i++) spine.push(this.sample(this.travel - i * this.spacing));
+    this.spine = spine;
+    return spine;
+  },
+
+  protected(entity) {
+    if (!entity?.isAlive || entity.isAlioth || entity.isSplit) return true;
+    if (entity.isAncient || entity.isAncientClone || entity.isDemonKing) return true;
+    return entity === window.GameEntities.EntityManager?.worldBoss;
+  },
+
+  nearest(x, y) {
+    let best = null, dist = Infinity;
+    for (const point of this.spine) {
+      const d = Math.hypot(point.x - x, point.y - y);
+      if (d < dist) { dist = d; best = point; }
+    }
+    return { point: best, dist };
+  },
+
+  avoid(pawn, dt) {
+    const head = this.spine[0];
+    if (!pawn?.isAlive || !head) return false;
+    const hit = this.nearest(pawn.x, pawn.y);
+    if (!hit.point || hit.dist > 300) return false;
     const M = window.GameEngine.MapTerrain;
     pawn.plan = null;
     pawn.targetEnemy = null;
     pawn.chase = null;
+    pawn.meditating = false;
     pawn.fear = Math.min(100, (pawn.fear || 0) + 40);
-    pawn.objective = '🚨 THÁO CHẠY KHỎI ALIOT!';
-    pawn.thought = 'Thực Thể Hư Không Alioth đang tới gần! Chạy mau trước khi bị nuốt chửng!';
-
-    const awayAngle = Math.atan2(pawn.y - a.y, pawn.x - a.x);
-    pawn.aimAngle = awayAngle;
+    pawn.objective = 'Tránh đường long thần Alioth';
+    pawn.thought = 'Alioth đang bay ngang. Né thân rồng trước khi bị cuốn đi.';
+    const away = Math.atan2(pawn.y - hit.point.y, pawn.x - hit.point.x);
+    pawn.aimAngle = away;
     const speed = M.getMoveSpeed(pawn) * 1.25;
-    M.moveEntity(pawn, Math.cos(awayAngle) * speed * dt, Math.sin(awayAngle) * speed * dt);
+    M.moveEntity(pawn, Math.cos(away) * speed * dt, Math.sin(away) * speed * dt);
     return true;
   },
 
-  update: function(dt) {
-    const a = this.alioth;
-    if (!a || !a.isAlive) return;
-
+  update(dt) {
+    const dragon = this.alioth;
+    if (!dragon?.isAlive) return;
+    const G = window.GameManager;
+    const mapW = G?.width || this.mapW || 5200;
+    const mapH = G?.height || this.mapH || 5200;
+    if (mapW !== this.mapW || mapH !== this.mapH || !this.path) this.buildPath(mapW, mapH);
     this.clock += dt;
-    this.roarCooldown -= dt;
-
-    const G = window.GameManager;
-    const mapW = G?.width || 5200;
-    const mapH = G?.height || 5200;
-
-    // 1. Tìm mục tiêu sống gần nhất (Pawn hoặc Monster) để từ từ lướt đến
-    a.retargetTimer -= dt;
-    if (a.retargetTimer <= 0 || !a.preyTarget || !a.preyTarget.isAlive) {
-      a.retargetTimer = 2.0 + Math.random() * 1.5;
-      let closest = null;
-      let closestDist = Infinity;
-
-      // Ưu tiên bot / player
-      const pawns = (G?.pawns || []).filter(p => p.isAlive);
-      for (const p of pawns) {
-        const d = Math.hypot(p.x - a.x, p.y - a.y);
-        if (d < closestDist) {
-          closestDist = d;
-          closest = p;
-        }
-      }
-
-      // Nếu không có pawn trong bán kính 1200, tìm quái vật
-      if (!closest || closestDist > 1200) {
-        const monsters = (G?.monsters || []).filter(m => m.isAlive && !m.isAncientClone);
-        for (const m of monsters) {
-          const d = Math.hypot(m.x - a.x, m.y - a.y);
-          if (d < closestDist) {
-            closestDist = d;
-            closest = m;
-          }
-        }
-      }
-
-      a.preyTarget = closest;
-      if (closest) {
-        a.targetX = closest.x;
-        a.targetY = closest.y;
-      } else {
-        // Tuần tra ngẫu nhiên khắp map nếu không có ai
-        if (Math.hypot(a.x - a.targetX, a.y - a.targetY) < 150) {
-          a.targetX = 400 + Math.random() * (mapW - 800);
-          a.targetY = 400 + Math.random() * (mapH - 800);
-        }
-      }
-    } else {
-      if (a.preyTarget && a.preyTarget.isAlive) {
-        a.targetX = a.preyTarget.x;
-        a.targetY = a.preyTarget.y;
-      }
-    }
-
-    // 2. Di chuyển chậm xuyên qua mọi địa hình
-    const dx = a.targetX - a.x;
-    const dy = a.targetY - a.y;
-    const dist = Math.hypot(dx, dy);
-    const targetAngle = Math.atan2(dy, dx);
-
-    // Xoay góc mặt từ từ về hướng di chuyển
-    let diff = targetAngle - a.aimAngle;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    while (diff > Math.PI) diff -= Math.PI * 2;
-    a.aimAngle += Math.sign(diff) * Math.min(Math.abs(diff), a.turnSpeed * dt);
-
-    if (dist > 15) {
-      const step = a.speed * dt;
-      a.vx = Math.cos(a.aimAngle) * step;
-      a.vy = Math.sin(a.aimAngle) * step;
-      a.x += a.vx;
-      a.y += a.vy;
-    } else {
-      a.vx = 0;
-      a.vy = 0;
-    }
-
-    // Giữ trong giới hạn map
-    a.x = Math.max(80, Math.min(mapW - 80, a.x));
-    a.y = Math.max(80, Math.min(mapH - 80, a.y));
-
-    // 3. Nuốt chửng mọi thực thể chạm vào bán kính nuốt
-    this.devourPrey(a);
-
-    // 4. Cập nhật xoay các cụm khói & tạo tia sét bên trong
-    for (const puff of this.smokePuffs) {
-      puff.rot += puff.rotSpeed * dt;
-    }
-
-    // Sinh tia sét tím ngẫu nhiên bên trong tầng mây
-    if (Math.random() < 0.25) {
-      this.generateLightning();
-    }
-    for (let i = this.lightningBolts.length - 1; i >= 0; i--) {
-      this.lightningBolts[i].life -= dt;
-      if (this.lightningBolts[i].life <= 0) {
-        this.lightningBolts.splice(i, 1);
-      }
+    this.travel += this.speed * dt;
+    this.rebuildSpine();
+    const head = this.spine[0];
+    dragon.x = head.x;
+    dragon.y = head.y;
+    dragon.vx = head.tx * this.speed;
+    dragon.vy = head.ty * this.speed;
+    dragon.aimAngle = Math.atan2(head.ty, head.tx);
+    this.devour();
+    if (Math.random() < dt * 4) this.sparks.push({ life: 0.16 + Math.random() * 0.08, seed: Math.random() * 6 });
+    for (let i = this.sparks.length - 1; i >= 0; i--) {
+      this.sparks[i].life -= dt;
+      if (this.sparks[i].life <= 0) this.sparks.splice(i, 1);
     }
   },
 
-  devourPrey: function(a) {
+  devour() {
     const G = window.GameManager;
-    const C = window.GameEntities.CombatSystem;
-    const killRadius = a.radius;
-
-    // Quét pawns (người chơi & bot)
-    const pawns = (G?.pawns || []).filter(p => p.isAlive);
-    for (const p of pawns) {
-      const dist = Math.hypot(p.x - a.x, p.y - a.y);
-      if (dist <= killRadius) {
-        this.executeDevour(p);
-      }
-    }
-
-    // Quét quái vật
-    const monsters = (G?.monsters || []).filter(m => m.isAlive && !m.isAncient && !m.isAncientClone);
-    for (const m of monsters) {
-      const dist = Math.hypot(m.x - a.x, m.y - a.y);
-      if (dist <= killRadius) {
-        this.executeDevour(m);
-      }
+    if (!G || !this.spine.length) return;
+    const victims = [...(G.pawns || []), ...(G.monsters || [])];
+    for (const victim of victims) {
+      if (this.protected(victim)) continue;
+      const hit = this.nearest(victim.x, victim.y);
+      if (hit.dist <= 34) this.executeDevour(victim);
     }
   },
 
-  executeDevour: function(victim) {
-    if (!victim || !victim.isAlive) return;
-    const C = window.GameEntities.CombatSystem;
-    const V = window.GameRenderer.VfxManager;
-
+  executeDevour(victim) {
+    if (!victim?.isAlive || this.protected(victim)) return;
+    const V = window.GameRenderer?.VfxManager;
     victim.currentHp = 0;
     victim.action = null;
     victim.attackState = null;
-
-    // Hiệu ứng tia sét tím và khói nuốt chửng
-    if (V) {
-      V.addEffect('impact', victim.x, victim.y, {
-        radius: 65,
-        color: '#9b59b6',
-        life: 0.8
-      });
-      V.addBurstParticles(victim.x, victim.y, '#e74c3c', 25);
-      V.addBurstParticles(victim.x, victim.y, '#3b1459', 35);
-      V.addDamageNumber(victim.x, victim.y - 30, 'NUỐT CHỬNG', 'crit');
-    }
-
-    // Âm thanh
-    if (window.GameEngine.Audio) {
-      window.GameEngine.Audio.play('death', victim, 'human');
-    }
-
-    // Thông báo Ticker
-    if (window.GameUI && window.GameUI.CombatTicker) {
-      window.GameUI.CombatTicker.log(`⚡ [ALIOTH] Thực Thể Hư Không đã nuốt chửng ${victim.name} vào cõi hư vô!`);
-    }
-
-    if (C && C.handleDeath) {
-      C.handleDeath(this.alioth, victim);
-    } else {
-      victim.isAlive = false;
-    }
+    victim.isAlive = false;
+    V?.addEffect?.('impact', victim.x, victim.y, { radius: 54, color: '#e7c56a', life: 0.7 });
+    V?.addBurstParticles?.(victim.x, victim.y, '#f4d48a', 16);
+    V?.addBurstParticles?.(victim.x, victim.y, '#c4342d', 18);
+    V?.addDamageNumber?.(victim.x, victim.y - 30, 'CUỐN ĐI', 'crit');
+    window.GameEngine?.Audio?.play?.('death', victim, undefined, { tier: victim.tier });
+    window.GameUI?.CombatTicker?.log(`🐉 Alioth cuốn ${victim.name} theo thân rồng.`);
+    window.GameEntities.CombatSystem?.dropLootOnDeath?.(victim);
+    if (victim === window.GameEntities.EntityManager?.worldBoss) window.GameEntities.AncientSystem?.awaken?.(victim, this.alioth);
   },
 
-  generateLightning: function() {
-    const a = this.alioth;
-    if (!a) return;
-    const startAngle = Math.random() * Math.PI * 2;
-    const startDist = Math.random() * 60;
-    const startX = a.x + Math.cos(startAngle) * startDist;
-    const startY = a.y + Math.sin(startAngle) * startDist;
-
-    const points = [{ x: startX, y: startY }];
-    let curX = startX;
-    let curY = startY;
-    const segments = 3 + Math.floor(Math.random() * 4);
-    const boltAngle = startAngle + (Math.random() - 0.5) * 1.5;
-
-    for (let i = 0; i < segments; i++) {
-      const len = 15 + Math.random() * 20;
-      const deviation = (Math.random() - 0.5) * 1.8;
-      curX += Math.cos(boltAngle + deviation) * len;
-      curY += Math.sin(boltAngle + deviation) * len;
-      points.push({ x: curX, y: curY });
-    }
-
-    this.lightningBolts.push({
-      points,
-      color: Math.random() < 0.6 ? '#d980fa' : '#ff4757',
-      life: 0.12 + Math.random() * 0.1
-    });
-  },
-
-  render: function(ctx) {
-    const a = this.alioth;
-    if (!a || !a.isAlive) return;
-
+  renderShadow(ctx) {
+    if (!this.spine.length) return;
     ctx.save();
-
-    // 1. Vẽ quầng sáng năng lượng tím đen nền dưới chân
-    const bgGrad = ctx.createRadialGradient(a.x, a.y, 20, a.x, a.y, a.visualRadius * 1.3);
-    bgGrad.addColorStop(0, 'rgba(44, 11, 77, 0.65)');
-    bgGrad.addColorStop(0.5, 'rgba(24, 6, 45, 0.45)');
-    bgGrad.addColorStop(1, 'rgba(10, 2, 20, 0)');
-    ctx.fillStyle = bgGrad;
-    ctx.beginPath();
-    ctx.arc(a.x, a.y, a.visualRadius * 1.3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 2. Vẽ các cụm khói mây cuộn trào (procedural dark turbulent clouds)
-    for (const puff of this.smokePuffs) {
-      const pulse = Math.sin(this.clock * puff.pulseSpeed + puff.pulseOffset) * 8;
-      const px = a.x + puff.relX;
-      const py = a.y + puff.relY;
-      const pr = puff.baseR + pulse;
-
-      ctx.save();
-      ctx.translate(px, py);
-      ctx.rotate(puff.rot);
-
-      const grad = ctx.createRadialGradient(0, 0, pr * 0.2, 0, 0, pr);
-      grad.addColorStop(0, puff.shade);
-      grad.addColorStop(0.7, 'rgba(20, 5, 35, 0.85)');
-      grad.addColorStop(1, 'rgba(10, 2, 18, 0)');
-
-      ctx.fillStyle = grad;
-      ctx.globalAlpha = puff.alpha;
+    ctx.fillStyle = 'rgba(28, 18, 16, 0.16)';
+    for (let i = 0; i < this.spine.length; i += 2) {
+      const point = this.spine[i];
+      const girth = 14 + (1 - i / this.spine.length) * 10;
       ctx.beginPath();
-      ctx.arc(0, 0, pr, 0, Math.PI * 2);
+      ctx.ellipse(point.x, point.y + 30, girth * 1.7, girth * 0.62, Math.atan2(point.ty, point.tx), 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
     }
-
-    // 3. Vẽ khuôn mặt quái thú Alioth bằng khói tối & miệng/mắt phát sáng
-    ctx.save();
-    ctx.translate(a.x, a.y);
-    ctx.rotate(a.aimAngle);
-
-    // Họng đỏ/hồng rực há mở nuốt chửng
-    const jawGlow = ctx.createRadialGradient(40, 0, 5, 40, 0, 65);
-    jawGlow.addColorStop(0, 'rgba(255, 60, 60, 0.95)');
-    jawGlow.addColorStop(0.3, 'rgba(235, 47, 6, 0.75)');
-    jawGlow.addColorStop(0.7, 'rgba(120, 10, 50, 0.4)');
-    jawGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-    ctx.fillStyle = jawGlow;
-    ctx.beginPath();
-    // Vòm miệng quái thú mở rộng
-    ctx.ellipse(38, 0, 48, 28, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Răng nanh khói đen tua tủa
-    ctx.fillStyle = '#0a0314';
-    ctx.beginPath();
-    ctx.moveTo(25, -20);
-    ctx.lineTo(45, -10);
-    ctx.lineTo(30, -5);
-    ctx.lineTo(52, 0);
-    ctx.lineTo(30, 5);
-    ctx.lineTo(45, 10);
-    ctx.lineTo(25, 20);
-    ctx.lineTo(15, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    // Hai mắt đỏ rực phát sáng uy nghiêm
-    const eyeGlow = (ex, ey) => {
-      const g = ctx.createRadialGradient(ex, ey, 2, ex, ey, 18);
-      g.addColorStop(0, '#ffffff');
-      g.addColorStop(0.2, '#ff3838');
-      g.addColorStop(0.6, 'rgba(255, 50, 50, 0.5)');
-      g.addColorStop(1, 'rgba(255, 0, 0, 0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(ex, ey, 18, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Đồng tử rực lửa
-      ctx.fillStyle = '#ff7675';
-      ctx.beginPath();
-      ctx.ellipse(ex, ey, 5, 9, 0.2, 0, Math.PI * 2);
-      ctx.fill();
-    };
-
-    eyeGlow(20, -22);
-    eyeGlow(20, 22);
-
     ctx.restore();
+  },
 
-    // 4. Vẽ các tia chớp điện giật bên trong đám mây
-    for (const bolt of this.lightningBolts) {
-      if (!bolt.points || bolt.points.length < 2) continue;
-      ctx.save();
-      ctx.strokeStyle = bolt.color;
-      ctx.lineWidth = 2.5;
-      ctx.shadowColor = bolt.color;
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.moveTo(bolt.points[0].x, bolt.points[0].y);
-      for (let i = 1; i < bolt.points.length; i++) {
-        ctx.lineTo(bolt.points[i].x, bolt.points[i].y);
-      }
-      ctx.stroke();
-      ctx.restore();
+  render(ctx) {
+    const spine = this.spine;
+    if (!spine.length || !window.GameRenderer?.ArtKit) return;
+    const kit = window.GameRenderer.ArtKit(ctx);
+    const time = this.clock;
+    const scale = '#c4342d', deep = '#8d241f', belly = '#f6d48a', gold = '#f0c14d', mane = '#f7f1e4';
+    for (let i = spine.length - 1; i >= 1; i--) this.drawSegment(ctx, kit, spine, i, scale, deep, belly, gold, mane, time);
+    this.drawHead(ctx, kit, spine[0], scale, deep, belly, gold, mane, time);
+    for (const spark of this.sparks) this.drawSpark(ctx, kit, spine[0], spark);
+    this.drawName(ctx, spine[0]);
+  },
+
+  place(ctx, point) {
+    ctx.translate(point.x, point.y);
+    const ang = Math.atan2(point.ty, point.tx);
+    ctx.rotate(ang);
+    if (Math.cos(ang) < 0) ctx.scale(1, -1);
+  },
+
+  drawSegment(ctx, kit, spine, index, scale, deep, belly, gold, mane, time) {
+    const point = spine[index];
+    const u = index / (spine.length - 1);
+    const rad = 6 + (1 - u) * 11;
+    const sway = Math.sin(time * 3 + index * 0.7) * 2;
+    ctx.save();
+    this.place(ctx, point);
+    kit.oval(0, 0, rad * 1.55, rad * 0.78, index % 2 ? scale : deep, 2);
+    kit.oval(rad * 0.15, rad * 0.22, rad * 0.72, rad * 0.3, belly, 1.3);
+    kit.poly([[-rad * 0.5, -rad * 0.25], [sway, -rad * 1.25], [rad * 0.45, -rad * 0.15]], mane, 1.4);
+    if (index === spine.length - 1) kit.poly([[-rad, -rad * 0.2], [-rad * 2.4, -rad * 0.1], [-rad * 1.6, rad * 0.7], [-rad * 0.2, rad * 0.2]], gold, 1.5);
+    if ([8, 14, 21, 27].includes(index)) this.drawClaw(kit, rad, gold, time, index);
+    ctx.restore();
+    if (index % 7 === 3) this.drawCloud(ctx, kit, point.x + point.nx * 34, point.y + point.ny * 34, 1, time + index);
+  },
+
+  drawClaw(kit, rad, gold, time, index) {
+    const step = Math.sin(time * 5 + index) * 3;
+    kit.line(rad * 0.2, rad * 0.35, rad * 0.15 + step, rad * 1.25, gold, 3);
+    kit.oval(rad * 0.15 + step, rad * 1.35, rad * 0.34, rad * 0.22, gold, 1.3);
+    for (const toe of [-4, 0, 4]) kit.line(rad * 0.15 + step + toe * 0.35, rad * 1.3, rad * 0.15 + step + toe, rad * 1.62, '#f8e7b4', 1.4);
+  },
+
+  drawCloud(ctx, kit, x, y, size, time) {
+    const bob = Math.sin(time) * 3;
+    ctx.save();
+    ctx.translate(x, y + bob);
+    kit.oval(-8 * size, 2, 9 * size, 6 * size, '#f7f4ee', 1.6);
+    kit.oval(0, -2, 12 * size, 8 * size, '#fff', 1.6);
+    kit.oval(10 * size, 2, 8 * size, 5.5 * size, '#f3efe6', 1.6);
+    ctx.restore();
+  },
+
+  drawHead(ctx, kit, head, scale, deep, belly, gold, mane, time) {
+    const jaw = 0.18 + Math.sin(time * 2.2) * 0.08;
+    const whisker = Math.sin(time * 3) * 6;
+    ctx.save();
+    this.place(ctx, head);
+    for (let i = 0; i < 5; i++) {
+      const flow = Math.sin(time * 3 + i) * 4;
+      kit.poly([[-4, -2], [-16 - i * 7, -18 - i * 2 + flow], [-6, 2]], i % 2 ? mane : gold, 1.3);
     }
+    kit.oval(6, -1, 15, 12, scale, 2.2);
+    kit.oval(4, 3, 8, 6, belly, 1.4);
+    kit.poly([[10, -6], [34, -3], [40, 2], [30, 7], [12, 6]], deep, 2);
+    kit.oval(33, 1, 2.1, 1.5, '#1d1a26', 1);
+    ctx.save();
+    ctx.translate(14, 5);
+    ctx.rotate(jaw);
+    kit.poly([[0, 0], [18, 3], [16, 9], [-2, 6]], belly, 1.5);
+    for (const tooth of [3, 9, 15]) kit.poly([[tooth, 0], [tooth + 2, -4], [tooth + 4, 0]], '#fffaf0', 1);
+    ctx.restore();
+    for (const tooth of [16, 23, 30]) kit.poly([[tooth, 4], [tooth + 2, 8], [tooth + 4, 4]], '#fffaf0', 1);
+    kit.poly([[-2, -10], [-6, -30], [2, -16], [4, -8]], gold, 1.6);
+    kit.poly([[-4, -22], [-14, -32], [-2, -16]], '#f8e7b4', 1.3);
+    kit.poly([[8, -12], [4, -34], [14, -18], [12, -8]], gold, 1.6);
+    kit.poly([[8, -26], [18, -36], [12, -16]], '#f8e7b4', 1.3);
+    kit.oval(12, -6, 4.4, 4.8, '#fffaf0', 1.4);
+    kit.oval(13.2, -6, 1.7, 3.3, '#1d1a26', 1);
+    kit.oval(12.4, -7.2, 0.7, 0.7, '#fff', 0.6);
+    kit.tube(28, -1, 46, -12 + whisker, 62, 4, 74, -8 + whisker, 1.5, mane);
+    kit.tube(28, 3, 48, 10 - whisker, 64, -2, 76, 8 - whisker, 1.5, mane);
+    const bob = Math.sin(time * 4) * 3;
+    kit.glow(46, -18 + bob, 16, '#e7d6ff', 0.85);
+    kit.oval(46, -18 + bob, 5.5, 5.5, '#f4ecff', 1.6);
+    kit.oval(46, -18 + bob, 2.2, 2.2, '#c9b4f0', 1);
+    ctx.restore();
+  },
 
-    // 5. Viền sương mờ cảnh báo bán kính nuốt
-    ctx.strokeStyle = 'rgba(165, 94, 234, 0.22)';
-    ctx.lineWidth = 1.8;
-    ctx.setLineDash([8, 6]);
-    ctx.beginPath();
-    ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
+  drawSpark(ctx, kit, head, spark) {
+    const fwd = 46, up = -18;
+    const x = head.x + head.tx * fwd + head.nx * up;
+    const y = head.y + head.ty * fwd + head.ny * up;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, spark.life * 5);
+    kit.line(x - 4, y, x + 5, y - 6, '#f4ecff', 1.4);
+    kit.line(x + 5, y - 6, x + 2, y + 5, '#f4ecff', 1.4);
+    ctx.restore();
+  },
 
-    // Tên hiển thị trên đầu
-    ctx.font = 'bold 13px Arial';
+  drawName(ctx, head) {
+    ctx.save();
+    ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#e056fd';
-    ctx.shadowColor = '#000';
-    ctx.shadowBlur = 6;
-    ctx.fillText('⚡ ALIOT HƯ KHÔNG ⚡', a.x, a.y - a.visualRadius * 0.75);
-    ctx.font = '11px Arial';
-    ctx.fillStyle = '#ff7979';
-    ctx.fillText('Bất Tử • Nuốt Chửng', a.x, a.y - a.visualRadius * 0.75 + 14);
-
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#1d1a26';
+    ctx.strokeText('Alioth', head.x, head.y - 58);
+    ctx.fillStyle = '#f6d48a';
+    ctx.fillText('Alioth', head.x, head.y - 58);
     ctx.restore();
   }
 };

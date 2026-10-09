@@ -569,7 +569,7 @@ window.GameManager = {
     // 1. Vẽ Bản Đồ & Địa Hình (Cây cối, đầm lầy, đền cổ, bụi rậm)
     window.GameEngine.MapTerrain.render(ctx, window.GameEngine.Camera);
 
-    window.GameEntities.AncientSystem.render(ctx);window.GameEntities.AliothSystem.render(ctx);window.GameEntities.CombatSystem.renderFields(ctx);
+    window.GameEntities.AncientSystem.render(ctx);window.GameEntities.AliothSystem.renderShadow(ctx);window.GameEntities.CombatSystem.renderFields(ctx);
     ctx.save();const arena=window.GameEntities.AncientSystem.arena;if(arena){ctx.beginPath();ctx.rect(arena.x,arena.y,arena.w,arena.h);ctx.clip();}
     window.GameEntities.RelicSystem.render(ctx);
     this.renderFocusRanges(ctx);
@@ -598,6 +598,7 @@ window.GameManager = {
     });
     const demonKing = this.monsters.find(m => m.isAlive && m.isDemonKing);
     if (demonKing) window.GameRenderer.ProceduralPawn.render(ctx, demonKing, demonKing.appearance, this.selectedEntity === demonKing);
+    window.GameEntities.AliothSystem.render(ctx);
 
     ctx.save();if(arena){ctx.beginPath();ctx.rect(arena.x,arena.y,arena.w,arena.h);ctx.clip();}
     // 6. Vẽ Đạn đạo, Số Sát Thương, Hạt VFX & Cảm Xúc Mote

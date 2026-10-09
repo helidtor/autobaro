@@ -961,6 +961,10 @@ window.GameEntities.CombatSystem = {
   },
   handleDeath(killer, victim) {
     if (!victim?.isAlive) return;
+    if (killer?.isAlioth) {
+      window.GameEntities.AliothSystem.executeDevour(victim);
+      return;
+    }
     if(window.GameEntities.AncientSystem.beforeDeath(victim,killer))return;
     if(victim.defId==='eternal_solar_phoenix'&&!victim.phoenixReborn){victim.phoenixReborn=true;victim.currentHp=1;victim.action=null;victim.attackState=null;victim.stasisTimer=4;victim.phoenixEgg={hp:80,until:(window.GameManager.matchTime||0)+4};window.GameRenderer.VfxManager.addEffect('rune',victim.x,victim.y,{radius:48,color:'#ffb449',life:4});return;}
     if (!victim.isAncient && victim.armor?.reviveOnce && !victim.hasRevived) { victim.hasRevived = true; victim.currentHp = victim.maxHp * 0.2; return; }

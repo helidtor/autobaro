@@ -20,11 +20,12 @@ window.GameAI.AiBrain = {
     const foot=this.findBestItemToLoot(pawn,drops.filter(i=>Math.hypot(i.x-pawn.x,i.y-pawn.y)<28));
     if(foot)this.lootItem(pawn,foot);
     if(pawn.action)return;
+    if(window.GameEntities.AliothSystem?.avoid?.(pawn,dt))return;
     if(pawn.meditating){
       if(C.underAttack(pawn))pawn.meditating=false;
       else{pawn.vx=pawn.vy=0;pawn.navPath=[];pawn.objective='Thiền định đến 75% máu';pawn.thought='Đứng yên, không di chuyển. Giao tranh sẽ ngắt thiền định.';return;}
     }
-    if(C.avoidFields(pawn,dt)||window.GameEntities.AncientSystem.avoid(pawn,dt)||window.GameEntities.AliothSystem?.avoid?.(pawn,dt))return;
+    if(C.avoidFields(pawn,dt)||window.GameEntities.AncientSystem.avoid(pawn,dt))return;
     if(window.GameEntities.AncientSystem.prepare(pawn,dt))return;
     if(pawn.currentHp<pawn.maxHp*(.3+P.caution*.003)&&C.usePotion(pawn)){
       pawn.thought='Để dành bình cho lúc nguy hiểm: hồi máu trước khi chọn con mồi.';pawn.objective='Uống bình hồi máu';return;
