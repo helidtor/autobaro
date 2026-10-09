@@ -154,6 +154,7 @@ window.GameEntities.HuaguoSystem = {
       window.GameRenderer?.VfxManager?.addEmotionMote?.(p, '🙏', '#f6d48a');
     }
     window.GameUI?.CombatTicker?.log(`☁️ Năm người bái kiến thành công! Tôn Ngộ Không cưỡi cân đẩu vân xuất kích diệt ${target.name}!`);
+    window.GameEngine?.Audio?.play?.('ascension');
     window.GameRenderer?.VfxManager?.addEffect?.('rune', m.x, m.y, { radius: 160, color: '#f6d48a', life: 2 });
   },
 
@@ -366,70 +367,146 @@ window.GameEntities.HuaguoSystem = {
     ctx.save();
     ctx.translate(w.x, w.y);
     const facing = Math.cos(w.angle) < 0 ? -1 : 1;
-    ctx.scale(facing, 1);
+    ctx.scale(facing * 2.2, 2.2);
 
     // Cân đẩu vân dưới chân.
     ctx.fillStyle = '#fff';
     ctx.strokeStyle = '#d9d3c7';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.ellipse(0, 14, 20, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 16, 22, 9, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.beginPath();
-    ctx.ellipse(-12, 10, 10, 6, 0, 0, Math.PI * 2);
-    ctx.ellipse(12, 10, 10, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(-13, 12, 11, 6.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(13, 12, 11, 6.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Thân áo hổ.
+    // Choàng đỏ bay sau lưng.
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath();
+    ctx.moveTo(-6, -12);
+    ctx.quadraticCurveTo(-26, -4, -20, 16);
+    ctx.quadraticCurveTo(-14, 6, -4, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Thân giáp vàng.
     ctx.fillStyle = '#e2b007';
-    ctx.strokeStyle = '#1d1a26';
+    ctx.strokeStyle = '#7a4e06';
     ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 8, 11, 0, 0, Math.PI * 2);
+    ctx.moveTo(-9, -8);
+    ctx.lineTo(9, -8);
+    ctx.lineTo(11, 8);
+    ctx.lineTo(-11, 8);
+    ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    for (const s of [-4, 0, 4]) {
-      ctx.strokeStyle = '#1d1a26';
-      ctx.beginPath();
-      ctx.moveTo(s, -6);
-      ctx.lineTo(s + 2, 6);
-      ctx.stroke();
-    }
+    ctx.strokeStyle = '#f6d48a';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(0, 8);
+    ctx.moveTo(-9, -2);
+    ctx.lineTo(9, -2);
+    ctx.stroke();
 
-    // Đầu + mão.
-    ctx.fillStyle = '#f1c27d';
+    // Đai đỏ.
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(-11, 6, 22, 4);
+    ctx.fillStyle = '#f6d48a';
     ctx.beginPath();
-    ctx.arc(0, -14, 7, 0, Math.PI * 2);
+    ctx.arc(0, 8, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Váy giáp dưới đai.
+    ctx.fillStyle = '#b45309';
+    ctx.beginPath();
+    ctx.moveTo(-11, 10);
+    ctx.lineTo(11, 10);
+    ctx.lineTo(8, 18);
+    ctx.lineTo(-8, 18);
+    ctx.closePath();
+    ctx.fill();
+
+    // Ủng vàng.
+    ctx.fillStyle = '#e2b007';
+    ctx.fillRect(-7, 17, 5, 5);
+    ctx.fillRect(2, 17, 5, 5);
+
+    // Đầu lông khỉ.
+    ctx.fillStyle = '#c9843f';
+    ctx.strokeStyle = '#5c3a1e';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(0, -16, 8.4, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = '#c0392b';
+    // Tai.
     ctx.beginPath();
-    ctx.arc(0, -19, 6, Math.PI, 0);
+    ctx.arc(-8, -17, 3, 0, Math.PI * 2);
+    ctx.arc(8, -17, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#f6d48a';
-    ctx.fillRect(-2, -27, 4, 8);
+    ctx.stroke();
+    // Mặt.
+    ctx.fillStyle = '#f3d2a2';
+    ctx.beginPath();
+    ctx.ellipse(0, -15, 5, 4.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Mắt + miệng.
+    ctx.fillStyle = '#1d1a26';
+    ctx.beginPath();
+    ctx.arc(-2, -16, 0.9, 0, Math.PI * 2);
+    ctx.arc(2, -16, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#1d1a26';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(0, -13.4, 1.6, 0.15, Math.PI - 0.15);
+    ctx.stroke();
 
     // Kim cô.
     ctx.strokeStyle = '#f6d48a';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.2;
     ctx.beginPath();
-    ctx.arc(0, -16, 7.4, 0.2, Math.PI - 0.2);
+    ctx.arc(0, -18, 8.6, 0.15, Math.PI - 0.15);
+    ctx.stroke();
+    // Lông vũ mão.
+    ctx.fillStyle = '#c0392b';
+    ctx.beginPath();
+    ctx.moveTo(-2, -26);
+    ctx.lineTo(2, -26);
+    ctx.lineTo(0, -34);
+    ctx.closePath();
+    ctx.fill();
+
+    // Đuôi khỉ cong.
+    ctx.strokeStyle = '#a86b30';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(-8, 6);
+    ctx.quadraticCurveTo(-20, 2, -16, -12);
     ctx.stroke();
 
     // Gậy Như Ý.
     const swing = w.state === 'strike' ? -0.9 : 0.5;
     ctx.save();
-    ctx.translate(8, -6);
+    ctx.translate(10, -4);
     ctx.rotate(swing);
-    ctx.strokeStyle = '#b45309';
-    ctx.lineWidth = 3;
+    const staff = ctx.createLinearGradient(0, 14, 0, -46);
+    staff.addColorStop(0, '#b45309');
+    staff.addColorStop(0.5, '#f6d48a');
+    staff.addColorStop(1, '#b45309');
+    ctx.strokeStyle = staff;
+    ctx.lineWidth = 3.4;
     ctx.beginPath();
-    ctx.moveTo(0, 8);
-    ctx.lineTo(0, -30);
+    ctx.moveTo(0, 14);
+    ctx.lineTo(0, -44);
     ctx.stroke();
     ctx.fillStyle = '#f6d48a';
-    ctx.fillRect(-3, -34, 6, 6);
+    ctx.fillRect(-4, -48, 8, 6);
+    ctx.fillRect(-4, 12, 8, 6);
     ctx.restore();
 
     ctx.restore();

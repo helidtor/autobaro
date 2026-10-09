@@ -116,6 +116,9 @@ T['warn.mecha']=R(.2,rep(3,.12,(i,at)=>o('square',1200+i*200,1200+i*200,.07,.04,
 for(const [k,f] of Object.entries({colossus:110,mirror:1568,void:220,chaos:311,mecha:880}))
  T['phase.'+k]=R(.45,o('sine',50,25,1.5,.3),n('lowpass',2000,150,.8,1.4,.14),o('sawtooth',100,400,.8,.05,0,1200),b(f,1.4,.08,.2));
 T.awaken=R(.5,b(110,2,.14),o('sawtooth',40,90,1.6,.08,0,300),n('lowpass',1500,100,.8,1.6,.1),o('sine',45,30,1.8,.25));
+// Nhạc thăng thiên: ngũ cung D-E-G-A-C dâng cao, chuông + hợp âm, khi Đại Thánh xuất kích.
+T.ascension=R(.6,arp([294,330,392,440,523,659,784],.16,.9,.09),o('sine',147,294,2.6,.12),o('triangle',196,392,2.4,.05,.3),n('bandpass',600,1800,1,.8,.04,.2),b(784,2,.06,1.3));
+T.thangThien=R(.55,arp([294,330,392,440,523,659,784],.16,.9,.09),o('sine',147,294,2.6,.12),o('triangle',196,392,2.4,.05,.3),n('bandpass',600,1800,1,.8,.04,.2),b(784,2,.06,1.3));
 T.ancientDown=R(.5,o('sine',90,25,1.6,.3),n('lowpass',1500,100,.7,1.5,.14),b(659,1.6,.07,.4),b(880,1.6,.06,.7),b(1318,1.6,.05,1));
 
 // ---- 32 bot skills: release sound per skill id ----
@@ -221,8 +224,8 @@ for(const [k,v] of Object.entries(ANC))T['ancient.'+k]=v;
 const RANK={2:b(1319,.35,.03,.02),3:[...b(1319,.45,.035,.02),...b(1976,.5,.03,.06),o('sine',80,45,.25,.08)]};
 const BLOCK_GROUP={sword:'blade',dagger:'blade',spear:'blade',axe:'heavy',hammer:'heavy',unarmed:'heavy',bow:'arrow',crossbow:'arrow',staff:'magic',tome:'magic',fire:'magic',ice:'magic',void:'magic'};
 const LEGACY={cast:'skill',fire:'skill.fire',ice:'skill.ice',void:'skill.void',boss:'warn.mon',swim:'step.swim',attack:'swing.unarmed',charge:'skill'};
-const PRIORITY=new Set(['death','level','phase','awaken','ancientDown','warn','roar','victory','ui']);
-const UI=new Set(['ui','victory']);
+const PRIORITY=new Set(['death','level','phase','awaken','ancientDown','warn','roar','victory','ui','ascension','thangThien']);
+const UI=new Set(['ui','victory','ascension','thangThien']);
 const CHARGE={fire:R(.2,o('sawtooth',150,320,.35,.03,0,600),n('lowpass',500,1500,.8,.35,.04)),ice:R(.3,b(1600,.4,.03),o('sine',800,1400,.35,.03)),
  void:R(.3,o('sine',120,240,.4,.035),o('sine',123,247,.4,.03)),steel:R(.15,b(2000,.3,.025),n('highpass',4000,6000,.7,.2,.025)),
  nature:R(.15,n('bandpass',800,1500,1.5,.3,.03),o('sine',300,450,.3,.025)),earth:R(.1,o('sine',60,90,.35,.05),n('lowpass',400,700,.8,.3,.04))};
