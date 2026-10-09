@@ -20,7 +20,7 @@ window.GameAI.AiBrain = {
     const foot=this.findBestItemToLoot(pawn,drops.filter(i=>Math.hypot(i.x-pawn.x,i.y-pawn.y)<28));
     if(foot)this.lootItem(pawn,foot);
     if(pawn.action)return;
-    if(window.GameEntities.AliothSystem?.avoid?.(pawn,dt))return;
+    if(window.GameEntities.AliothSystem?.avoid?.(pawn,dt) || window.GameEntities.CloudSystem?.avoid?.(pawn,dt))return;
     if(pawn.meditating){
       if(C.underAttack(pawn))pawn.meditating=false;
       else{pawn.vx=pawn.vy=0;pawn.navPath=[];pawn.objective='Thiền định đến 75% máu';pawn.thought='Đứng yên, không di chuyển. Giao tranh sẽ ngắt thiền định.';return;}

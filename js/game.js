@@ -69,6 +69,7 @@ window.GameManager = {
     this.playerPawn = window.GameEntities.EntityManager.playerPawn;
     window.GameUI.BotRoster.init();
     window.GameEntities.AliothSystem.init(this.width, this.height);
+    window.GameEntities.CloudSystem.init(this.width, this.height);
 
     // Gán listener sự kiện bàn phím & chuột
     this.bindInputs();
@@ -155,6 +156,7 @@ window.GameManager = {
     window.GameUI.BotRoster.init();
     this.spatialGrid.clear();
     window.GameEntities.AliothSystem.reset(this.width, this.height);
+    window.GameEntities.CloudSystem.reset(this.width, this.height);
     window.GameUI.DirectorControls.syncSpeed();
     document.getElementById('btn-toggle-mode').innerText='👁️ Chế độ: Đạo Diễn (Spectator)';
     document.getElementById('btn-toggle-mode').classList.remove('btn-player-mode');
@@ -416,6 +418,7 @@ window.GameManager = {
     // 5. Cập nhật Quái vật AI (Wandering, Aggro, Tấn công)
     this.updateMonsters(dt);
     window.GameEntities.AliothSystem.update(dt);
+    window.GameEntities.CloudSystem.update(dt);
     window.GameEntities.AncientSystem.tick(dt);
     window.GameEntities.CombatSystem.tickEffects(dt);
     window.GameEngine.Audio?.update(dt);
@@ -599,6 +602,7 @@ window.GameManager = {
     const demonKing = this.monsters.find(m => m.isAlive && m.isDemonKing);
     if (demonKing) window.GameRenderer.ProceduralPawn.render(ctx, demonKing, demonKing.appearance, this.selectedEntity === demonKing);
     window.GameEntities.AliothSystem.render(ctx);
+    window.GameEntities.CloudSystem.render(ctx);
 
     ctx.save();if(arena){ctx.beginPath();ctx.rect(arena.x,arena.y,arena.w,arena.h);ctx.clip();}
     // 6. Vẽ Đạn đạo, Số Sát Thương, Hạt VFX & Cảm Xúc Mote

@@ -7,6 +7,7 @@ window.GameEntities = window.GameEntities || {};
 
 window.GameEntities.AliothSystem = {
   alioth: null,
+  dragons: [],
   spine: [],
   sparks: [],
   clock: 0,
@@ -23,28 +24,40 @@ window.GameEntities.AliothSystem = {
   init(mapWidth, mapHeight) {
     this.sparks = [];
     this.clock = 0;
-    this.travel = 0;
-    this.spine = [];
+    this.dragons = [];
     this.buildPath(mapWidth, mapHeight);
-    this.travel = this.pathLen * 0.18;
-    const head = this.sample(this.travel);
-    this.alioth = {
-      id: 'alioth_entity',
-      name: 'Alioth',
-      title: 'Long Thần',
-      isAlioth: true,
-      isAlive: true,
-      invincible: true,
-      x: head.x,
-      y: head.y,
-      vx: 0,
-      vy: 0,
-      aimAngle: Math.atan2(head.ty, head.tx),
-      speed: this.speed,
-      radius: 36
-    };
-    this.rebuildSpine();
-    window.GameUI?.CombatTicker?.log('🐉 Long thần Alioth cất cánh và bay tuần tra khắp đấu trường.');
+    const colors = [
+      { name: 'Alioth', scale: '#c4342d', deep: '#8d241f', belly: '#f6d48a', gold: '#f0c14d', mane: '#f7f1e4' },
+      { name: 'Long Thanh', scale: '#1f6f4a', deep: '#134a31', belly: '#d8f3e2', gold: '#e8c15a', mane: '#f4fff8' },
+      { name: 'Long Huyền', scale: '#3a2f8a', deep: '#241c5c', belly: '#e4defa', gold: '#f0c14d', mane: '#f6f2ff' }
+    ];
+    for (let i = 0; i < colors.length; i++) {
+      const travel = this.pathLen * (0.18 + i / colors.length);
+      const head = this.sample(travel);
+      const spine = this.spineAt(travel);
+      this.dragons.push({
+        id: 'alioth_entity_' + i,
+        name: colors[i].name,
+        title: 'Long Thần',
+        isAlioth: true,
+        isAlive: true,
+        invincible: true,
+        x: head.x,
+        y: head.y,
+        vx: 0,
+        vy: 0,
+        aimAngle: Math.atan2(head.ty, head.tx),
+        speed: this.speed,
+        radius: 36,
+        travel,
+        spine,
+        sparks: [],
+        colors: colors[i]
+      });
+    }
+    this.alioth = this.dragons[0];
+    this.spine = this.dragons[0].spine;
+    window.GameUI?.CombatTicker?.log('🐉 Ba long thần cất cánh và bay tuần tra khắp đấu trường.');
   },
 
   reset(mapWidth, mapHeight) {
@@ -109,10 +122,9 @@ window.GameEntities.AliothSystem = {
     return { x: base.x + nx * wave, y: base.y + ny * wave, tx, ty, nx, ny };
   },
 
-  rebuildSpine() {
+  spineAt(travel) {
     const spine = [];
-    for (let i = 0; i < this.segments; i++) spine.push(this.sample(this.travel - i * this.spacing));
-    this.spine = spine;
+    for (let i = 0; i < this.segments; i++) spine.push(this.sample(travel - i * this.spacing));
     return spine;
   },
 
@@ -124,7 +136,7 @@ window.GameEntities.AliothSystem = {
 
   nearest(x, y) {
     let best = null, dist = Infinity;
-    for (const point of this.spine) {
+    for (const dragon of this.dragons) for (const point of dragon.spine) {
       const d = Math.hypot(point.x - x, point.y - y);
       if (d < dist) { dist = d; best = point; }
     }
@@ -132,8 +144,7 @@ window.GameEntities.AliothSystem = {
   },
 
   avoid(pawn, dt) {
-    const head = this.spine[0];
-    if (!pawn?.isAlive || !head) return false;
+    if (!pawn?.isAlive || !this.dragons.length) return false;
     const hit = this.nearest(pawn.x, pawn.y);
     if (!hit.point || hit.dist > 300) return false;
     const M = window.GameEngine.MapTerrain;
@@ -142,8 +153,8 @@ window.GameEntities.AliothSystem = {
     pawn.chase = null;
     pawn.meditating = false;
     pawn.fear = Math.min(100, (pawn.fear || 0) + 40);
-    pawn.objective = 'Tránh đường long thần Alioth';
-    pawn.thought = 'Alioth đang bay ngang. Né thân rồng trước khi bị cuốn đi.';
+    pawn.objective = 'Tránh đường long thần';
+    pawn.thought = 'Long thần đang bay ngang. Né thân rồng trước khi bị cuốn đi.';
     const away = Math.atan2(pawn.y - hit.point.y, pawn.x - hit.point.x);
     pawn.aimAngle = away;
     const speed = M.getMoveSpeed(pawn) * 1.25;
@@ -152,32 +163,36 @@ window.GameEntities.AliothSystem = {
   },
 
   update(dt) {
-    const dragon = this.alioth;
-    if (!dragon?.isAlive) return;
+    if (!this.dragons.length) return;
     const G = window.GameManager;
     const mapW = G?.width || this.mapW || 5200;
     const mapH = G?.height || this.mapH || 5200;
     if (mapW !== this.mapW || mapH !== this.mapH || !this.path) this.buildPath(mapW, mapH);
     this.clock += dt;
-    this.travel += this.speed * dt;
-    this.rebuildSpine();
-    const head = this.spine[0];
-    dragon.x = head.x;
-    dragon.y = head.y;
-    dragon.vx = head.tx * this.speed;
-    dragon.vy = head.ty * this.speed;
-    dragon.aimAngle = Math.atan2(head.ty, head.tx);
-    this.devour();
-    if (Math.random() < dt * 4) this.sparks.push({ life: 0.16 + Math.random() * 0.08, seed: Math.random() * 6 });
-    for (let i = this.sparks.length - 1; i >= 0; i--) {
-      this.sparks[i].life -= dt;
-      if (this.sparks[i].life <= 0) this.sparks.splice(i, 1);
+    for (const dragon of this.dragons) {
+      if (!dragon.isAlive) continue;
+      dragon.travel += this.speed * dt;
+      dragon.spine = this.spineAt(dragon.travel);
+      const head = dragon.spine[0];
+      dragon.x = head.x;
+      dragon.y = head.y;
+      dragon.vx = head.tx * this.speed;
+      dragon.vy = head.ty * this.speed;
+      dragon.aimAngle = Math.atan2(head.ty, head.tx);
+      if (Math.random() < dt * 4) dragon.sparks.push({ life: 0.16 + Math.random() * 0.08, seed: Math.random() * 6 });
+      for (let i = dragon.sparks.length - 1; i >= 0; i--) {
+        dragon.sparks[i].life -= dt;
+        if (dragon.sparks[i].life <= 0) dragon.sparks.splice(i, 1);
+      }
     }
+    this.alioth = this.dragons[0];
+    this.spine = this.dragons[0].spine;
+    this.devour();
   },
 
   devour() {
     const G = window.GameManager;
-    if (!G || !this.spine.length) return;
+    if (!G || !this.dragons.length) return;
     const victims = [...(G.pawns || []), ...(G.monsters || [])];
     for (const victim of victims) {
       if (this.protected(victim)) continue;
@@ -225,12 +240,12 @@ window.GameEntities.AliothSystem = {
   },
 
   renderShadow(ctx) {
-    if (!this.spine.length) return;
+    if (!this.dragons.length) return;
     ctx.save();
     ctx.fillStyle = 'rgba(28, 18, 16, 0.16)';
-    for (let i = 0; i < this.spine.length; i += 2) {
-      const point = this.spine[i];
-      const girth = 14 + (1 - i / this.spine.length) * 10;
+    for (const dragon of this.dragons) for (let i = 0; i < dragon.spine.length; i += 2) {
+      const point = dragon.spine[i];
+      const girth = 14 + (1 - i / dragon.spine.length) * 10;
       ctx.beginPath();
       ctx.ellipse(point.x, point.y + 30, girth * 1.7, girth * 0.62, Math.atan2(point.ty, point.tx), 0, Math.PI * 2);
       ctx.fill();
@@ -239,15 +254,18 @@ window.GameEntities.AliothSystem = {
   },
 
   render(ctx) {
-    const spine = this.spine;
-    if (!spine.length || !window.GameRenderer?.ArtKit) return;
+    if (!this.dragons.length || !window.GameRenderer?.ArtKit) return;
     const kit = window.GameRenderer.ArtKit(ctx);
     const time = this.clock;
-    const scale = '#c4342d', deep = '#8d241f', belly = '#f6d48a', gold = '#f0c14d', mane = '#f7f1e4';
-    for (let i = spine.length - 1; i >= 1; i--) this.drawSegment(ctx, kit, spine, i, scale, deep, belly, gold, mane, time);
-    this.drawHead(ctx, kit, spine[0], scale, deep, belly, gold, mane, time);
-    for (const spark of this.sparks) this.drawSpark(ctx, kit, spine[0], spark);
-    this.drawName(ctx, spine[0]);
+    for (const dragon of this.dragons) {
+      const spine = dragon.spine;
+      if (!spine.length) continue;
+      const c = dragon.colors;
+      for (let i = spine.length - 1; i >= 1; i--) this.drawSegment(ctx, kit, spine, i, c.scale, c.deep, c.belly, c.gold, c.mane, time);
+      this.drawHead(ctx, kit, spine[0], c.scale, c.deep, c.belly, c.gold, c.mane, time);
+      for (const spark of dragon.sparks) this.drawSpark(ctx, kit, spine[0], spark);
+      this.drawName(ctx, spine[0], dragon.name);
+    }
   },
 
   place(ctx, point) {
@@ -337,15 +355,15 @@ window.GameEntities.AliothSystem = {
     ctx.restore();
   },
 
-  drawName(ctx, head) {
+  drawName(ctx, head, name) {
     ctx.save();
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#1d1a26';
-    ctx.strokeText('Alioth', head.x, head.y - 58);
+    ctx.strokeText(name, head.x, head.y - 58);
     ctx.fillStyle = '#f6d48a';
-    ctx.fillText('Alioth', head.x, head.y - 58);
+    ctx.fillText(name, head.x, head.y - 58);
     ctx.restore();
   }
 };
