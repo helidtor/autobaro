@@ -71,13 +71,14 @@
       <button class="btn-ctrl btn-speed active" data-speed="1">1x</button>
       <button class="btn-ctrl btn-speed" data-speed="2">2x</button>
       <button class="btn-ctrl btn-speed" data-speed="5">5x</button>
+      <button class="btn-ctrl btn-speed" data-speed="10">10x</button>
     </div>
     <div class="hud-divider"></div>
     <div class="director-group">
       <button id="btn-sound" class="btn-ctrl" aria-pressed="true" onclick="window.GameEngine.Audio.toggle()" title="Bật/tắt âm thanh">🔊 Âm thanh</button>
       <label class="sound-volume">Âm lượng <input id="sound-volume" type="range" min="0" max="100" value="30" aria-label="Âm lượng hiệu ứng" oninput="window.GameEngine.Audio.setVolume(this.value)"></label>
       <button id="btn-new-match" class="btn-ctrl" onclick="window.GameManager.startNewMatch()">↻ Ván mới</button>
-      <button class="btn-ctrl" onclick="window.GameManager.showMapOverview()" title="M: bản đồ toàn cảnh • C: bật/tắt camera tự động">🗺 Bản đồ</button>
+      <button class="btn-ctrl" onclick="window.GameManager.showMapOverview()" title="M: bản đồ toàn cảnh • P: bật/tắt camera tự động">🗺 Bản đồ</button>
       <button id="btn-toggle-mode" class="btn-ctrl">👁️ Đạo diễn</button>
     </div>
   </div>

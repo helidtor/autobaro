@@ -12,21 +12,29 @@ Game chạy trên trình duyệt bằng JavaScript thuần, Canvas 2D và Vite. 
 4. Khi còn 2–5 bot, chúng ưu tiên tìm nhau. Khi còn đúng 1 bot, trận pause và hiện popup.
 5. Đóng popup (hoặc Escape) bắt đầu lượt farm cuối: quái từ Yêu Vương trở xuống bị thay bằng 5 Yêu Vương. Người sống sót phải lên cấp 15 và hạ hết 5 con này rồi mới được đánh Yêu Thần.
 6. Hạ Yêu Thần mở đếm ngược 20 giây mô phỏng để loot. Hết giờ, nếu còn đúng một bot cấp 15 trở lên và không còn Yêu Vương, thế giới sụp trong 6 giây thành đấu trường 1500×1500.
-7. Chuỗi 5 boss Thượng Cổ. Trận kết thúc khi hạ đủ 5 boss, hoặc khi người sống sót chết. Nếu Yêu Thần chết khi còn nhiều bot, chuỗi chờ đến khi điều kiện trên đủ.
+7. Chuỗi 5 boss Thượng Cổ khi chưa có Quỷ Vương. Trận kết thúc khi hạ đủ 5 boss, hoặc khi người sống sót chết. Nếu Yêu Thần chết khi còn nhiều bot, chuỗi chờ đến khi điều kiện trên đủ.
+8. Popup sau 5 Thượng Cổ, và popup sau khi hạ Quỷ Vương, có đúng hai nút: **Ván mới** và **Tiếm ngôi quỷ vương**. Popup còn một người sống sót ở Battle Royale không có quyền tiếm ngôi.
+9. **Tiếm ngôi** chụp người thắng tại lúc bấm nút: cấp, EXP, điểm kỹ năng, chỉ số nền và chỉ số chiến đấu, HP/mana/thể lực hiện tại, kỹ năng, nội tại, tính cách, ngoại hình và trang bị. Bình máu được đặt thành đúng 3 bình thường. Rồi mở trận 100 bot mới. Quỷ Vương không nằm trong 100 bot và chưa xuất hiện ở Battle Royale, farm cuối hay lúc đánh Yêu Thần.
+10. Ván đã có Quỷ Vương: Yêu Thần vẫn thưởng 10.000 EXP, nhưng rơi đúng 1 vũ khí Thượng Cổ, 1 giáp thân Thượng Cổ và 3 bình thường. Đấu trường chỉ mở sau 20 giây và sau khi hai món đã được nhặt hoặc bỏ vì yếu hơn món đang mặc, và 3 bình đã được nhặt. Bên trong chỉ có Quỷ Vương, không có boss Thượng Cổ, không sấm, không hai phase. Quỷ Vương dùng AI, hồi phục và một thanh máu của bot.
+11. Hạ Quỷ Vương không rơi đồ, không cộng EXP và không thưởng kết liễu. Thua Quỷ Vương mở popup **Ván mới** hoặc **Khiêu chiến lại**. Khiêu chiến lại giữ bản chụp lúc lên ngôi, tạo 100 bot mới và vẫn phải qua farm cuối cùng Yêu Thần. HP đã mất và bình đã uống trong lần thua không ghi vào bản chụp.
 
-Nút **Ván mới** xóa bot, quái, đồ rơi, đấu trường và chuỗi Thượng Cổ.
+Nút **Ván mới** trên popup thắng, popup thua hoặc thanh công cụ đều xóa bot, quái, đồ rơi, đấu trường, chuỗi Thượng Cổ và ngôi Quỷ Vương. Ngôi chỉ nằm trong bộ nhớ của phiên chơi. Tải lại trang là trận thường.
 
 ## 2. Bot
 
-Chỉ số gốc: 160 HP, 16 tấn công, 5 giáp, 5% chí mạng, 95 tốc chạy, 100 thể lực, 100 mana. Mỗi cấp: +24 HP tối đa, +3 tấn công, +2 giáp, hồi đầy máu, +1 điểm kỹ năng.
+Chỉ số gốc: 160 HP, 16 tấn công, 5 giáp, 5% chí mạng, 95 tốc chạy, 100 thể lực, 100 mana, 0 sức kỹ năng. Mỗi cấp vẫn hồi đầy máu, cho 1 điểm kỹ năng, và cộng một ngân sách 21 điểm theo build đang có. Build lấy từ tính cách lúc chưa có điểm, rồi mỗi điểm đã chi cộng vào hướng của môn đó. Đổi vũ khí không viết lại phần đã cộng.
+
+Năm hướng thuần, mỗi cấp: Chống chịu +40 HP, +1 tấn công, +4 giáp. Sát thủ +12 HP, +4 tấn công, +1,5% chí mạng. Cung thủ +32 HP, +3 tấn công, +1 giáp, +1% chí mạng. Pháp sư +16 HP, +1 tấn công, +15 mana, +4 sức kỹ năng. Hồi phục +20 HP, +2 tấn công, +1 giáp, +5 mana, +0,15 HP/giây. Bot lai lấy trung bình có trọng số. Phòng thủ và phản đòn vào Chống chịu. Đòn kết liễu và môn ám sát vào Sát thủ. Môn cung vào Cung thủ. Môn phép vào Pháp sư. Hồi máu vào Hồi phục. Đòn cận chiến còn lại chia đôi Chống chịu và Sát thủ.
 
 EXP tích lũy để lên cấp 2→15: 80, 180, 320, 500, 750, 1050, 1400, 1800, 2300, 2900, 3600, 4400, 5300, 6400. Từ 15 lên 16 cần thêm 1200 EXP; mỗi cấp sau cộng thêm 200 so với mức tăng của cấp trước. Không có trần cấp.
 
-Hồi máu nền 1 HP/giây, kể cả trong giao tranh. Bình thường hồi 35% HP tối đa, trần 220, hồi chiêu 8 giây, phải ngắt động tác để uống. Bình toàn phần chỉ rơi từ Thượng Cổ và hồi đầy máu.
+Hồi máu nền 1 HP/giây, kể cả trong giao tranh, cộng thêm hồi từ build và từ đồ đang mặc. Bình thường hồi 35% HP tối đa, trần 220, hồi chiêu 8 giây, phải ngắt động tác để uống. Bình toàn phần chỉ rơi từ Thượng Cổ và hồi đầy máu. Thể lực bot hồi 6 điểm/giây, quái hồi 4 điểm/giây, cộng thêm hồi từ trang bị.
+
+Khi máu dưới 30% và bot không đang giao tranh, bot có thể thiền định: đứng yên, không di chuyển, hồi 8% máu tối đa mỗi giây cho đến 75%. Đòn, khống chế, cụm combat hoặc kẻ địch đang lấy bot làm mục tiêu sẽ ngắt thiền. Máu đã hồi được giữ lại.
 
 Mỗi bot có một tính cách chính và một tính cách phụ trong năm nhóm Can Đảm, Hèn Nhát, Khôn Ngoan, Tham Lam, Xảo Quyệt. Tám trục 5–95 được trộn từ hai nhóm rồi cộng nhiễu: hiếu chiến, thận trọng, tham vọng, trung thành, kiên nhẫn, khám phá, hèn nhát, bình tĩnh. Nhóm chính chiếm 80%, nhóm phụ 20%.
 
-Nhặt vũ khí gán `classId` theo loại vũ khí để chọn kiểu né và màu đạn. Hệ số máu/giáp/tấn công của năm lớp trong dữ liệu chỉ để hiển thị, không nhân chỉ số. Không khóa nhánh kỹ năng.
+Nhặt món mới vào một ô đang có đồ thì món cũ rơi xuống đất. Bot lấy món có điểm hợp build cao hơn, nên giáp nhiều máu có thể thua áo pháp trên bot phép. Nhặt vũ khí gán `classId` theo loại vũ khí để chọn kiểu né và màu đạn. Hệ số máu/giáp/tấn công của năm lớp trong dữ liệu chỉ để hiển thị, không nhân chỉ số. Không khóa nhánh kỹ năng.
 
 ### Cảm xúc
 
@@ -45,7 +53,10 @@ Ngưỡng sợ 80, tự tin 85 và tuyệt vọng 90 trong dữ liệu cũ khôn
 Mỗi khoảng khoảng 0,3 giây, bot chấm các việc nhìn thấy: nhặt đồ, farm quái, đấu bot, phục kích. Kế hoạch đang chạy được giữ nếu chưa kém phương án mới quá 30 điểm. Ước lượng thắng là thời gian sống sót tương đối, dựa trên DPS đã tính chiêu sẵn sàng, thể lực, tầm đánh, địa hình và trang bị. Đây là heuristic, không phải xác suất thống kê.
 
 - Săn quái khi ước lượng từ 50% và tính cách chịu đánh. Ngưỡng cấp tối thiểu theo bậc quái là 1, 3, 6, 10, 15.
-- Chủ động tìm người vẫn cần ước lượng từ 50%. Chênh cấp không phải lệnh cấm.
+- Phút đầu, tính theo thời gian trận, bot không chủ động đánh bot khác. Chúng farm và nhặt đồ.
+- Sau phút đầu, bot thấp hơn mức trung bình của bot còn sống từ 2 cấp trở lên cũng không chủ động tìm bot. Chúng ưu tiên farm để đuổi cấp. Bot còn lại vẫn có thể chủ động giao tranh.
+- Bị nhắm, bị ra đòn, bị đánh, hết đường hoặc đang ở vòng quyết đấu cuối thì vẫn đánh theo luật cũ. Hết phút đầu và không còn thấp hơn mặt bằng, bot lại kết liễu người ít máu và trả thù như trước.
+- Chủ động tìm người vẫn cần ước lượng từ 50%. Chênh cấp không phải lệnh cấm khi bot không nằm trong hai giới hạn trên.
 - Bị đánh, bị cướp mạng quái, bị cướp đồ đang đi nhặt, bị đánh lén, hoặc thấy bot còn từ 30% máu: vào trận dù hơn nhiều cấp. Bot hèn nhát từ 85 không chủ động lao vào người ít máu, nhưng vẫn đánh khi bị ép hoặc hết đường.
 - Đang combat và ước lượng còn từ 50%, hoặc chưa mất 25% HP tối đa của trận đó: không đổi mục tiêu. Bot ít máu và kẻ gây hận được ghi vào lượt sau. Ngoại lệ: mục tiêu khác đang tấn công mình thì đổi sang đánh trả người đó. Kẻ ra đòn sau được giữ, không nhảy mục tiêu mỗi khung hình.
 - Đã mất từ 25% HP tối đa và ước lượng dưới 40%: rút nếu còn đường lui. Hết đường thì đánh đến chết.
@@ -94,7 +105,7 @@ Lượt farm cuối xóa quái bậc 4 trở xuống và sinh lại bốn Yêu V
 
 Chỉ bot AI kết liễu bot khác mới rơi đồ PvP: 75% món nạn nhân đang cầm, 25% một món ngẫu nhiên cao hơn một bậc, tối đa Thần Khí. Không có vũ khí thì lấy giáp hoặc mũ. Không có trang bị thì sinh món Thường hoặc Hiếm. EXP PvP bằng 60 nhân cấp nạn nhân, không tặng thêm một cấp. Quái hoặc người chơi điều khiển kết liễu không tạo món này.
 
-Tỷ lệ rơi khi quái chết: Lâu La 20%, Yêu Thú 30%, Yêu Tướng 40%, Yêu Vương và Yêu Thần 100%. Lâu La đến Yêu Tướng rơi một bình hoặc một món trang bị. Yêu Vương rơi một bình và một món Cực Phẩm. Yêu Thần thưởng 10.000 EXP và rơi một bình, vũ khí Thần Khí riêng của loài, giáp Thần Khí và mũ Thần Khí. Không có đồ rải sẵn trên bản đồ.
+Tỷ lệ rơi khi quái chết: Lâu La 20%, Yêu Thú 30%, Yêu Tướng 40%, Yêu Vương và Yêu Thần 100%. Lâu La đến Yêu Tướng rơi một bình hoặc một món trang bị. Yêu Vương rơi một bình và một món Cực Phẩm. Yêu Thần thưởng 10.000 EXP và, ở trận chưa có Quỷ Vương, rơi một bình, vũ khí Thần Khí riêng của loài, một thân Thần Khí và một mũ Thần Khí. Thân và mũ được rút trong ba hướng nặng, pháp và nhẹ. Ở trận đã có Quỷ Vương, Yêu Thần vẫn thưởng 10.000 EXP nhưng chỉ rơi một vũ khí Thượng Cổ, một giáp thân Thượng Cổ và ba bình thường. Không có đồ rải sẵn trên bản đồ.
 
 ## 5. Địa hình
 
@@ -104,7 +115,7 @@ Bản đồ 5200×5200, một mét bằng 20 px. Có Thiền Viện Trúc Lâm, 
 
 ## 6. Thượng Cổ
 
-Sau 20 giây loot, đấu trường 1500×1500 mở ở phía nam tâm bản đồ. Tám tàn tích có va chạm. Nước, bụi và tường điện thờ cũ không còn tác dụng. Sấm đánh ngẫu nhiên mỗi 4 giây.
+Sau 20 giây loot, đấu trường 1500×1500 mở ở phía nam tâm bản đồ. Tám tàn tích có va chạm. Nước, bụi và tường điện thờ cũ không còn tác dụng. Chuỗi Thượng Cổ có sấm đánh ngẫu nhiên mỗi 4 giây. Trận Quỷ Vương dùng cùng đấu trường nhưng không sinh năm boss và không có sấm.
 
 Năm boss theo thứ tự ngẫu nhiên, không lặp: Bàn Cổ, Phản Chiếu, Quy Khư, La Hầu, Zero Protocol. Mỗi boss có 6 nội tại, 6 chiêu và hai thanh máu. Thanh một bằng HP tối đa của người sống sót, thanh hai gấp đôi. Hạ thanh một chuyển phase, không chết. Hạ thanh hai rơi đúng một Thượng Bảo chưa rơi trong trận, cộng một bình hồi đầy. Boss kế xuất hiện sau 10 giây. Trong lúc chờ, người sống sót ưu tiên nhặt bảo vật, uống bình và đứng yên ít nhất 1,5 giây để thích ứng.
 
@@ -114,7 +125,7 @@ Chiến thắng hiện popup riêng. Chết giữa chuỗi thì thua, không có
 
 ## 7. Người chơi và đạo diễn
 
-Chế độ đạo diễn quan sát 100 bot. Chế độ người chơi điều khiển bot số 0.
+Chế độ đạo diễn quan sát 100 bot. Chế độ người chơi điều khiển bot đang được soi. Nếu chưa soi bot nào, điều khiển bot số 0. Khi vào chế độ này, hành động AI đang dở được hủy để phím điều khiển có hiệu lực ngay.
 
 | Thao tác | Đạo diễn | Người chơi |
 | --- | --- | --- |
@@ -126,11 +137,11 @@ Chế độ đạo diễn quan sát 100 bot. Chế độ người chơi điều 
 | Shift | — | Đỡ |
 | V | — | Né |
 | Space | Tạm dừng hoặc tiếp tục | Tạm dừng hoặc tiếp tục |
-| C | Bật tắt camera tự động | — |
+| P | Bật tắt camera tự động | — |
 | H | — | Uống bình |
 | M | Bản đồ tổng | Bản đồ tổng |
 
-Đạo diễn có Thiên Lôi (250 sát thương trong 60 px), Hỏa Thần (đốt bụi) và Cuồng Nộ. Tốc độ 0, 1x, 2x, 5x. Tạm dừng đóng băng thời gian mô phỏng, kể cả đếm Thượng Cổ. Âm thanh Web Audio, tối đa 16 tiếng, ưu tiên gần camera, bật sau tương tác đầu tiên.
+Đạo diễn có Thiên Lôi (250 sát thương trong 60 px), Hỏa Thần (đốt bụi) và Cuồng Nộ. Tốc độ 0, 1x, 2x, 5x, 10x. Tạm dừng đóng băng thời gian mô phỏng, kể cả đếm Thượng Cổ. Âm thanh Web Audio, tối đa 16 tiếng, ưu tiên gần camera, bật sau tương tác đầu tiên.
 
 ## 8. Hiển thị
 

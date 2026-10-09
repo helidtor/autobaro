@@ -134,7 +134,7 @@ window.GameUI.InspectModal = {
   scalingDescription(e,s,passive=false){
     const C=window.GameEntities.CombatSystem,c=passive?C.passiveConfig(e,s):C.getSkillConfig(e,s);
     const names={damage:'Sát thương tổng',counter:'Phản công',heal:'Hồi máu tổng',guard:'Sát thương đỡ tối đa',shield:'Khiên',distance:'Khoảng lướt',speed:'Tăng tốc',onHit:'Cộng mỗi đòn',regen:'Hồi trong combat mỗi giây',burst:'Đợt hồi khi nguy hiểm',reserve:'Giới hạn máu tích',radius:'Phạm vi'};
-    const stats={attack:'ATK',defense:'DEF',hp:e.isAncient||e.isAncientClone?'máu tối đa của bot gốc':'máu tối đa',mana:'mana tối đa',speed:'tốc chạy cơ bản'};
+    const stats={attack:'ATK',defense:'DEF',hp:e.isAncient||e.isAncientClone?'máu tối đa của bot gốc':'máu tối đa',mana:'mana tối đa',speed:'tốc chạy cơ bản',skill:'sức kỹ năng'};
     return Object.entries(c.scaling||{}).map(([key,f])=>{
       const value=key==='damage'?c.damage:key==='onHit'?c.magicOnHit:c[key+'Amount'];
       const limited=Number.isFinite(value)&&value+.01<C.scaledValue(e,{...f,cap:undefined});
@@ -153,7 +153,7 @@ window.GameUI.InspectModal = {
   },
   weaponDetails(w,label='Vũ khí'){
     if(!w)return '<div class="item-slot">⚔️ Vũ khí: <b>Tay không</b></div>';
-    const fields=[['attack','Tấn công'],['magicPower','Sức mạnh phép'],['defense','Phòng ngự'],['magicDefense','Kháng phép'],['hp','Máu tối đa'],['manaMax','Mana tối đa'],['staminaMax','Thể lực tối đa'],['moveBonus','Tốc di chuyển',true],['range','Tầm đánh'],['speed','Tốc đánh'],['critChance','Chí mạng',true],['lifeSteal','Hút máu',true],['cooldownReduction','Giảm hồi chiêu',true]];
+    const fields=[['attack','Tấn công'],['magicPower','Sức mạnh phép'],['skillPower','Sức kỹ năng'],['defense','Phòng ngự'],['magicDefense','Kháng phép'],['hp','Máu tối đa'],['manaMax','Mana tối đa'],['staminaMax','Thể lực tối đa'],['hpRegen','Hồi máu'],['moveBonus','Tốc di chuyển',true],['range','Tầm đánh'],['speed','Tốc đánh'],['critChance','Chí mạng',true],['lifeSteal','Hút máu',true],['cooldownReduction','Giảm hồi chiêu',true]];
     return '<div class="weapon-details"><div class="equipment-label">'+label+'</div><div class="item-slot"><b class="equipment-name" style="color:'+window.GameData.Equipments.TIER_COLORS[w.tier]+'">'+w.name+'</b></div><div class="skill-summary">'+(window.GameData.Equipments.TIER_NAMES[w.tier]||w.tier)+'</div><dl class="weapon-stats">'+fields.filter(([key])=>typeof w[key]==='number').map(([key,label,percent])=>'<div><dt>'+label+'</dt><dd>'+ (percent?Math.round(w[key]*100)+'%':key==='speed'?w[key]+'×':w[key])+'</dd></div>').join('')+'</dl>'+this.equipmentEffects(w)+'</div>';
   },
   equipmentEffects(w){
@@ -189,14 +189,16 @@ window.GameUI.InspectModal = {
       </div>
 
       <div class="inspect-subtitle">
+        ${p.isDemonKing?'<span class="badge badge-level">Quỷ Vương</span>':''}
         <span class="badge badge-class">Vũ khí: ${classDef.name}</span>
+        <span class="badge badge-level">Build: ${window.GameEntities.CombatSystem.dominantBuild(p)}</span>
         <span class="badge badge-trait">${traitDef.name || p.trait}</span>
         <span class="badge badge-level">Hạ gục: ${p.killCount}</span>
       </div>
 
       <div class="inspect-section pane-overview">
         <div class="inspect-bar-label">${"EXP: "+xpInLevel+" / "+xpNeeded+" • Còn "+Math.max(0,next-p.currentExp)+" EXP để lên cấp"}</div>
-        <div class="inspect-bar-label">Máu: ${Math.round(p.currentHp)} / ${p.maxHp} • Hồi 1 HP/s</div>
+        <div class="inspect-bar-label">Máu: ${Math.round(p.currentHp)} / ${p.maxHp} • Hồi ${Number(window.GameEntities.CombatSystem.healthRegenRate(p).toFixed(4))} HP/s</div>
         <div class="bar-container"><div class="bar-fill bar-hp" style="width: ${(p.currentHp / p.maxHp) * 100}%"></div></div>
 
         <div class="inspect-bar-label">Thể Lực: ${Math.round(p.currentStamina)} / ${p.maxStamina}</div>
@@ -208,8 +210,8 @@ window.GameUI.InspectModal = {
 
       <div class="inspect-section pane-overview">
         <div class="inspect-status"><div class="section-title">Chỉ số thực chiến</div>
-        <div>ATK: <b>${stats.attack}</b> • DEF: <b>${stats.defense}</b> • Kháng phép: <b>${stats.magicDefense}</b></div>
-        <div>Tốc độ: <b>${Math.round(stats.speed)}</b> • Tầm đánh: <b>${stats.range}</b> • Tầm nhìn: <b>${window.GameEntities.CombatSystem.visionRange(p)}</b> • Chí mạng: <b>${Math.round(Math.min(.35,(p.critChance||0)+(p.weapon?.critChance||0))*100)}%</b></div>
+        <div>ATK: <b>${Math.round(stats.attack)}</b> • DEF: <b>${Math.round(stats.defense)}</b> • Kháng phép: <b>${Math.round(stats.magicDefense)}</b> • Sức kỹ năng: <b>${Math.round(stats.skillPower||0)}</b></div>
+        <div>Tốc độ: <b>${Math.round(stats.speed)}</b> • Tầm đánh: <b>${stats.range}</b> • Tầm nhìn: <b>${window.GameEntities.CombatSystem.visionRange(p)}</b> • Chí mạng: <b>${Math.round(window.GameEntities.CombatSystem.critChance(p)*100)}%</b></div>
         <div class="inspect-intent"><div class="section-title">Suy nghĩ & mục tiêu hiện tại</div>
         <div class="bot-objective">${p.objective || "Quan sát chiến trường"}</div>
         <p class="bot-thought">${p.thought || "Đang lựa chọn hành động."}</p>
@@ -262,7 +264,7 @@ window.GameUI.InspectModal = {
       </div>
 
       <div class="inspect-section pane-overview">
-        <div class="inspect-bar-label">${m.isAncient?"Phase "+m.phase+" / 2 • ":""}Máu: ${Math.round(m.currentHp)} / ${m.maxHp} • ${({3:1,4:3,5:5}[m.tier])?"Ngoài combat: hồi "+({3:1,4:3,5:5}[m.tier])+"% HP/s • Trong combat: 1 HP/s":"Hồi 1 HP/s"}</div>
+        <div class="inspect-bar-label">${m.isAncient?"Phase "+m.phase+" / 2 • ":""}Máu: ${Math.round(m.currentHp)} / ${m.maxHp} • Hồi ${Number(window.GameEntities.CombatSystem.healthRegenRate(m).toFixed(4))} HP/s</div>
         <div class="bar-container"><div class="bar-fill bar-hp" style="width: ${(m.currentHp / m.maxHp) * 100}%"></div></div>
       </div>
 

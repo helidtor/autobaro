@@ -79,27 +79,29 @@ window.GameRenderer.ProceduralPawn = {
       ctx.restore();
     }
 
-    // Thanh máu & Tên nổi phía trên đầu
-    ctx.save();
-    const barW = 28;
-    const barH = 3.5;
-    const hpPct = Math.max(0, Math.min(1, pawn.currentHp / pawn.maxHp));
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-    ctx.fillRect(pawn.x - barW / 2, pawn.y - 44, barW, barH);
-    ctx.fillStyle = hpPct > 0.5 ? '#2ecc71' : (hpPct > 0.25 ? '#f1c40f' : '#e74c3c');
-    ctx.fillRect(pawn.x - barW / 2, pawn.y - 44, barW * hpPct, barH);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 9px Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${pawn.name} (Lv.${pawn.level})`, pawn.x, pawn.y - 47);
-    ctx.restore();
-
     this.renderPawn(ctx, pawn, time, pawn.aimAngle || 0, isMoving);
     const relics=window.GameEntities.RelicSystem.equipment(pawn).filter(d=>d.tier==='ancient');
     if(relics.length){ctx.save();ctx.strokeStyle='#ffd166';ctx.lineWidth=3.5;ctx.shadowColor='#f6bf57';ctx.shadowBlur=8;ctx.beginPath();ctx.roundRect(pawn.x-16,pawn.y-38,32,46,13);ctx.stroke();
       for(let i=0;i<6;i++){ctx.fillStyle=relics[i%relics.length].color;ctx.globalAlpha=.5+Math.sin(time*4+i)*.3;ctx.beginPath();ctx.arc(pawn.x+Math.cos(time+i)*24,pawn.y-17+Math.sin(time+i)*30,2,0,Math.PI*2);ctx.fill();}ctx.restore();}
     if(pawn.boots){ctx.save();ctx.fillStyle='#ffbf78';ctx.strokeStyle='#ffd166';ctx.lineWidth=2;for(const side of [-1,1]){ctx.beginPath();ctx.roundRect(pawn.x+side*7-4,pawn.y+2,8,7,2);ctx.fill();ctx.stroke();}ctx.restore();}
+    this.renderOverhead(ctx, pawn);
+  },
+
+  renderOverhead: function(ctx, pawn) {
+    ctx.save();
+    const barW = 28, barH = 3.5, barY = pawn.y - 64;
+    const hpPct = Math.max(0, Math.min(1, pawn.currentHp / pawn.maxHp));
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(pawn.x - barW / 2, barY, barW, barH);
+    ctx.fillStyle = hpPct > 0.5 ? '#2ecc71' : (hpPct > 0.25 ? '#f1c40f' : '#e74c3c');
+    ctx.fillRect(pawn.x - barW / 2, barY, barW * hpPct, barH);
+    ctx.font = 'bold 9px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    if (pawn.meditating) { ctx.fillStyle = '#9ad7ff'; ctx.fillText('Thiền', pawn.x, barY - 22); }
+    if (pawn.isDemonKing) { ctx.fillStyle = '#f0c984'; ctx.fillText('Quỷ Vương', pawn.x, barY - 12); }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${pawn.name} (Lv.${pawn.level})`, pawn.x, barY - 3);
+    ctx.restore();
   },
 
   renderAura(ctx,p,time){

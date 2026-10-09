@@ -107,6 +107,15 @@ window.GameUI.DirectorControls = {
     }
   },
 
+  showEnding: function(title, winner, paragraphs, actions) {
+    const G = window.GameManager, cardEl = document.getElementById('story-card-modal');
+    if (!cardEl) return;
+    G.isGameOver = true; G.isPaused = true; G.resultOpen = true; this.syncSpeed();
+    const buttons = actions.map((action, index) => '<button type="button" class="' + (index ? 'btn-ctrl' : 'btn-restart') + '" onclick="' + action.call + '">' + action.label + '</button>').join('');
+    cardEl.innerHTML = '<div class="story-card-box"><h1>' + title + '</h1><div class="story-card-winner">' + (winner || 'Người chiến thắng') + '</div>' + paragraphs.map(text => '<p>' + text + '</p>').join('') + '<div class="story-actions">' + buttons + '</div><p>Phím 1: Ván mới. Phím 2: lựa chọn còn lại.</p></div>';
+    cardEl.classList.remove('hidden');
+  },
+
   // Hiển thị Post-Match Story Card khi chỉ còn 1 bot sống sót
   showPostMatchStoryCard: function(winner) {
     const cardEl = document.getElementById('story-card-modal');

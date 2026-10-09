@@ -12,6 +12,8 @@ window.GameManager = {
   matchTime: 0,
   isGameOver: false,
   winnerPawn: null,
+  demonKing: null,
+  matchStarting: false,
   battleRoyaleResolved: false,
   finalShowdown: false,
   resultOpen: false,
@@ -76,7 +78,64 @@ window.GameManager = {
     requestAnimationFrame((t) => this.gameLoop(t));
   },
 
-  startNewMatch: function() {
+  captureDemonKing: function(pawn) {
+    if (!pawn?.isAlive || !pawn.isPawn) return null;
+    const copy = value => value == null ? value : JSON.parse(JSON.stringify(value));
+    const skill = s => ({ id: s.id, def: copy(s.def), tier: s.tier || 1, cooldownTimer: 0, type: s.type, name: s.name, desc: s.desc, ranks: copy(s.ranks), role: s.role, cooldown: s.cooldown });
+    const passive = entry => { const next = copy(entry); if (next) next.cooldownTimer = 0; return next; };
+    return {
+      sourceId: pawn.id, name: pawn.name, title: 'Quỷ Vương', appearance: copy(pawn.appearance),
+      trait: pawn.trait, secondaryTrait: pawn.secondaryTrait, personality: copy(pawn.personality), style: pawn.style,
+      classId: pawn.classId, flankSide: pawn.flankSide || 1, level: pawn.level, currentExp: pawn.currentExp,
+      unspentSkillPoints: pawn.unspentSkillPoints || 0, maxHp: pawn.maxHp, currentHp: pawn.currentHp,
+      maxStamina: pawn.maxStamina, currentStamina: pawn.currentStamina, maxMana: pawn.maxMana, currentMana: pawn.currentMana,
+      attack: pawn.attack, defense: pawn.defense, critChance: pawn.critChance, moveSpeed: pawn.moveSpeed,
+      skillPower: pawn.skillPower||0, hpRegen: pawn.hpRegen||0, buildPoints: copy(pawn.buildPoints),
+      skills: (pawn.skills || []).map(skill), passives: (pawn.passives || []).map(passive).filter(Boolean),
+      skillPreferences: copy(pawn.skillPreferences) || null, weapon: copy(pawn.weapon), secondaryWeapon: copy(pawn.secondaryWeapon),
+      helmet: copy(pawn.helmet), armor: copy(pawn.armor), boots: copy(pawn.boots), keptRelics: copy(pawn.keptRelics) || [],
+      hasRevived: !!pawn.hasRevived, passivePoolOpened: !!pawn.passivePoolOpened, lastSkillInvestment: pawn.lastSkillInvestment || '',
+      healthPotions: 3, fullHealthPotions: 0, killCount: pawn.killCount || 0
+    };
+  },
+  materializeDemonKing: function(snap, pos) {
+    const copy = value => value == null ? value : JSON.parse(JSON.stringify(value));
+    return {
+      id: 'demon_king', name: snap.name, title: 'Quỷ Vương', isPawn: true, isDemonKing: true, isAlive: true, isPlayerControlled: false,
+      x: pos.x, y: pos.y, vx: 0, vy: 0, aimAngle: Math.PI, moveSpeed: snap.moveSpeed || 95, level: snap.level, currentExp: snap.currentExp,
+      unspentSkillPoints: snap.unspentSkillPoints || 0, maxHp: snap.maxHp, currentHp: Math.min(snap.currentHp, snap.maxHp),
+      maxStamina: snap.maxStamina, currentStamina: Math.min(snap.currentStamina, snap.maxStamina),
+      maxMana: snap.maxMana, currentMana: Math.min(snap.currentMana, snap.maxMana),
+      attack: snap.attack, defense: snap.defense, critChance: snap.critChance, skillPower: snap.skillPower||0, hpRegen: snap.hpRegen||0,
+      buildPoints: copy(snap.buildPoints), trait: snap.trait, secondaryTrait: snap.secondaryTrait,
+      personality: copy(snap.personality), style: snap.style, classId: snap.classId, flankSide: snap.flankSide || 1, decisionInterval: .8,
+      weapon: copy(snap.weapon), secondaryWeapon: copy(snap.secondaryWeapon), helmet: copy(snap.helmet), armor: copy(snap.armor), boots: copy(snap.boots),
+      skills: (copy(snap.skills) || []).map(s => ({ ...s, cooldownTimer: 0 })), passives: (copy(snap.passives) || []).map(s => ({ ...s, cooldownTimer: 0 })),
+      skillPreferences: copy(snap.skillPreferences), keptRelics: copy(snap.keptRelics) || [], hasRevived: !!snap.hasRevived,
+      passivePoolOpened: !!snap.passivePoolOpened, lastSkillInvestment: snap.lastSkillInvestment || '', healthPotions: 3, fullHealthPotions: 0,
+      killCount: snap.killCount || 0, appearance: copy(snap.appearance), thought: 'Giữ ngôi trước kẻ thách đấu.', objective: 'Đấu với người thách đấu',
+      battleWill: 0, anger: 0, fear: 0, confidence: 20, despair: 0, attackCooldown: 0, attackState: { isAttacking: false, progress: 0 },
+      action: null, targetEnemy: null, allyPawn: null, isAllied: false, expReward: 0
+    };
+  },
+  usurpDemonKing: function() {
+    if (!this.isGameOver || !this.winnerPawn?.isAlive) return false;
+    return this.startNewMatch('succeed');
+  },
+  retryDemonKing: function() {
+    if (!this.isGameOver || !this.demonKing || this.pawns.some(p => p.isAlive)) return false;
+    return this.startNewMatch('keep');
+  },
+  startNewMatch: function(mode) {
+    if (this.matchStarting) return false;
+    if (mode === 'succeed' && !this.winnerPawn?.isAlive) return false;
+    if (mode === 'keep' && !this.demonKing) return false;
+    const crowned = mode === 'succeed' ? this.captureDemonKing(this.winnerPawn) : null;
+    if (mode === 'succeed' && !crowned) return false;
+    this.matchStarting = true;
+    try {
+    if (mode === 'succeed') this.demonKing = crowned;
+    else if (mode !== 'keep') this.demonKing = null;
     this.matchTime=0;this.gameSpeed=1;this.isPaused=false;this.isGameOver=false;
     this.battleRoyaleResolved=false;this.finalShowdown=false;this.resultOpen=false;this.winnerPawn=null;this.cataclysm=false;this.ancientDefeated=false;
     window.GameEntities.AncientSystem.reset();
@@ -98,6 +157,8 @@ window.GameManager = {
     document.getElementById('btn-toggle-mode').innerText='👁️ Chế độ: Đạo Diễn (Spectator)';
     document.getElementById('btn-toggle-mode').classList.remove('btn-player-mode');
     this.updateHUD();
+    return true;
+    } finally { this.matchStarting = false; }
   },
 
   resizeCanvas: function() {
@@ -113,18 +174,24 @@ window.GameManager = {
     window.addEventListener('keydown', (e) => {
       if(e.target?.matches?.('input,textarea,select,[contenteditable=true]'))return;
       if(e.target?.matches?.('button,summary')&&e.key==='Enter')return;
+      const key=e.key.toLowerCase();
+      if(this.isPlayerMode&&['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','q','e','r','f','v','h','shift',' '].includes(key))e.preventDefault?.();
       if(e.key===' '){e.preventDefault();if(!e.repeat)window.GameUI.DirectorControls.togglePause();return;}
-      this.keys[e.key.toLowerCase()] = true;
+      this.keys[key] = true;
 
-      if (e.repeat && ['Shift', 'h', 'q', 'e', 'r', 'f', 'v', 'c'].includes(e.key)) return;
+      if (e.repeat && ['Shift', 'h', 'q', 'e', 'r', 'f', 'v', 'p'].includes(e.key)) return;
       if (e.key.toLowerCase() === 'm') this.showMapOverview();
       if(e.key.toLowerCase()==='v'&&this.isPlayerMode&&this.playerPawn?.isAlive)this.executePlayerDodge();
-      if(e.key.toLowerCase()==='c'&&!this.isPlayerMode){
+      if(e.key.toLowerCase()==='p'&&!this.isPlayerMode){
         const camera=window.GameEngine.Camera;
         camera.autoDirector=!camera.autoDirector;camera.directorTimer=0;
       }
 
       if (e.key === 'Escape' && this.resultOpen) this.continueAfterResult();
+      if (this.isGameOver && this.resultOpen && !e.repeat) {
+        if (e.key === '1') { e.preventDefault(); this.startNewMatch(); return; }
+        if (e.key === '2') { e.preventDefault(); if (this.winnerPawn?.isAlive) this.usurpDemonKing(); else if (this.demonKing) this.retryDemonKing(); return; }
+      }
       if (this.isPlayerMode && !this.isPaused && !this.isGameOver) {
         if (e.key === 'Shift') window.GameEntities.CombatSystem.defend(this.playerPawn, 'block');
         if (e.key.toLowerCase() === 'h') window.GameEntities.CombatSystem.usePotion(this.playerPawn);
@@ -230,18 +297,27 @@ window.GameManager = {
     c.zoom=c.targetZoom=Math.max(.1,Math.min(this.canvas.width/this.width,(this.canvas.height-150)/this.height));
   },
   togglePlayerMode: function() {
-    this.isPlayerMode = !this.isPlayerMode;
-    if (this.playerPawn) {
-      this.playerPawn.isPlayerControlled = this.isPlayerMode;
-      if (this.isPlayerMode) {
-        window.GameEngine.Camera.autoDirector = false;
-        window.GameEngine.Camera.targetEntity = this.playerPawn;
-        if (window.GameUI.CombatTicker) {
-          window.GameUI.CombatTicker.log(`🎮 [NGƯỜI CHƠI] Bạn đã nhập hồn vào ${this.playerPawn.name}! Dùng WASD di chuyển, Chuột trái tấn công, Phím V lướt, Space tạm dừng/tiếp tục!`);
-        }
-      }
+    if (this.isPlayerMode) {
+      if (this.playerPawn) this.playerPawn.isPlayerControlled = false;
+      this.isPlayerMode = false;
+      return false;
     }
-    return this.isPlayerMode;
+    const focused = this.selectedEntity;
+    const picked = focused?.isPawn && focused.isAlive ? focused : (this.playerPawn?.isAlive ? this.playerPawn : this.pawns.find(p => p.isAlive));
+    if (!picked) return false;
+    if (this.playerPawn && this.playerPawn !== picked) this.playerPawn.isPlayerControlled = false;
+    this.playerPawn = picked;
+    this.isPlayerMode = true;
+    picked.isPlayerControlled = true;
+    picked.action = null; picked.attackState = null; picked.meditating = false; picked.vx = picked.vy = 0; picked.navPath = [];
+    this.selectedEntity = picked;
+    window.GameEngine.Camera.autoDirector = false;
+    window.GameEngine.Camera.targetEntity = picked;
+    if (document.activeElement && document.activeElement !== this.canvas && document.activeElement.blur) document.activeElement.blur();
+    if (window.GameUI.CombatTicker) {
+      window.GameUI.CombatTicker.log(`🎮 [NGƯỜI CHƠI] Bạn đã nhập hồn vào ${picked.name}! Dùng WASD di chuyển, Chuột trái tấn công, Phím V lướt, Space tạm dừng/tiếp tục!`);
+    }
+    return true;
   },
 
   spawnDropItem: function(x, y, equipmentData, slot = 'weapon') {
@@ -329,29 +405,10 @@ window.GameManager = {
       this.updatePlayerInput(dt);
     }
 
-    // 4. Cập nhật AI cho các Pawns
-    this.pawns.forEach(p => {
-      if (!p.isAlive) return;
-      p.isSprinting=false;
-      window.GameEntities.CombatSystem.updateStatus(p, dt);
-      window.GameAI.AIBrain.handleLevelingAndSkills(p);
-
-      // Hồi phục dần Stamina & Mana
-      p.currentStamina = Math.min(p.maxStamina, p.currentStamina + (12+window.GameEntities.RelicSystem.equipment(p).reduce((v,d)=>v+(d.staminaRegen||0),0)) * dt);
-      p.currentMana = Math.min(p.maxMana, p.currentMana + 8*(1+window.GameEntities.RelicSystem.equipment(p).reduce((v,d)=>v+(d.manaRegen||0),0)) * dt);
-
-      // Nếu không phải do người chơi điều khiển -> Chạy trí thông minh nhân tạo
-      p.emotionTick = (p.emotionTick || 0) + dt;
-      if (p.emotionTick >= 0.1) {
-        const nearbyPawns = this.spatialGrid.queryCircle(p.x, p.y, window.GameEntities.CombatSystem.visionRange(p)).filter(e => e.isPawn && e !== p);
-        const nearbyMonsters = this.spatialGrid.queryCircle(p.x, p.y, window.GameEntities.CombatSystem.visionRange(p)).filter(e => e.isMonster);
-        window.GameAI.EmotionEngine.updatePawnEmotions(p, p.emotionTick, nearbyPawns, nearbyMonsters);
-        p.emotionTick = 0;
-      }
-      if (!p.isPlayerControlled && !(p.stunTimer > 0)) {
-        window.GameAI.AIBrain.updatePawnAI(p, dt, this.spatialGrid, window.GameEngine.MapTerrain);
-      }
-    });
+    // 4. Cập nhật AI cho các Pawns, rồi đúng một lần cho Quỷ Vương nếu đấu trường đã mở.
+    this.pawns.forEach(p => this.updateBot(p, dt));
+    const demon = this.monsters.find(m => m.isDemonKing && m.isAlive);
+    if (demon) this.updateBot(demon, dt);
 
     // 5. Cập nhật Quái vật AI (Wandering, Aggro, Tấn công)
     this.updateMonsters(dt);
@@ -372,6 +429,25 @@ window.GameManager = {
 
     // 9. Kiểm tra Điều Kiện Chiến Thắng (Chỉ còn 1 Pawn sống sót)
     this.checkVictoryCondition();
+  },
+
+  updateBot: function(p, dt) {
+    if (!p.isAlive) return;
+    p.isSprinting=false;
+    window.GameEntities.CombatSystem.updateStatus(p, dt);
+    window.GameAI.AIBrain.handleLevelingAndSkills(p);
+    p.currentStamina = Math.min(p.maxStamina, p.currentStamina + (6+window.GameEntities.RelicSystem.equipment(p).reduce((v,d)=>v+(d.staminaRegen||0),0)) * dt);
+    p.currentMana = Math.min(p.maxMana, p.currentMana + 8*(1+window.GameEntities.RelicSystem.equipment(p).reduce((v,d)=>v+(d.manaRegen||0),0)) * dt);
+    p.emotionTick = (p.emotionTick || 0) + dt;
+    if (p.emotionTick >= 0.1) {
+      const nearbyPawns = this.spatialGrid.queryCircle(p.x, p.y, window.GameEntities.CombatSystem.visionRange(p)).filter(e => e.isPawn && e !== p);
+      const nearbyMonsters = this.spatialGrid.queryCircle(p.x, p.y, window.GameEntities.CombatSystem.visionRange(p)).filter(e => e.isMonster);
+      window.GameAI.EmotionEngine.updatePawnEmotions(p, p.emotionTick, nearbyPawns, nearbyMonsters);
+      p.emotionTick = 0;
+    }
+    if (p.isPlayerControlled || p.stunTimer > 0) return;
+    if (window.GameEntities.AncientSystem.boss?.isDemonKing && window.GameEntities.RelicSystem.distract(p, dt)) return;
+    window.GameAI.AIBrain.updatePawnAI(p, dt, this.spatialGrid, window.GameEngine.MapTerrain);
   },
 
   updatePlayerInput: function(dt) {
@@ -408,10 +484,10 @@ window.GameManager = {
   updateMonsters: function(dt) {
     const C = window.GameEntities.CombatSystem;
     this.monsters.forEach(m => {
-      if (!m.isAlive) return;
+      if (!m.isAlive || m.isDemonKing) return;
       C.updateStatus(m, dt);
       m.currentMana = Math.min(m.maxMana, m.currentMana + 5 * dt);
-      m.currentStamina = Math.min(m.maxStamina, m.currentStamina + 8 * dt);
+      m.currentStamina = Math.min(m.maxStamina, m.currentStamina + 4 * dt);
       if(window.GameEntities.RelicSystem.distract(m,dt))return;
       if (m.action || m.stunTimer > 0 || m.relicInterrupt>0 || m.isSplit) return;
       const M=window.GameEngine.MapTerrain;
@@ -503,7 +579,7 @@ window.GameManager = {
     ctx.restore();
     // 4. Vẽ Quái Vật (Vector Thủ Công 50 Loài, Không Khối Vuông Rỗng)
     this.monsters.forEach(m => {
-      if (m.isAlive) {
+      if (m.isAlive && !m.isDemonKing) {
         const isSelected = (this.selectedEntity === m);
         window.GameRenderer.MonsterRenderer.render(ctx, m, isSelected);
       }
@@ -516,6 +592,8 @@ window.GameManager = {
         window.GameRenderer.ProceduralPawn.render(ctx, p, p.appearance, isSelected);
       }
     });
+    const demonKing = this.monsters.find(m => m.isAlive && m.isDemonKing);
+    if (demonKing) window.GameRenderer.ProceduralPawn.render(ctx, demonKing, demonKing.appearance, this.selectedEntity === demonKing);
 
     ctx.save();if(arena){ctx.beginPath();ctx.rect(arena.x,arena.y,arena.w,arena.h);ctx.clip();}
     // 6. Vẽ Đạn đạo, Số Sát Thương, Hạt VFX & Cảm Xúc Mote
@@ -543,7 +621,7 @@ window.GameManager = {
 
   updateHUD: function() {
     const alivePawnsCount = this.pawns.filter(p => p.isAlive).length;
-    const aliveMonstersCount = this.monsters.filter(m => m.isAlive).length;
+    const aliveMonstersCount = this.monsters.filter(m => m.isAlive && !m.isDemonKing).length;
 
     const elPawns = document.getElementById('hud-pawns-count');
     if (elPawns) elPawns.innerText = `${alivePawnsCount} / 100`;
@@ -559,7 +637,8 @@ window.GameManager = {
       const remaining=window.GameEngine.MapTerrain.remainingLords();
       const ancient=window.GameEntities.AncientSystem.boss;
       const trial=window.GameEntities.AncientSystem;
-      templeStatus.innerText=trial.pendingGod&&!trial.awakened?'Thượng Cổ • '+Math.ceil(trial.wakeRemaining)+'s':trial.nextAt!==null?'Boss '+(trial.defeated+1)+'/'+trial.total+' • '+Math.max(0,trial.nextAt-trial.clock).toFixed(1)+'s':ancient?.isAlive?'Thượng Cổ '+ancient.gauntletRound+'/'+window.GameEntities.AncientSystem.total+' • Phase '+ancient.phase:this.ancientDefeated?'Đã chinh phục Thượng Cổ':remaining?'Khóa • còn '+remaining+' Yêu Vương':window.GameEntities.EntityManager.worldBoss?.isAlive?'Đã mở cửa':'Đã hạ Yêu Thần';
+      const prep=trial.pendingGod&&!trial.awakened?(this.demonKing?'Quỷ Vương • ':'Thượng Cổ • ')+Math.ceil(trial.wakeRemaining)+'s':'';
+      templeStatus.innerText=prep||(ancient?.isDemonKing&&ancient.isAlive?'Quỷ Vương • '+ancient.name:trial.nextAt!==null?'Boss '+(trial.defeated+1)+'/'+trial.total+' • '+Math.max(0,trial.nextAt-trial.clock).toFixed(1)+'s':ancient?.isAlive?'Thượng Cổ '+ancient.gauntletRound+'/'+window.GameEntities.AncientSystem.total+' • Phase '+ancient.phase:this.ancientDefeated?'Đã chinh phục Thượng Cổ':remaining?'Khóa • còn '+remaining+' Yêu Vương':window.GameEntities.EntityManager.worldBoss?.isAlive?'Đã mở cửa':'Đã hạ Yêu Thần');
     }
 
     // Cập nhật thanh HUD Player nếu ở chế độ người chơi

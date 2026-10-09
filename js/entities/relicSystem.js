@@ -8,7 +8,7 @@ window.GameEntities.RelicSystem={
   for(const s of Object.values(e.relicState||{}))for(const key of ['cooldown','timer','shieldTimer','invulnerable'])if(s[key]>0)s[key]=Math.max(0,s[key]-dt);
   e.relicInvulnerable=Math.max(0,(e.relicInvulnerable||0)-dt);
   if(this.has(e,'nano')){
-   if((G.matchTime||0)-(e.lastDamageTakenAt??-Infinity)>=3)e.currentHp=Math.min(e.maxHp,e.currentHp+e.maxHp*.015*dt);
+   e.currentHp=Math.min(e.maxHp,e.currentHp+C.healthRegenRate(e,'nano')*dt);
    const s=this.state(e,'nano');if(e.despair>90&&s.cooldown<=0){s.cooldown=40;e.currentStamina=Math.min(e.maxStamina,e.currentStamina+e.maxStamina*.5);e.speedBuff=.25;e.speedBuffTimer=4;}
   }
   const prism=e.relicState?.prism;if(prism?.timer>0&&prism.decoy){const d=prism.decoy;const pos=M.nearestFree(d.x+Math.cos(d.angle)*100*dt,d.y+Math.sin(d.angle)*100*dt);Object.assign(d,pos);}
@@ -19,7 +19,7 @@ window.GameEntities.RelicSystem={
    if(d<=step+12){C.applyDamage(e,t,e.weapon,{baseDamage:bolt.damage,magic:true,relic:true,projectile:true,damageBudget:bolt.damageBudget});bolt.life=0;}
   }
   e.relicBolts=(e.relicBolts||[]).filter(b=>b.life>0);
-  for(const trap of e.relicTraps||[]){trap.life-=dt;trap.next-=dt;if(trap.next<=0){trap.next=.5;for(const t of G.monsters)if(t.isAlive&&C.isEnemy(e,t)&&Math.hypot(t.x-trap.x,t.y-trap.y)<30)C.applyDamage(e,t,null,{baseDamage:C.combatStats(e).attack*.2,magic:true,relic:true,dot:'burn',element:'fire'});}}
+  for(const trap of e.relicTraps||[]){trap.life-=dt;trap.next-=dt;if(trap.next<=0){trap.next=.5;const pool=[...G.monsters,...(G.monsters.some(m=>m.isDemonKing)?G.pawns:[])];for(const t of pool)if(t.isAlive&&C.isEnemy(e,t)&&Math.hypot(t.x-trap.x,t.y-trap.y)<30)C.applyDamage(e,t,null,{baseDamage:C.combatStats(e).attack*.2,magic:true,relic:true,dot:'burn',element:'fire'});}}
   e.relicTraps=(e.relicTraps||[]).filter(f=>f.life>0);
  },
  incoming(a,e,damage,c){
@@ -59,7 +59,7 @@ window.GameEntities.RelicSystem={
   if(this.has(a,'greatbow')&&!c.skill&&!c.dot){
    const s=this.state(a,'greatbow');s.moon=!s.moon;
    if(s.moon){const ancient=window.GameEntities.AncientSystem;ancient.fields=ancient.fields.filter(f=>f.warningOnly||Math.hypot(f.x-t.x,f.y-t.y)>40||!['acid','lava'].includes(f.effect));
-    for(const e of window.GameManager.monsters)if(e!==t&&e.isAlive&&Math.hypot(e.x-t.x,e.y-t.y)<40)C.applyDamage(a,e,null,{baseDamage:damage*.4,magic:true,relic:true,explosion:true});
+    const pool=[...window.GameManager.monsters,...(window.GameManager.monsters.some(m=>m.isDemonKing)?window.GameManager.pawns:[])];for(const e of pool)if(e!==t&&e!==a&&e.isAlive&&C.isEnemy(a,e)&&Math.hypot(e.x-t.x,e.y-t.y)<40)C.applyDamage(a,e,null,{baseDamage:damage*.4,magic:true,relic:true,explosion:true});
     window.GameRenderer.VfxManager.addEffect('flame',t.x,t.y,{radius:40,color:'#ffd166',life:.5});
    }else{const mark=this.state(t,'moon');mark.owner=a;mark.timer=4;}
   }
@@ -71,7 +71,7 @@ window.GameEntities.RelicSystem={
  onCast(e,skill,castId=e.skillsCast,damageBudget){
   if(!this.has(e,'tome')||skill.tier!==3)return;
   const s=this.state(e,'tome');if(s.cast!==undefined&&castId<=s.cast)return;s.cast=castId;
-  const C=window.GameEntities.CombatSystem,t=window.GameManager.monsters.filter(m=>C.isEnemy(e,m)&&C.canEngage(e,m)).sort((a,b)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(b.x-e.x,b.y-e.y))[0];
+  const C=window.GameEntities.CombatSystem,G=window.GameManager,pool=[...G.monsters,...(e.isDemonKing||G.monsters.some(m=>m.isDemonKing)?G.pawns:[])],t=pool.filter(m=>C.isEnemy(e,m)&&C.canEngage(e,m)).sort((a,b)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(b.x-e.x,b.y-e.y))[0];
   if(t)e.relicBolts=[...(e.relicBolts||[]),...[0,1,2].map(i=>({x:e.x,y:e.y+i*8,target:t,life:3,damageBudget,damage:C.combatStats(e).attack*.5}))];
  },
  tryDash(e,t,mode){
@@ -95,13 +95,14 @@ window.GameEntities.RelicSystem={
  },
  knockbackImmune(e){return this.has(e,'core')&&(e.relicState?.core?.shieldTimer||0)>0;},
  distract(m,dt){
-  const p=window.GameManager.pawns.find(e=>e.isAlive&&this.has(e,'prism')&&e.relicState?.prism?.timer>0&&Math.hypot(e.x-m.x,e.y-m.y)<350);
+  const owners=[...window.GameManager.pawns,...window.GameManager.monsters.filter(e=>e.isDemonKing)];
+  const p=owners.find(e=>e!==m&&e.isAlive&&this.has(e,'prism')&&e.relicState?.prism?.timer>0&&Math.hypot(e.x-m.x,e.y-m.y)<350);
   if(!p)return false;const d=p.relicState.prism.decoy;m.objective='Đuổi ảo ảnh Kính Vạn Hoa';m.targetEnemy=null;
   if(m.action&&!m.action.released){m.action.targetX=d.x;m.action.targetY=d.y;}
   if(!m.action)window.GameEngine.MapTerrain.navigate(m,d.x,d.y,dt);return true;
  },
  render(ctx){
-  for(const p of window.GameManager.pawns.filter(e=>e.isAlive)){
+  for(const p of [...window.GameManager.pawns,...window.GameManager.monsters.filter(e=>e.isDemonKing)].filter(e=>e.isAlive)){
    const s=p.relicState?.prism;if(s?.timer>0&&s.decoy){ctx.save();ctx.globalAlpha=.35;window.GameRenderer.ProceduralPawn.renderPawn(ctx,s.decoy,performance.now()/1000,s.decoy.angle,true);ctx.restore();}
    for(const b of p.relicBolts||[]){ctx.fillStyle='#d7a0ff';ctx.beginPath();ctx.arc(b.x,b.y,5,0,Math.PI*2);ctx.fill();}
    for(const f of p.relicTraps||[]){ctx.fillStyle='#ff8758';ctx.globalAlpha=.4;ctx.beginPath();ctx.arc(f.x,f.y,30,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}

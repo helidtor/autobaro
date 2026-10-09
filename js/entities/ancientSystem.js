@@ -1,18 +1,36 @@
 window.GameEntities=window.GameEntities||{};
 window.GameEntities.AncientSystem={
- boss:null,awakened:false,fields:[],walls:[],clock:0,lightningAt:0,queue:[],defeated:0,total:5,usedRelics:[],nextAt:null,arena:null,god:null,original:null,victoryPending:false,pendingGod:null,wakeRemaining:null,
- reset(){if(window.GameEntities.CombatSystem){window.GameEntities.CombatSystem.fields=[];window.GameEntities.CombatSystem.fieldClock=0;}this.boss=null;this.awakened=false;this.fields=[];this.walls=[];this.clock=0;this.lightningAt=0;this.queue=[];this.defeated=0;this.usedRelics=[];this.nextAt=null;this.arena=null;this.god=null;this.original=null;this.victoryPending=false;this.pendingGod=null;this.wakeRemaining=null;if(window.GameEngine.MapTerrain)window.GameEngine.MapTerrain.ancientArena=null;},
+ boss:null,awakened:false,fields:[],walls:[],clock:0,lightningAt:0,queue:[],defeated:0,total:5,usedRelics:[],nextAt:null,arena:null,god:null,original:null,victoryPending:false,pendingGod:null,wakeRemaining:null,demonKingFight:false,demonResolved:false,successionLoot:null,
+ reset(){if(window.GameEntities.CombatSystem){window.GameEntities.CombatSystem.fields=[];window.GameEntities.CombatSystem.fieldClock=0;}this.boss=null;this.awakened=false;this.fields=[];this.walls=[];this.clock=0;this.lightningAt=0;this.queue=[];this.defeated=0;this.usedRelics=[];this.nextAt=null;this.arena=null;this.god=null;this.original=null;this.victoryPending=false;this.pendingGod=null;this.wakeRemaining=null;this.demonKingFight=false;this.demonResolved=false;this.successionLoot=null;if(window.GameEngine.MapTerrain)window.GameEngine.MapTerrain.ancientArena=null;},
+ successionReady(p){
+  const loot=this.successionLoot;if(!window.GameManager.demonKing)return true;if(!loot||!p)return false;
+  const gear=item=>!item||item.isCollected||window.GameAI.AIBrain.lootValue(p,item)<=0;
+  return gear(loot.weapon)&&gear(loot.armor)&&loot.potions.every(item=>!item||item.isCollected);
+ },
  awaken(god,killer,ready=false){
   if(this.awakened)return this.boss;
-  if(!ready){if(!this.pendingGod&&!this.awakened){this.pendingGod=god;this.wakeRemaining=20;this.god=killer;window.GameUI.CombatTicker.log("⏳ Yêu Thần đã chết. Thượng Cổ thức tỉnh sau 20 giây: thu thập chiến lợi phẩm!");}return null;}
+  if(!ready){if(!this.pendingGod&&!this.awakened){this.pendingGod=god;this.wakeRemaining=20;this.god=killer;window.GameUI.CombatTicker.log(window.GameManager.demonKing?"⏳ Yêu Thần đã chết. Quỷ Vương xuất hiện sau 20 giây: thu thập vũ khí, giáp và bình máu!":"⏳ Yêu Thần đã chết. Thượng Cổ thức tỉnh sau 20 giây: thu thập chiến lợi phẩm!");}return null;}
   if(this.awakened)return this.boss;
   const G=window.GameManager,E=window.GameEntities.EntityManager,D=window.GameData.AncientBosses;
   if(G.pawns.filter(p=>p.isAlive).length!==1){this.pendingGod=god;return null;}
   this.pendingGod=null;this.awakened=true;
   const original=G.winnerPawn?.isAlive?G.winnerPawn:killer?.isPawn?killer:G.pawns.find(p=>p.isAlive);
-  const first=D[Math.floor(Math.random()*D.length)];this.queue=[first,...D.filter(d=>d!==first)];this.god=god;this.original=original;
+  this.god=god;this.original=original;
+  if(G.demonKing){this.queue=[];this.openArena(original,god);return this.spawnDemonKing();}
+  const first=D[Math.floor(Math.random()*D.length)];this.queue=[first,...D.filter(d=>d!==first)];
   this.openArena(original,god);
   return this.spawnNext();
+ },
+ spawnDemonKing(){
+  const G=window.GameManager,snap=G.demonKing,original=this.original;if(!snap||!original?.isAlive)return null;
+  const pos=window.GameEngine.MapTerrain.nearestFree(this.arena.cx+140,this.arena.cy);
+  const king=G.materializeDemonKing(snap,pos);
+  king.homeX=king.x;king.homeY=king.y;king.territory={id:'ancient_arena',name:'Đấu trường Quỷ Vương',x:this.arena.cx,y:this.arena.cy,radius:this.arena.w/2,isCleared:false};
+  this.boss=king;this.demonKingFight=true;this.queue=[];this.nextAt=null;
+  window.GameEntities.EntityManager.monsters.push(king);G.monsters=window.GameEntities.EntityManager.monsters;
+  window.GameUI.CombatTicker.log('👑 QUỶ VƯƠNG HIỆN THÂN: '+king.name+' • Một thanh máu • Đấu trường 1500×1500!');
+  window.GameRenderer.VfxManager.addEffect('rune',king.x,king.y,{radius:220,color:'#f0c984',life:2});
+  return king;
  },
  openArena(p,god){
   const G=window.GameManager,M=window.GameEngine.MapTerrain,cx=G.width/2,cy=G.height/2+800;
@@ -75,10 +93,34 @@ window.GameEntities.AncientSystem={
   this.victoryPending=true;this.finalAt=this.clock;return;
  },
  showVictory(){
-  const G=window.GameManager,killer=this.original,m=this.boss;this.victoryPending=false;
-  G.ancientDefeated=true;G.isGameOver=true;G.isPaused=true;G.resultOpen=true;window.GameEngine.Audio?.play('victory');
-  const el=document.getElementById('story-card-modal');
-  el.innerHTML='<div class="story-card-box"><h1>🏆 CHINH PHỤC THƯỢNG CỔ</h1><div class="story-card-winner">'+(killer?.name||'Người chiến thắng')+'</div><p>Đã hạ '+m.name+' và chinh phục đủ 5 boss qua 10 thanh máu. Trận đấu hoàn tất.</p><button class="btn-restart" onclick="window.GameManager.startNewMatch()">Bắt đầu ván mới</button></div>';el.classList.remove('hidden');
+  if(this.demonKingFight)return this.showDemonVictory();
+  const killer=this.original,m=this.boss;this.victoryPending=false;
+  window.GameManager.ancientDefeated=true;window.GameEngine.Audio?.play('victory');
+  window.GameUI.DirectorControls.showEnding('🏆 CHINH PHỤC THƯỢNG CỔ',killer?.name||'Người chiến thắng',[
+    'Đã hạ '+(m?.name||'boss cuối')+' và chinh phục đủ 5 boss qua 10 thanh máu. Trận đấu hoàn tất.',
+    'Ván mới xóa ngôi Quỷ Vương. Tiếm ngôi giữ nguyên build của người thắng và mở trận 100 bot mới.'
+  ],[{label:'Ván mới',call:'window.GameManager.startNewMatch()'},{label:'Tiếm ngôi quỷ vương',call:'window.GameManager.usurpDemonKing()'}]);
+ },
+ showDemonVictory(){
+  if(this.demonResolved)return;this.demonResolved=true;this.victoryPending=false;
+  window.GameEngine.Audio?.play('victory');
+  window.GameUI.DirectorControls.showEnding('🏆 HẠ QUỶ VƯƠNG',this.original?.name||'Người chiến thắng',[
+    'Đã hạ Quỷ Vương '+(this.boss?.name||'')+'. Không có chiến lợi phẩm, EXP hay phần thưởng kết liễu.',
+    'Ván mới xóa ngôi. Tiếm ngôi thay vua cũ bằng chính người thắng, với build hiện có và 3 bình máu.'
+  ],[{label:'Ván mới',call:'window.GameManager.startNewMatch()'},{label:'Tiếm ngôi quỷ vương',call:'window.GameManager.usurpDemonKing()'}]);
+ },
+ showDemonDefeat(){
+  if(this.demonResolved)return;this.demonResolved=true;
+  const name=window.GameManager.demonKing?.name||this.boss?.name||'Quỷ Vương';
+  window.GameUI.DirectorControls.showEnding('QUỶ VƯƠNG GIỮ NGÔI',name,[
+    'Người thách đấu đã gục. Ngôi không truyền cho người đã chết.',
+    'Khiêu chiến lại tạo 100 bot mới, vẫn phải hạ Yêu Thần, rồi đối đầu cùng Quỷ Vương '+name+'.'
+  ],[{label:'Ván mới',call:'window.GameManager.startNewMatch()'},{label:'Khiêu chiến lại',call:'window.GameManager.retryDemonKing()'}]);
+ },
+ clearDuelHazards(){
+  const G=window.GameManager;window.GameRenderer.VfxManager.projectiles=[];window.GameEntities.CombatSystem.pendingEffects=[];
+  window.GameEntities.CombatSystem.fields=[];this.fields=[];this.walls=[];
+  for(const e of [...(G.pawns||[]),...(G.monsters||[])]){e.relicBolts=[];e.relicTraps=[];}
  },
  config(m,s){
   const d={...s.def},owner=m.ancientOwner||m;
@@ -210,10 +252,11 @@ window.GameEntities.AncientSystem={
  },
  control(p,kind,duration,source){if(p.ccImmune||p.invincible||p.controlImmunityTimer>0)return;p[kind]=window.GameEntities.RelicSystem.control(p,kind,duration,source);p.controlImmunityTimer=3;},
  tick(dt){
-  if(!this.awakened){const G=window.GameManager;if(this.pendingGod){this.wakeRemaining=Math.max(0,this.wakeRemaining-dt);if(this.wakeRemaining===0&&G.battleRoyaleResolved&&G.winnerPawn?.isAlive&&G.winnerPawn.level>=15&&!window.GameEngine.MapTerrain.remainingLords())this.awaken(this.pendingGod,G.winnerPawn,true);}return;}
+  if(!this.awakened){const G=window.GameManager;if(this.pendingGod){this.wakeRemaining=Math.max(0,this.wakeRemaining-dt);if(this.wakeRemaining===0&&G.battleRoyaleResolved&&G.winnerPawn?.isAlive&&G.winnerPawn.level>=15&&!window.GameEngine.MapTerrain.remainingLords()&&this.successionReady(G.winnerPawn))this.awaken(this.pendingGod,G.winnerPawn,true);}return;}
   this.clock+=dt;this.walls=this.walls.filter(w=>w.end>this.clock&&w.hp>0);
   const C=window.GameEntities.CombatSystem,M=window.GameEngine.MapTerrain,G=window.GameManager,m=this.boss;
-  if(!m?.isAlive){if(this.victoryPending&&(this.original?.relicLoot?.isCollected&&this.original?.ancientPotionLoot?.isCollected&&this.original?.currentHp>=this.original?.maxHp&&!this.original?.action||this.clock-this.finalAt>=15))this.showVictory();if(this.nextAt!==null&&this.clock>=this.nextAt)this.spawnNext();return;}
+  if(!m?.isAlive){if(this.demonKingFight)return;if(this.victoryPending&&(this.original?.relicLoot?.isCollected&&this.original?.ancientPotionLoot?.isCollected&&this.original?.currentHp>=this.original?.maxHp&&!this.original?.action||this.clock-this.finalAt>=15))this.showVictory();if(this.nextAt!==null&&this.clock>=this.nextAt)this.spawnNext();return;}
+  if(m.isDemonKing)return;
   if(m.isSplit){m.currentHp=m.clones.reduce((sum,c)=>sum+(c.isAlive?c.currentHp:0),0);this.fields=this.fields.filter(f=>f.owner!==m);return;}
   if(this.clock>=this.lightningAt){this.lightningAt=this.clock+4;this.field(m,{name:'Sấm Tận Thế',fxKey:'doom_bolt',radius:45,damage:25},this.arena.x+Math.random()*this.arena.w,this.arena.y+Math.random()*this.arena.h,.8);}
   this.passives(m,dt);
@@ -310,6 +353,8 @@ window.GameEntities.AncientSystem={
   if(!this.awakened){
    if(!this.pendingGod||!window.GameManager.battleRoyaleResolved)return false;
    const A=window.GameAI.AIBrain,C=window.GameEntities.CombatSystem;
+   const prep=this.successionLoot?[this.successionLoot.weapon,this.successionLoot.armor,...this.successionLoot.potions].filter(item=>item&&!item.isCollected&&A.lootValue(p,item)>0):[];
+   if(prep.length){A.seekLoot(p,prep[0],dt);p.objective='Chuẩn bị đấu Quỷ Vương: '+prep[0].name;return true;}
    const item=A.findBestItemToLoot(p,window.GameManager.dropItems.filter(d=>Math.hypot(d.x-this.pendingGod.x,d.y-this.pendingGod.y)<150));
    if(item){A.seekLoot(p,item,dt);return true;}
    if(p.currentHp<p.maxHp*.85)C.usePotion(p);
@@ -317,6 +362,7 @@ window.GameEntities.AncientSystem={
    return false;
   }
   if(p!==this.original)return false;
+  if(this.boss?.isDemonKing&&this.boss.isAlive)return false;
   const A=window.GameAI.AIBrain,C=window.GameEntities.CombatSystem,G=window.GameManager;
   const relic=p.relicLoot;
   if(relic&&!relic.isCollected){
@@ -352,5 +398,5 @@ window.GameEntities.AncientSystem={
  },
  renderSky(ctx,w,h){if(!this.awakened)return;ctx.save();ctx.strokeStyle='#ffc7b8';ctx.lineWidth=2;ctx.globalAlpha=.5;
   for(let i=0;i<4;i++){const x=(i+.2)*w/4;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+20,35);ctx.lineTo(x-10,62);ctx.lineTo(x+45,95);ctx.stroke();}
-  ctx.fillStyle='#ffe1cb';ctx.font='bold 16px Arial';ctx.textAlign='center';ctx.fillText(this.nextAt!==null?'BOSS TIẾP THEO • '+Math.max(0,this.nextAt-this.clock).toFixed(1)+'s':'THƯỢNG CỔ '+(this.boss?.gauntletRound||1)+'/'+this.total+' • ĐẤU TRƯỜNG 1500×1500',w/2,125);ctx.restore();}
+  ctx.fillStyle='#ffe1cb';ctx.font='bold 16px Arial';ctx.textAlign='center';ctx.fillText(this.boss?.isDemonKing?'QUỶ VƯƠNG • '+this.boss.name+' • ĐẤU TRƯỜNG 1500×1500':this.nextAt!==null?'BOSS TIẾP THEO • '+Math.max(0,this.nextAt-this.clock).toFixed(1)+'s':'THƯỢNG CỔ '+(this.boss?.gauntletRound||1)+'/'+this.total+' • ĐẤU TRƯỜNG 1500×1500',w/2,125);ctx.restore();}
 };

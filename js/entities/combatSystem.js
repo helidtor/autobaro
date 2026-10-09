@@ -26,7 +26,7 @@ window.GameEntities.CombatSystem = {
       const targets=window.GameManager.spatialGrid.queryCircle(f.x,f.y,f.shape==='line'?f.length+f.radius:f.radius);
       for(const e of targets){
         if(!e.isAlive||!this.fieldContains(f,e.x,e.y))continue;
-        if(f.heal){if(e===f.owner||e===f.owner.allyPawn){e.currentHp=Math.min(e.maxHp,e.currentHp+f.heal*f.tick*(e===f.owner?1:.5)*(1-Math.min(.5,e.antiHealUntil>(window.GameManager.matchTime||0)?e.antiHeal||0:0)));if(f.cleanse&&(f.healTicks=(f.healTicks||0)+1)>=2){e.slowTimer=0;f.cleanse=false;}}continue;}
+        if(f.heal){if(e===f.owner||e===f.owner.allyPawn){e.currentHp=Math.min(e.maxHp,e.currentHp+this.healthRegenRate(e,'aura',f)*f.tick);if(f.cleanse&&(f.healTicks=(f.healTicks||0)+1)>=2){e.slowTimer=0;f.cleanse=false;}}continue;}
         if(!this.isEnemy(f.owner,e))continue;
         const dealt=f.damage>0?this.applyDamage(f.owner,e,null,{baseDamage:f.damage,skill:true,magic:f.magic,damageBudget:f.damageBudget,sourceSkill:f.sourceSkill,dot:'field'}):(this.canEngage(f.owner,e)&&this.reserveCombat(f.owner,e)?1:0);
         if(!dealt||!e.isAlive)continue;
@@ -223,8 +223,8 @@ window.GameEntities.CombatSystem = {
     if(e.isSplit)return;
     const blood=this.passiveList(e).find(p=>p.id==='p_blood_body'),combat=now-(e.lastHostileAt??-Infinity)<6&&!M.isInWater(e.x,e.y);
     const anti=Math.min(.5,Math.max(0,e.antiHealUntil>now?e.antiHeal||0:0));
-    if(blood){const rank=blood.tier||1,base=this.supportHp(e),regen=Math.min(base*.012,this.passiveConfig(e,blood).regenAmount);
-      if(combat){e.currentHp=Math.min(e.maxHp,e.currentHp+regen*dt*(1-anti));if(state.bloodRemaining>0){const elapsed=Math.min(dt,state.bloodRemaining);e.currentHp=Math.min(e.maxHp,e.currentHp+state.bloodRate*elapsed*(1-anti)/(e.isAncientClone?Math.max(1,e.ancientOwner.clones.filter(q=>q.isAlive).length):1));if(!e.isAncientClone||e===e.ancientOwner.clones.find(q=>q.isAlive))state.bloodRemaining-=elapsed;}}
+    if(blood){
+      if(combat){e.currentHp=Math.min(e.maxHp,e.currentHp+this.healthRegenRate(e,'blood')*dt);if(state.bloodRemaining>0){const elapsed=Math.min(dt,state.bloodRemaining);e.currentHp=Math.min(e.maxHp,e.currentHp+this.healthRegenRate(e,'burst')*elapsed);if(!e.isAncientClone||e===e.ancientOwner.clones.find(q=>q.isAlive))state.bloodRemaining-=elapsed;}}
       else state.bloodRemaining=0;
       state.bloodRearm=e.currentHp>e.maxHp*.6?(state.bloodRearm||0)+dt:0;if(state.bloodRearm>=8&&blood.cooldownTimer<=0)state.bloodLocked=false;
     }
@@ -352,15 +352,75 @@ window.GameEntities.CombatSystem = {
   return true;
  },
  combatStats(e,attacker){
-  const scale=e.statMultiplier||1,R=window.GameEntities.RelicSystem,gear=R.equipment(e),weapon=e.weapon?.attack||e.weapon?.magicPower||0;
-  let attack=(e.attack||16)+(e.weapon?.tier==='ancient'?weapon:Math.min(65,weapon))+[e.armor,e.helmet,e.boots].reduce((v,d)=>v+(d?.attack||0),0);
+  const scale=e.statMultiplier||1,R=window.GameEntities.RelicSystem,gear=R.equipment(e),ancient=e.weapon?.tier==='ancient';
+  const weaponAttack=ancient?(e.weapon?.attack||e.weapon?.magicPower||0):(e.weapon?.attack||0);
+  let attack=(e.attack||16)+weaponAttack+[e.armor,e.helmet,e.boots].reduce((v,d)=>v+(d?.attack||0),0);
   const steal=e.relicState?.voidblade;
   if(R.has(e,'voidblade')&&steal?.timer>0&&steal.target?.isAlive){const t=steal.target;attack+=steal.stacks*.02*((t.defense||0)*2+R.equipment(t).reduce((v,d)=>v+(d.defense||0)+(d.magicDefense||0),0));}
   const defense=(e.defense||0)+gear.reduce((v,d)=>v+(d.defense||0),0),debuff=e.relicState?.voidArmor;
   const crackApplies=!e.crackOwner||!attacker||attacker===e.crackOwner&&Math.cos(Math.atan2(attacker.y-e.y,attacker.x-e.x)-e.crackAngle)>.5;
   const modifier=(e.armorBreakTimer>0&&crackApplies?1-(e.armorBreak||0):1)*(debuff?.timer>0?1-debuff.stacks*.02:1);
   const range=this.bossDamageRange(e);
-  return {attack:range?Math.max(range[0],Math.min(range[1],attack*scale)):attack*scale,defense:defense*scale*modifier,magicDefense:(defense+gear.reduce((v,d)=>v+(d.magicDefense||0),0))*scale*modifier,range:e.weapon?.range||(['bow','crossbow','staff','tome'].includes(this.weaponStyle(e))?130:e.isAncient?150:e.tier>=4?75:38),speed:window.GameEngine.MapTerrain.getMoveSpeed(e)};
+  const skillPower=((e.skillPower||0)+gear.reduce((v,d)=>v+(d.skillPower||0),0)+(ancient?(e.weapon?.magicPower||0):0))*scale;
+  return {attack:range?Math.max(range[0],Math.min(range[1],attack*scale)):attack*scale,defense:defense*scale*modifier,magicDefense:(defense+gear.reduce((v,d)=>v+(d.magicDefense||0),0))*scale*modifier,skillPower,range:e.weapon?.range||(['bow','crossbow','staff','tome'].includes(this.weaponStyle(e))?130:e.isAncient?150:e.tier>=4?75:38),speed:window.GameEngine.MapTerrain.getMoveSpeed(e)};
+ },
+ critChance(e){
+  return Math.min(.5,(e?.critChance||0)+window.GameEntities.RelicSystem.equipment(e).reduce((v,d)=>v+(d.critChance||0),0));
+ },
+ buildRows:{
+  fortify:{hp:40,attack:1,defense:4,crit:0,mana:0,skill:0,hpRegen:0},
+  assassin:{hp:12,attack:4,defense:0,crit:.015,mana:0,skill:0,hpRegen:0},
+  archer:{hp:32,attack:3,defense:1,crit:.01,mana:0,skill:0,hpRegen:0},
+  mage:{hp:16,attack:1,defense:0,crit:0,mana:15,skill:4,hpRegen:0},
+  restore:{hp:20,attack:2,defense:1,crit:0,mana:5,skill:0,hpRegen:.15}
+ },
+ skillVector(d){
+  const id=d?.id||'',role=d?.role||'',blank={fortify:0,assassin:0,archer:0,mage:0,restore:0};
+  if(role==='heal'||id==='h_healing_aura'||id==='p_blood_body'||id==='p_recovery_cycle')return {...blank,restore:1};
+  if(role==='defense'||id==='w_riposte'||id==='w_iron_wall'||id==='p_flexible_armor')return {...blank,fortify:1};
+  if(id.startsWith('as_')||role==='finisher')return {...blank,assassin:1};
+  if(id.startsWith('a_'))return {...blank,archer:1};
+  if(id.startsWith('m_')||d?.magic)return {...blank,mage:1};
+  if(id.startsWith('w_')&&(role==='control'||role==='defense'))return {...blank,fortify:1};
+  if(id.startsWith('w_'))return {...blank,fortify:.5,assassin:.5};
+  if(role==='mobility')return {...blank,assassin:.5,archer:.5};
+  if(role==='buff')return {...blank,mage:.5,restore:.5};
+  if(role==='control')return {...blank,fortify:.5,mage:.5};
+  return {fortify:.25,assassin:.25,archer:.25,mage:.25,restore:0};
+ },
+ investBuild(p,d){
+  const source=d?.def||d;if(!p||!source)return;
+  const v=this.skillVector(source);
+  p.buildPoints=p.buildPoints||{fortify:0,assassin:0,archer:0,mage:0,restore:0};
+  for(const key of Object.keys(p.buildPoints))p.buildPoints[key]+=v[key]||0;
+ },
+ normalizedBuild(p){
+  const w={fortify:0,assassin:0,archer:0,mage:0,restore:0};
+  const P=p?.personality||window.GameData.PersonalityProfiles?.[p?.trait]||{};
+  w.fortify+=(P.caution||0)*.008;
+  w.assassin+=(P.aggression||0)*.008;
+  w.archer+=(P.patience||0)*.006;
+  w.mage+=(P.curiosity||0)*.008;
+  w.restore+=(P.loyalty||0)*.008;
+  for(const key of Object.keys(w))w[key]+=p?.buildPoints?.[key]||0;
+  const sum=Object.values(w).reduce((s,n)=>s+n,0);
+  if(sum<=0)return {fortify:.2,assassin:.2,archer:.2,mage:.2,restore:.2};
+  for(const key of Object.keys(w))w[key]/=sum;
+  return w;
+ },
+ levelGrowth(p){
+  const w=this.normalizedBuild(p),g={hp:0,attack:0,defense:0,crit:0,mana:0,skill:0,hpRegen:0};
+  for(const [key,row] of Object.entries(this.buildRows))for(const stat of Object.keys(g))g[stat]+=w[key]*(row[stat]||0);
+  return g;
+ },
+ dominantBuild(p){
+  const names={fortify:'Chống chịu',assassin:'Sát thủ',archer:'Cung thủ',mage:'Pháp sư',restore:'Hồi phục'};
+  const best=Object.entries(this.normalizedBuild(p)).sort((a,b)=>b[1]-a[1])[0][0];
+  return names[best];
+ },
+ bonusHealthRegen(e){
+  if(!e?.isPawn)return 0;
+  return (e.hpRegen||0)+window.GameEntities.RelicSystem.equipment(e).reduce((v,d)=>v+(d.hpRegen||0),0);
  },
 
   canAttack(e) {
@@ -428,14 +488,15 @@ window.GameEntities.CombatSystem = {
   scaledValue(e,f,context={}){
     if(!f)return 0;
     const stats=this.combatStats(e),hp=this.supportHp(e),scale=e.statMultiplier||1;
-    const stat={attack:stats.attack,defense:stats.defense,hp,mana:e.maxMana||0,speed:(e.moveSpeed||e.speed||95)*scale,...context}[f.stat]||0;
+    const stat={attack:stats.attack,defense:stats.defense,hp,mana:e.maxMana||0,speed:(e.moveSpeed||e.speed||95)*scale,skill:stats.skillPower||0,...context}[f.stat]||0;
     const value=f.base*scale+f.ratio*stat;
     return Math.max(0,Math.min(value,f.cap===undefined?Infinity:hp*f.cap));
   },
   evaluateScaling(e,c){
     const stats=this.combatStats(e),hp=this.supportHp(e),range=this.bossDamageRange(e);
     for(const [key,f] of Object.entries(c.scaling||{}))c[key+'Amount']=this.scaledValue(e,f);
-    c.maxDamage=range?.[1]??stats.attack*(c.role==='finisher'?2.4:2.1);
+    const power=Math.max(stats.attack,c.magic?stats.skillPower||0:0);
+    c.maxDamage=range?.[1]??power*(c.role==='finisher'?2.4:2.1);
     if(c.scaling?.counter)c.counterAmount=Math.min(c.maxDamage,c.counterAmount);
     c.damage=c.scaling?.damage?Math.min(c.maxDamage,Math.max(range?.[0]||0,c.damageAmount)):0;
     if(c.scaling?.distance){const base=c.scaling.distance.base*(e.statMultiplier||1),distance=Math.min(base*1.2,c.distanceAmount);if(c.backstep)c.backstep=distance;else c.distance=distance;}
@@ -464,6 +525,7 @@ window.GameEntities.CombatSystem = {
       c.scaling={damage:{base:Math.round(base*factor/1.3),ratio:e.tier===5?.35:e.tier===4?.25:factor*.5,stat:'attack'}};
     }
     if(!c.scaling)c.scaling={damage:{base:c.baseDamage||c.magicDamage||c.nukeDamage||0,ratio:c.dmgMultiplier||c.dmgPct||1.3,stat:'attack'}};
+    if(c.magic)c.scaling=Object.fromEntries(Object.entries(c.scaling).map(([key,f])=>[key,f&&f.stat==='attack'?{...f,stat:'skill'}:f]));
     this.evaluateScaling(e,c);
     c.radius = Math.min(100, c.radius || 50);
     c.range = Math.min(240, Math.max(c.range || 100, c.radius));
@@ -715,6 +777,50 @@ window.GameEntities.CombatSystem = {
       window.GameRenderer.VfxManager.addDamageNumber(e.x, e.y - 20, '+' + Math.round(hp), 'heal');
     }, { windup: 0.65, active: 0.1, recovery: 0.15, style: 'unarmed' });
   },
+  underAttack(e) {
+    if (!e) return false;
+    const now = window.GameManager.matchTime || 0;
+    if (e.combatLease > 0 || e.stunTimer > 0) return true;
+    if (now - (e.lastDamageTakenAt ?? -Infinity) < 0.75) return true;
+    if (e.action && ['attack', 'skill'].includes(e.action.kind)) return true;
+    const near = window.GameManager.spatialGrid?.queryCircle(e.x, e.y, 180) || [];
+    return near.some(t => t !== e && t.isAlive && this.isEnemy(t, e) && (t.targetEnemy === e || t.action?.target === e));
+  },
+  healthRegenRate(e, source = 'total', field = null) {
+    if (!e?.isAlive) return 0;
+    const now = window.GameManager.matchTime || 0;
+    if (source === 'idle') return (e.isMonster ? e.maxHp * ({3:.01,4:.03,5:.05}[e.tier] || 0) || 1 : 1) + this.bonusHealthRegen(e);
+    if (source === 'base') return e.isSplit ? 0 :
+      (e.targetEnemy?.isAlive && this.canSee(e,e.targetEnemy) || e.combatLease > 0 || e.action?.target && e.action.duration > e.action.elapsed ? 1 + this.bonusHealthRegen(e) : this.healthRegenRate(e,'idle'));
+    if (source === 'hot') return e.healTimer > 0 ? e.healPerSecond || 0 : 0;
+    if (source === 'nano') return window.GameEntities.RelicSystem.has(e,'nano') && now - (e.lastDamageTakenAt ?? -Infinity) >= 3 ? e.maxHp * .015 : 0;
+    if (source === 'meditation') return e.isPawn && e.meditating && e.currentHp < e.maxHp * .75 && !this.underAttack(e) ? e.maxHp * .08 : 0;
+    if (source === 'total') {
+      if (e.isSplit) return e.clones.reduce((sum,c) => sum + this.healthRegenRate(c),0);
+      // Instant heals and damage are separate from the active HP/s rate.
+      return ['base','hot','nano','meditation','blood','burst'].reduce((sum,key) => sum + this.healthRegenRate(e,key),0) +
+        this.fields.reduce((sum,f) => sum + this.healthRegenRate(e,'aura',f),0);
+    }
+    if (source === 'aura') return field?.heal && field.life > 0 && field.delay <= 0 && field.owner.isAlive &&
+      (e === field.owner || e === field.owner.allyPawn) && this.fieldContains(field,e.x,e.y) ?
+      field.heal * (e === field.owner ? 1 : .5) * (1 - Math.min(.5,e.antiHealUntil > now ? e.antiHeal || 0 : 0)) : 0;
+    if (e.isSplit || now - (e.lastHostileAt ?? -Infinity) >= 6 || window.GameEngine.MapTerrain.isInWater(e.x,e.y)) return 0;
+    const blood = this.passiveList(e).find(p => p.id === 'p_blood_body');
+    if (!blood) return 0;
+    const multiplier = 1 - Math.min(.5,Math.max(0,e.antiHealUntil > now ? e.antiHeal || 0 : 0));
+    if (source === 'blood') return Math.min(this.supportHp(e) * .012,this.passiveConfig(e,blood).regenAmount) * multiplier;
+    return e.progression?.bloodRemaining > 0 ? e.progression.bloodRate * multiplier /
+      (e.isAncientClone ? Math.max(1,e.ancientOwner.clones.filter(q => q.isAlive).length) : 1) : 0;
+  },
+  tickMeditation(e, dt) {
+    if (!e.isPawn || !e.meditating) return;
+    if (this.underAttack(e)) { e.meditating = false; e.objective = 'Thiền định bị ngắt'; return; }
+    const cap = e.maxHp * 0.75;
+    if (e.currentHp >= cap) { e.currentHp = cap; e.meditating = false; e.objective = 'Xong thiền định'; return; }
+    e.currentHp = Math.min(cap, e.currentHp + this.healthRegenRate(e,'meditation') * dt);
+    if (e.currentHp >= cap) { e.meditating = false; e.objective = 'Xong thiền định'; }
+    e.vx = e.vy = 0; e.navPath = [];
+  },
   updateStatus(e, dt) {
     if(!e.isAlive)return;
     this.tickProgression(e,dt);this.tickSpecies(e,dt);
@@ -722,15 +828,15 @@ window.GameEntities.CombatSystem = {
     if(!e.isSplit){
       const engaged=e.targetEnemy?.isAlive&&this.canSee(e,e.targetEnemy);
       const combatTime=engaged?dt:Math.min(dt,Math.max(e.combatLease||0,e.action?.target?e.action.duration-e.action.elapsed:0));
-      const rate=e.isMonster?e.maxHp*({3:.01,4:.03,5:.05}[e.tier]||0):0;
-      e.currentHp=Math.min(e.maxHp,e.currentHp+combatTime+(dt-combatTime)*(rate||1));
+      e.currentHp=Math.min(e.maxHp,e.currentHp+combatTime*(1+this.bonusHealthRegen(e))+(dt-combatTime)*this.healthRegenRate(e,'idle'));
     }
     if(e.isHiding&&!this.canHideInBush(e))e.isHiding=false;
     if(e.ccImmune)e.stunTimer=e.slowTimer=e.silenceTimer=e.panicTimer=0;
     for (const k of ['relicInterrupt','relicSlowTimer','riposteTimer','manaShieldTimer','panicTimer','auraSlowTimer','dodgeLockedTimer','armorBreakTimer','healInterruptibleTimer','stasisTimer','deathMarkTimer','globalSkillCooldown', 'combatLease', 'stunTimer', 'slowTimer', 'silenceTimer', 'speedBuffTimer', 'waterWalkTimer', 'pacifyTimer', 'weaponBuffTimer', 'stealthTimer', 'guardTimer', 'controlImmunityTimer', 'defenseCooldown', 'potionCooldown', 'attackCooldown', 'hitFlashTimer']) e[k] = Math.max(0, (e[k] || 0) - dt);
     for (const p of this.passiveList(e)) if(!e.isAncientClone)p.cooldownTimer=Math.max(0,(p.cooldownTimer||0)-dt);
     for (const s of e.skills || []) s.cooldownTimer = Math.max(0, (s.cooldownTimer || 0) - dt);
-    if (e.healTimer > 0) { const time = Math.min(dt, e.healTimer); e.currentHp = Math.min(e.maxHp, e.currentHp + e.healPerSecond * time); e.healTimer -= time; }
+    if (e.healTimer > 0) { const time = Math.min(dt, e.healTimer); e.currentHp = Math.min(e.maxHp, e.currentHp + this.healthRegenRate(e,'hot') * time); e.healTimer -= time; }
+    this.tickMeditation(e, dt);
     if(e.sporeExposure>0&&!this.fields.some(f=>f.spore&&this.fieldContains(f,e.x,e.y)))e.sporeExposure=Math.max(0,e.sporeExposure-dt);
     if(e.guardAdvanceUntil>(window.GameManager.matchTime||0)&&!e.action&&e.targetEnemy?.isAlive){const angle=Math.atan2(e.targetEnemy.y-e.y,e.targetEnemy.x-e.x);window.GameEngine.MapTerrain.moveEntity(e,Math.cos(angle)*20*dt,Math.sin(angle)*20*dt);}
     if(e.turnLockedUntil>(window.GameManager.matchTime||0))e.aimAngle=e.turnLockedAngle;if(e.armorBreakTimer<=0)e.crackOwner=null;
@@ -772,7 +878,7 @@ window.GameEntities.CombatSystem = {
       }
     }
     if (!c.trueDamage && a.currentHp < a.maxHp * 0.25) raw *= 1 + (window.GameData.Traits[a.trait]?.lowHpDamageBonus || 0);
-    const crit = !c.trueDamage && Math.random() < Math.min(0.35, (a.critChance || 0.05) + (weapon?.critChance || 0));
+    const crit = !c.trueDamage && Math.random() < this.critChance(a);
     if (crit) raw *= 1.35;
     const ambush=this.passiveList(a).find(p=>p.type==='ambush'&&p.cooldownTimer<=0);
     if(!c.trueDamage&&ambush&&window.GameEngine.MapTerrain.isInBush(a.x,a.y)){raw*=1+.2*(a.passiveMultiplier||1);ambush.cooldownTimer=ambush.cooldown;}
@@ -829,7 +935,8 @@ window.GameEntities.CombatSystem = {
     window.GameEntities.RelicSystem.afterDamage(a,t,damage,c);
     if(weapon?.onHitStun&&!t.ccImmune&&!(t.controlImmunityTimer>0)){t.stunTimer=window.GameEntities.RelicSystem.control(t,'stunTimer',weapon.onHitStun,a);t.controlImmunityTimer=3;}
     if (t.currentHp <= 0) this.handleDeath(a, t);
-    if(a.isAlive && !t.isAlive)this.progressionEvent(a,t,'kill',c);
+    const successionKill=!t.isAlive&&(t.isDemonKing||a.isDemonKing&&t===window.GameEntities.AncientSystem.original);
+    if(a.isAlive && !t.isAlive && !successionKill)this.progressionEvent(a,t,'kill',c);
     if(a.isAlive&&t.isAlive&&!c.skill&&!c.dot&&!c.reflected&&a.nextAttackStride){const step=a.nextAttackStride;a.nextAttackStride=0;const direction=Math.atan2(t.y-a.y,t.x-a.x)+(a.armamentDefense?Math.PI:Math.PI/2);M.moveEntity(a,Math.cos(direction)*step,Math.sin(direction)*step);}
     if(a.isAlive && t.isAlive) {this.triggerPassives(a,t,damage,false,c);this.triggerPassives(t,a,damage,true,c);}
     return damage;
@@ -856,8 +963,17 @@ window.GameEntities.CombatSystem = {
     if(window.GameEntities.AncientSystem.beforeDeath(victim,killer))return;
     if(victim.defId==='eternal_solar_phoenix'&&!victim.phoenixReborn){victim.phoenixReborn=true;victim.currentHp=1;victim.action=null;victim.attackState=null;victim.stasisTimer=4;victim.phoenixEgg={hp:80,until:(window.GameManager.matchTime||0)+4};window.GameRenderer.VfxManager.addEffect('rune',victim.x,victim.y,{radius:48,color:'#ffb449',life:4});return;}
     if (!victim.isAncient && victim.armor?.reviveOnce && !victim.hasRevived) { victim.hasRevived = true; victim.currentHp = victim.maxHp * 0.2; return; }
+    const duel=victim.isDemonKing||window.GameEntities.AncientSystem.demonKingFight&&victim===window.GameEntities.AncientSystem.original;
     window.GameEngine.Audio?.play('death',victim,undefined,{tier:victim.tier});
     victim.isAlive = false; victim.action = null;
+    if(duel){
+      window.GameRenderer.VfxManager.addBurstParticles(victim.x, victim.y, '#d8c4a3', 12);
+      window.GameEntities.AncientSystem.clearDuelHazards();
+      window.GameUI.CombatTicker.log('💀 ' + victim.name + ' bị hạ bởi ' + (killer?.name || 'Thiên tai') + '.');
+      if(victim.isDemonKing)window.GameEntities.AncientSystem.showDemonVictory();
+      else window.GameEntities.AncientSystem.showDemonDefeat();
+      return;
+    }
     if(victim.isMonster&&victim.tier>=4&&victim.territory)victim.territory.isCleared=true;
     window.GameRenderer.VfxManager.addBurstParticles(victim.x, victim.y, '#d8c4a3', 12);
     if (killer?.isPawn&&!victim.isAncient&&!victim.isAncientClone) { this.rewardBotKill(killer,victim);killer.currentExp += victim.isPawn ? Math.max(1,victim.level||1)*60 : victim.expReward||50; this.checkLevelUp(killer); killer.killCount = (killer.killCount || 0) + 1; window.GameAI.EmotionEngine.onKillOrLoot(killer, victim.dropTier || 'rare'); }
@@ -873,13 +989,31 @@ window.GameEntities.CombatSystem = {
     if(!Number.isFinite(p.currentExp))return;
     while (p.currentExp >= D.expForLevel(p.level+1)) {
       window.GameEngine.Audio?.play('level',p);
-      p.level++; p.unspentSkillPoints++; p.maxHp += 24; p.currentHp = p.maxHp; p.attack += 3; p.defense += 2;
+      p.level++; p.unspentSkillPoints++;
+      window.GameAI.AIBrain.handleLevelingAndSkills(p);
+      const g=this.levelGrowth(p);
+      p.maxHp += Math.round(g.hp); p.currentHp = p.maxHp; p.attack += Math.round(g.attack); p.defense += Math.round(g.defense);
+      p.critChance=(p.critChance||0)+g.crit; p.maxMana=(p.maxMana||0)+Math.round(g.mana); p.currentMana=Math.min(p.maxMana,(p.currentMana||0)+Math.max(0,Math.round(g.mana)));
+      p.skillPower=(p.skillPower||0)+Math.round(g.skill); p.hpRegen=(p.hpRegen||0)+g.hpRegen;
       window.GameRenderer.VfxManager.addEffect('heal', p.x, p.y, { radius: 36, color: '#ffe5a4', life: 0.8 });
       window.GameUI.CombatTicker.log('⭐ ' + p.name + ' lên cấp ' + p.level + ', hồi đầy máu.');
     }
   },
   dropLootOnDeath(v) {
     if (!v.isMonster || v.isAncient || v.isAncientClone) return;
+    if (v.tier === 5 && window.GameManager.demonKing) {
+      if (v.successionLooted) return;
+      v.successionLooted = true;
+      const G = window.GameManager, relics = Object.values(window.GameData.Equipments.relics);
+      const weapons = relics.filter(e => e.slot === 'weapon'), bodies = relics.filter(e => e.slot === 'body');
+      const weapon = G.spawnDropItem(v.x - 24, v.y, weapons[Math.floor(Math.random() * weapons.length)], 'weapon');
+      const armor = G.spawnDropItem(v.x + 24, v.y, bodies[Math.floor(Math.random() * bodies.length)], 'body');
+      const potions = [0, 1, 2].map(i => G.spawnDropItem(v.x + (i - 1) * 28, v.y + 36, this.potion, 'potion'));
+      for (const item of [weapon, armor, ...potions]) item.successionPrep = true;
+      const bundle = { weapon, armor, potions };
+      window.GameEntities.AncientSystem.successionLoot = bundle;
+      return;
+    }
     if (Math.random() >= [0, 0.2, 0.3, 0.4, 1, 1][v.tier]) return;
     const G = window.GameManager, D = window.GameData.Equipments;
     if (v.tier >= 4) G.spawnDropItem(v.x - 14, v.y, this.potion, 'potion');
@@ -887,8 +1021,10 @@ window.GameEntities.CombatSystem = {
     if(v.tier===5){
       const weapons=Object.values(D.weapons).filter(e=>e.tier==='god');
       const weapon=D.weapons[v.godArtifactId]||weapons[Math.floor(Math.random()*weapons.length)];
-      const armor=Object.values(D.armors).find(e=>e.tier==='god'&&e.slot==='body');
-      const helmet=Object.values(D.armors).find(e=>e.tier==='god'&&e.slot==='head');
+      const bodies=Object.values(D.armors).filter(e=>e.tier==='god'&&e.slot==='body');
+      const heads=Object.values(D.armors).filter(e=>e.tier==='god'&&e.slot==='head');
+      const armor=bodies[Math.floor(Math.random()*bodies.length)];
+      const helmet=heads[Math.floor(Math.random()*heads.length)];
       for(const [i,equipment] of [weapon,armor,helmet].entries())if(equipment)G.spawnDropItem(v.x+(i-1)*32,v.y+20,equipment,equipment.slot||'weapon');
       return;
     }

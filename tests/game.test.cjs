@@ -26,7 +26,7 @@ function loadGame(seed = 42, { openTemple = false } = {}) {
     const filename = path.join(root, 'js', relative);
     vm.runInContext(fs.readFileSync(filename, 'utf8'), context, { filename });
   }
-  context.window.__math=math;context.window.documentText=id=>elements.get(id)?.innerHTML || "";
+  context.window.__math=math;context.window.document=document;context.window.documentText=id=>elements.get(id)?.innerHTML || "";
   context.window.GameManager.init();
   if(openTemple)context.window.GameManager.monsters.filter(m=>m.tier===4).forEach(m=>m.isAlive=false);
   return context.window;
@@ -653,9 +653,9 @@ test('strong bots choose weaker opponents, time out pursuit and do not immediate
  const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,M=w.GameEngine.MapTerrain,[p,q]=G.pawns;
  G.pawns=[p,q];G.monsters=[];p.x=1000;q.x=1160;p.y=q.y=300;q.currentHp=25;
  p.personality={...p.personality,aggression:90,caution:10};p.fear=p.despair=0;
- G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));G.matchTime=1;
+ G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));G.matchTime=70;
  A.update(p,.1,G.spatialGrid,M);assert.equal(p.targetEnemy,q);assert.ok(p.chase);
- G.matchTime=40;p.action=null;A.update(p,.1,G.spatialGrid,M);
+ G.matchTime=110;p.action=null;A.update(p,.1,G.spatialGrid,M);
  assert.notEqual(p.targetEnemy,q);assert.equal(A.ignored(p,q),true);
  p.chase={target:q,started:40};q.x=p.x+A.chaseLimit(p)+1;assert.equal(A.keepChasing(p,q),false);
 });
@@ -674,7 +674,7 @@ test('ambush requires a visible full battle, safe nearby bush and attacks a pass
  G.pawns=[p,q,r,t];G.monsters=[];p.x=1120;q.x=1320;r.x=1340;t.x=1360;p.y=q.y=r.y=t.y=300;
  const bush={x:490,y:150,radius:25,isBurned:false};M.bushes.push(bush);p.decisionTime=1;
  p.trait='coward';p.personality={...p.personality,aggression:90,caution:85,greed:80,loyalty:10};
- C.reserveCombat(q,r);C.reserveCombat(r,t);G.spatialGrid.clear();[p,q,r,t].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);
+ C.reserveCombat(q,r);C.reserveCombat(r,t);G.matchTime=70;G.spatialGrid.clear();[p,q,r,t].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);
  assert.equal(p.plan?.kind,'ambush');const site=p.plan.target;p.x=site.x;p.y=site.y;A.ambush(p,site,[q,r,t],.1);
  assert.equal(p.isHiding,true);assert.equal(C.canSee(q,p),false);
  q.combatLease=r.combatLease=t.combatLease=0;q.x=p.x+20;q.currentHp=35;A.ambush(p,site,[q],.1);
@@ -711,7 +711,7 @@ test('a cautious bot still attacks a weaker bot instead of standing beside it fo
  const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,M=w.GameEngine.MapTerrain,[p,q]=G.pawns;
  G.pawns=[p,q];G.monsters=[];p.x=1000;q.x=1020;p.y=q.y=300;
  p.personality={...p.personality,aggression:26,caution:85,greed:37};p.confidence=p.fear=p.despair=0;q.currentHp=100;
- G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);
+ G.matchTime=70;G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);
  assert.equal(p.targetEnemy,q);assert.equal(p.action?.kind,'attack');
 });
 test('a low-tier monster chases a visible bot beyond its habitat and still refuses another lair',()=>{
@@ -1030,6 +1030,33 @@ test('regeneration is independent of frame size, capped, pauses and never revive
  m.isAlive=false;m.currentHp=0;C.updateStatus(m,10);assert.equal(m.currentHp,0);
  p.currentHp=20;G.isPaused=true;G.update(5);assert.equal(p.currentHp,20);
 });
+test('inspection HP/s matches active healing, reductions, expiry and monster combat rates',()=>{
+ const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,I=w.GameUI.InspectModal,[p,q]=G.pawns;
+ G.pawns=[p,q];G.monsters=[];G.matchTime=10;
+ Object.assign(p,{x:2600,y:2600,maxHp:1000,currentHp:100,skills:[],action:null,healTimer:3,healPerSecond:2.5,lastHostileAt:10,lastDamageTakenAt:0,antiHeal:.3,antiHealUntil:12,armor:w.GameData.Equipments.relics.nano});
+ p.passives=[{...w.GameData.EndgamePassives.find(d=>d.id==='p_blood_body'),tier:3,cooldownTimer:0}];p.progression={bloodRemaining:3,bloodRate:10};
+ Object.assign(q,{x:2620,y:2600,maxHp:1000,currentHp:100,skills:[],passives:[],action:null,antiHeal:.25,antiHealUntil:12});p.allyPawn=q;
+ G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));
+ const aura=C.field(p,{radius:100},p.x,p.y,{heal:8,life:3});
+ assert.ok(Math.abs(C.healthRegenRate(p)-38.8)<1e-8);assert.equal(C.healthRegenRate(q),4);
+ I.inspect(p);assert.match(w.documentText('inspect-panel'),/Hồi 38\.8 HP\/s/);
+ const hp=p.currentHp,allyHp=q.currentHp;C.updateStatus(p,.5);C.updateStatus(q,.5);C.tickFields(.5);
+ assert.ok(Math.abs((p.currentHp-hp)/.5-C.healthRegenRate(p))<1e-8);assert.ok(Math.abs((q.currentHp-allyHp)/.5-C.healthRegenRate(q))<1e-8);
+ q.x+=200;assert.equal(C.healthRegenRate(q),1);q.x=p.x;aura.delay=1;assert.equal(C.healthRegenRate(q),1);aura.delay=0;aura.life=0;assert.equal(C.healthRegenRate(q),1);
+ G.matchTime=13;assert.equal(C.healthRegenRate(p),39.5);p.lastDamageTakenAt=12;assert.equal(C.healthRegenRate(p),24.5);
+ G.matchTime=20;assert.equal(C.healthRegenRate(p),18.5);p.healTimer=0;p.armor=null;assert.equal(C.healthRegenRate(p),1);
+ p.meditating=true;p.currentHp=200;assert.equal(C.healthRegenRate(p),81);const before=p.currentHp;C.updateStatus(p,.5);assert.equal((p.currentHp-before)/.5,81);
+ p.combatLease=2;assert.equal(C.healthRegenRate(p),1);p.combatLease=0;p.currentHp=750;assert.equal(C.healthRegenRate(p),1);
+ p.isAlive=false;assert.equal(C.healthRegenRate(p),0);I.updateContent();assert.match(w.documentText('inspect-panel'),/Hồi 0 HP\/s/);
+ const m=Object.values(w.GameData.Monsters).flat().map(d=>w.GameEntities.EntityManager.spawnMonster(d,2600,2600)).find(e=>e.tier===5);
+ Object.assign(m,{maxHp:1000,currentHp:100,passives:[],skills:[],action:null,targetEnemy:null});
+ for(const [tier,rate] of [[1,1],[2,1],[3,10],[4,30],[5,50],[6,1]]){
+  m.tier=tier;m.combatLease=0;assert.equal(C.healthRegenRate(m),rate);const before=m.currentHp;C.updateStatus(m,.1);assert.ok(Math.abs((m.currentHp-before)/.1-rate)<1e-8);
+  m.combatLease=2;assert.equal(C.healthRegenRate(m),1);
+ }
+ m.tier=5;m.combatLease=0;I.inspect(m);assert.match(w.documentText('inspect-panel'),/Hồi 50 HP\/s/);
+ p.isAlive=true;m.targetEnemy=p;assert.equal(C.healthRegenRate(m),1);I.updateContent();assert.match(w.documentText('inspect-panel'),/Hồi 1 HP\/s/);
+});
 test('personality chooses breadth or mastery without weapon locks or a four-skill cap',()=>{
  const w=loadGame(),A=w.GameAI.AIBrain,[wide,deep]=w.GameManager.pawns;
  for(const [p,random] of [[wide,0],[deep,.99]]){p.skills=[];p.unspentSkillPoints=15;p.skillPreferences=Object.fromEntries(Object.values(w.GameData.Skills).flatMap(g=>g.actives).map((d,i)=>[d.id,100-i]));w.__math.random=()=>random;A.handleLevelingAndSkills(p);assert.equal(p.skills.reduce((n,s)=>n+s.tier,0),15);}
@@ -1143,6 +1170,7 @@ test('multi-hit skills record a cast once and split Mirror HP follows clone rege
  G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));const d=w.GameData.Skills.warrior.actives.find(d=>d.type==='whirlwind_aoe');p.skillsCast=1;C.resolveSkill(p,{id:d.id,def:d,tier:3},q);C.tickEffects(.4);C.tickEffects(.4);assert.equal(p.attackHistory.length,1);
  const a=ancientScenario('mirror');a.m.phase=2;a.A.resolve(a.m,a.A.config(a.m,a.m.skills.find(s=>s.def.effect==='split')),a.p,{x:a.p.x,y:a.p.y},0);
  a.m.clones.forEach(c=>{c.currentHp-=10;C.updateStatus.call(a.C,c,1);});a.A.tick(.1);assert.equal(a.m.currentHp,a.m.clones.reduce((sum,c)=>sum+c.currentHp,0));
+ assert.equal(a.C.healthRegenRate(a.m),a.m.clones.reduce((sum,c)=>sum+a.C.healthRegenRate(c),0));
 });
 
 
@@ -1195,8 +1223,8 @@ test('all bots level past 15 without a cap, with increasing EXP, stat gains and 
  const hp=p.maxHp,atk=p.attack,def=p.defense,startLevel=p.level,points=p.unspentSkillPoints;
  p.currentExp=D.expForLevel(100);C.checkLevelUp(p);assert.equal(p.level,100);
  assert.equal(G.pawns.filter(e=>e.isAlive).length,100);assert.equal(G.battleRoyaleResolved,false);
- assert.equal(p.maxHp,hp+(100-startLevel)*24);assert.equal(p.attack,atk+(100-startLevel)*3);assert.equal(p.defense,def+(100-startLevel)*2);assert.equal(p.unspentSkillPoints,points+100-startLevel);
- assert.ok(p.level>15);assert.equal(p.currentHp,p.maxHp);assert.ok(p.unspentSkillPoints>15);
+ assert.ok(p.maxHp>hp);assert.ok(p.attack>atk);assert.ok(p.defense>=def);assert.equal(p.unspentSkillPoints,0);
+ assert.ok(p.level>15);assert.equal(p.currentHp,p.maxHp);assert.ok(points>=0);
  const next=D.expForLevel(p.level+1);assert.ok(next>p.currentExp);
  assert.ok(D.expForLevel(18)-D.expForLevel(17)>D.expForLevel(17)-D.expForLevel(16));
  w.GameUI.InspectModal.inspect(p);const html=w.documentText('inspect-panel');assert.match(html,/Còn/);assert.doesNotMatch(html,/NaN|undefined|cấp tối đa/);
@@ -1230,7 +1258,7 @@ test('God rewards every top-tier equipment slot, one potion and 10000 EXP before
  const rewards=G.dropItems.filter(d=>d.slot!=='potion');assert.equal(rewards.length,3);
  assert.deepEqual(Array.from(rewards,d=>d.slot).sort(),['body','head','weapon']);assert.ok(rewards.every(d=>d.tier==='god'));
  assert.equal(G.dropItems.filter(d=>d.slot==='potion').length,1);assert.equal(w.GameEntities.AncientSystem.awakened,false);assert.equal(w.GameEntities.AncientSystem.wakeRemaining,20);
- w.GameUI.InspectModal.inspect(god);assert.match(w.documentText('inspect-panel'),/5% HP/);assert.match(w.documentText('inspect-panel'),/giáp, mũ Thần Khí/);
+  w.GameUI.InspectModal.inspect(god);assert.match(w.documentText('inspect-panel'),/Hồi 0 HP\/s/);assert.match(w.documentText('inspect-panel'),/giáp, mũ Thần Khí/);
  const count=G.dropItems.length;C.handleDeath(p,god);assert.equal(G.dropItems.length,count);assert.equal(p.currentExp-before,10000);
 });
 
@@ -1299,7 +1327,7 @@ test('all ten relics equip their actual slots and apply bounded stats, shields, 
  const bow=relicScenario('greatbow');bow.A.fields=[{effect:'acid',x:bow.m.x,y:bow.m.y,warningOnly:false}];bow.C.applyDamage(bow.p,bow.m,bow.p.weapon,{baseDamage:10});assert.equal(bow.A.fields.length,0);bow.C.applyDamage(bow.p,bow.m,bow.p.weapon,{baseDamage:10});assert.equal(bow.R.modifyDamage(bow.p,bow.m,100),120);
  const tome=relicScenario('tome');tome.p.skillsCast=1;const tier3={tier:3};tome.R.onCast(tome.p,tier3);tome.R.onCast(tome.p,tier3);assert.equal(tome.p.relicBolts.length,3);const hp=tome.m.currentHp;tome.C.updateStatus(tome.p,.5);assert.ok(tome.m.currentHp<hp);assert.equal(tome.p.relicBolts.length,0);
  const crown=relicScenario('crown');assert.equal(crown.R.incoming(crown.m,crown.p,100,{element:'fire'}),70);assert.equal(crown.R.control(crown.p,'stunTimer',2,crown.m),1);assert.equal(crown.R.control(crown.p,'stunTimer',2,crown.m),2);
- const nano=relicScenario('nano');nano.G.matchTime=5;nano.p.lastDamageTakenAt=0;nano.p.currentHp=100;nano.p.currentStamina=0;nano.p.despair=95;const max=nano.p.maxHp;nano.C.updateStatus(nano.p,1);assert.ok(Math.abs(nano.p.currentHp-(101+max*.015))<1e-8);assert.equal(nano.p.currentStamina,nano.p.maxStamina*.5);assert.equal(nano.p.relicState.nano.cooldown,40);
+ const nano=relicScenario('nano');nano.G.matchTime=5;nano.p.lastDamageTakenAt=0;nano.p.currentHp=100;nano.p.currentStamina=0;nano.p.despair=95;const max=nano.p.maxHp;const regen=1+nano.C.bonusHealthRegen(nano.p);nano.C.updateStatus(nano.p,1);assert.ok(Math.abs(nano.p.currentHp-(100+regen+max*.015))<1e-8);assert.equal(nano.p.currentStamina,nano.p.maxStamina*.5);assert.equal(nano.p.relicState.nano.cooldown,40);
  const ring=relicScenario('ring');ring.p.currentHp=100;for(let i=0;i<50;i++)ring.C.applyDamage(ring.p,ring.m,null,{baseDamage:10});assert.equal(ring.p.relicState.ring.charge,50);const x=ring.p.x;ring.C.applyDamage(ring.p,ring.m,null,{baseDamage:10});assert.equal(ring.p.relicState.ring.charge,0);assert.ok(ring.p.currentHp>100);assert.ok(ring.p.x<x);
 });
 
@@ -1492,13 +1520,13 @@ test('an attack from someone else pulls the bot off a winning target',()=>{
  G.spatialGrid.clear();[p,q,t].forEach(e=>G.spatialGrid.insert(e));
  A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);
  assert.equal(p.plan.target,q);
- p.plan={kind:'farm',target:m,until:100};p.targetEnemy=m;p.combatFocus=null;p.action=null;t.targetEnemy=null;q.targetEnemy=null;m.targetEnemy=p;
+ p.plan={kind:'farm',target:m,until:100};p.targetEnemy=m;p.combatFocus=null;p.action=null;t.targetEnemy=null;q.targetEnemy=null;q.action=null;t.action=null;m.targetEnemy=p;
  G.matchTime=8;p.decisionTime=8;G.spatialGrid.clear();[p,q,m].forEach(e=>G.spatialGrid.insert(e));
  A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);
  assert.equal(p.plan.target,m);assert.equal(p.targetEnemy,m);
 });
 test('a winning fight keeps its target and queues a wounded bot',()=>{
- const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,C=w.GameEntities.CombatSystem,[p,q,t]=G.pawns;G.pawns=[p,q,t];G.monsters=[];Object.assign(p,{x:1000,y:300,skills:[],attackCooldown:999,personality:{...w.GameData.PersonalityProfiles.brave}});Object.assign(q,{x:1060,y:300,currentHp:q.maxHp});Object.assign(t,{x:1120,y:300,currentHp:t.maxHp*.1});p.plan={kind:'duel',target:q,until:100};A.calculateWinRate=()=>.8;G.matchTime=5;p.decisionTime=5;A.rememberNext(p,[q,t]);assert.equal(p.nextTarget.target,t);assert.equal(A.holdsTarget(p),true);A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(p.plan.target,q);q.isAlive=false;A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(p.plan.target,t);assert.ok(C.isEnemy(p,t));
+ const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,C=w.GameEntities.CombatSystem,[p,q,t]=G.pawns;G.pawns=[p,q,t];G.monsters=[];Object.assign(p,{x:1000,y:300,skills:[],attackCooldown:999,personality:{...w.GameData.PersonalityProfiles.brave}});Object.assign(q,{x:1060,y:300,currentHp:q.maxHp});Object.assign(t,{x:1120,y:300,currentHp:t.maxHp*.1});p.plan={kind:'duel',target:q,until:100};A.calculateWinRate=()=>.8;G.matchTime=70;p.decisionTime=5;A.rememberNext(p,[q,t]);assert.equal(p.nextTarget.target,t);assert.equal(A.holdsTarget(p),true);A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(p.plan.target,q);q.isAlive=false;A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(p.plan.target,t);assert.ok(C.isEnemy(p,t));
 });
 test('seeing a wounded bot starts a finish even across a level gap, except extreme cowardice',()=>{
  const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,[p,q]=G.pawns;G.pawns=[p,q];G.monsters=[];Object.assign(p,{x:1000,y:300,level:4,personality:{...w.GameData.PersonalityProfiles.brave},fear:0,despair:0,confidence:70});Object.assign(q,{x:1100,y:300,level:12,currentHp:q.maxHp*.3});G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));A.calculateWinRate=()=>.2;assert.equal(A.duelEligible(p,q),true);p.personality={...p.personality,cowardice:90};assert.equal(A.duelEligible(p,q),false);
@@ -1513,7 +1541,7 @@ test('a much stronger attacker is fought until a quarter of HP is lost',()=>{
 
 test('inspection shows readable skill cards, cooldown recovery, gear stats and combined skill count',()=>{
  const w=loadGame(),I=w.GameUI.InspectModal,p=w.GameManager.pawns[0],d=w.GameData.Skills.warrior.actives[0];p.skills=[{id:d.id,def:d,tier:1,cooldownTimer:4}];p.weapon=w.GameData.Equipments.weapons.w_tempered_blade;p.passives=[w.GameEntities.CombatSystem.makePassive({name:'Hộ thể',type:'guard'})];
- I.inspect(p);const html=w.documentText('inspect-panel');assert.match(html,/Kỹ năng \(2\)/);assert.match(html,/Cấp 1/);assert.match(html,/Tấn công/);assert.match(html,/>28</);assert.match(html,/--skill-progress:50%/);assert.match(html,/skill-cooling/);assert.doesNotMatch(I.skillDescription(p,p.skills[0]),/ATK|damage|guard|Đối sách/);
+ I.inspect(p);const html=w.documentText('inspect-panel');assert.match(html,/Kỹ năng \(2\)/);assert.match(html,/Cấp 1/);assert.match(html,/Tấn công/);assert.match(html,/>24</);assert.match(html,/--skill-progress:50%/);assert.match(html,/skill-cooling/);assert.doesNotMatch(I.skillDescription(p,p.skills[0]),/ATK|damage|guard|Đối sách/);
  I.panelEl.scrollTop=430;p.thought='Suy nghĩ thay đổi';I.updateContent();assert.equal(I.panelEl.scrollTop,430);p.skills[0].cooldownTimer=0;assert.match(I.skillCard(p,p.skills[0]),/skill-ready/);assert.match(I.skillCard(p,p.skills[0]),/--skill-progress:100%/);
  const m=w.GameManager.monsters.find(e=>e.tier===5);I.inspect(m);assert.ok(w.documentText('inspect-panel').includes('Kỹ năng quái ('+(m.skills.length+m.passives.length)+')'));assert.equal(I.panelEl.scrollTop,0);
 });
@@ -1571,6 +1599,75 @@ test('auto director holds a living target for ten real seconds at every game spe
 });
 
 
+test('a safe bot below 30 percent can meditate to 75 percent and combat breaks it',()=>{
+ const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,A=w.GameAI.AIBrain,[p,q]=G.pawns,monster=G.monsters.find(m=>m.isAlive);
+ G.pawns=[p];G.monsters=[];p.x=1000;p.y=1000;p.maxHp=1000;p.currentHp=200;p.skills=[];p.passives=[];p.action=null;p.combatLease=0;p.lastHostileAt=-100;p.healthPotions=0;
+ G.matchTime=10;G.spatialGrid.clear();G.spatialGrid.insert(p);
+ A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(p.meditating,true);
+ const x=p.x,y=p.y;C.updateStatus(p,1);assert.equal(p.currentHp,281);assert.equal(p.x,x);assert.equal(p.y,y);assert.equal(p.vx,0);
+ p.currentHp=740;p.meditating=true;C.updateStatus(p,1);assert.equal(p.currentHp,750);assert.equal(p.meditating,false);
+ p.currentHp=200;p.meditating=true;p.combatLease=2;C.updateStatus(p,.1);assert.equal(p.meditating,false);
+ p.meditating=true;p.combatLease=0;p.lastDamageTakenAt=G.matchTime;C.updateStatus(p,.1);assert.equal(p.meditating,false);
+ p.currentHp=200;p.lastDamageTakenAt=-100;p.meditating=false;q.x=1100;q.y=1000;q.targetEnemy=p;q.isAlive=true;G.pawns=[p,q];G.spatialGrid.insert(q);
+ A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(p.meditating,false);
+ p.currentHp=400;q.targetEnemy=null;G.spatialGrid.clear();G.spatialGrid.insert(p);A.update(p,.1,G.spatialGrid,w.GameEngine.MapTerrain);assert.equal(p.meditating,false);
+ p.isPlayerControlled=true;p.currentStamina=0;p.maxStamina=100;G.updateBot(p,1);assert.equal(p.currentStamina,6);
+ monster.currentStamina=0;monster.maxStamina=100;G.monsters=[monster];G.updateMonsters(1);assert.equal(monster.currentStamina,4);
+});
+
+test('focused bot becomes the controlled pawn and movement works after an AI action',()=>{
+ const w=loadGame(),G=w.GameManager,p=G.pawns[4];
+ p.action={kind:'attack',elapsed:0,duration:1};p.x=1500;p.y=1500;G.selectedEntity=p;
+ assert.equal(G.togglePlayerMode(),true);assert.equal(G.playerPawn,p);assert.equal(p.isPlayerControlled,true);assert.equal(G.pawns[0].isPlayerControlled,false);assert.equal(p.action,null);
+ G.keys={w:true};const y=p.y;G.updatePlayerInput(.2);assert.ok(p.y<y);
+ G.togglePlayerMode();assert.equal(p.isPlayerControlled,false);assert.equal(G.isPlayerMode,false);
+});
+
+test('replacing a worn weapon or armor drops the previous piece',()=>{
+ const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,p=G.pawns[0],D=w.GameData.Equipments;
+ p.x=1200;p.y=1200;A.lootItem(p,G.spawnDropItem(p.x,p.y,D.weapons.w_rusty_axe));
+ const before=G.dropItems.filter(d=>!d.isCollected).length;
+ A.lootItem(p,G.spawnDropItem(p.x,p.y,D.weapons.w_tempered_blade));
+ assert.equal(p.weapon.id,'w_tempered_blade');
+ assert.equal(G.dropItems.filter(d=>!d.isCollected&&d.data.id==='w_rusty_axe').length,1);
+ assert.equal(G.dropItems.filter(d=>!d.isCollected).length,before+1);
+ const helm=D.armors.a_guard_helmet;A.lootItem(p,G.spawnDropItem(p.x,p.y,helm,'head'));
+ const better={...helm,id:'better_helm',defense:(helm.defense||0)+20,hp:(helm.hp||0)+30};
+ A.lootItem(p,G.spawnDropItem(p.x,p.y,better,'head'));
+ assert.equal(p.helmet.id,'better_helm');
+ assert.equal(G.dropItems.filter(d=>!d.isCollected&&d.data.id===helm.id).length,1);
+ const same=G.dropItems.filter(d=>!d.isCollected).length;
+ assert.equal(A.lootItem(p,G.spawnDropItem(p.x,p.y,better,'head')),false);
+ assert.equal(G.dropItems.filter(d=>!d.isCollected&&d.data.id==='better_helm').length,1);
+ assert.equal(G.dropItems.filter(d=>!d.isCollected).length,same+1);
+});
+
+test('the first minute and under-level bots farm instead of starting pawn fights',()=>{
+ const w=loadGame(),G=w.GameManager,A=w.GameAI.AIBrain,M=w.GameEngine.MapTerrain,[p,q]=G.pawns,m=G.monsters.find(e=>e.tier===1&&e.isAlive);
+ G.pawns=[p,q];G.monsters=[m];p.x=1000;q.x=1120;m.x=1040;p.y=q.y=m.y=300;p.level=q.level=3;p.skills=[];q.skills=[];
+ G.matchTime=20;G.spatialGrid.clear();[p,q,m].forEach(e=>G.spatialGrid.insert(e));
+ A.update(p,.1,G.spatialGrid,M);assert.notEqual(p.targetEnemy,q);assert.equal(p.plan?.kind,'farm');assert.equal(p.plan.target,m);
+ q.targetEnemy=p;q.action={kind:'attack',target:p,released:false};p.action=null;p.plan=null;p.targetEnemy=null;
+ G.spatialGrid.clear();[p,q,m].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);assert.equal(p.targetEnemy,q);
+ q.targetEnemy=null;q.action=null;p.action=null;p.plan=null;p.targetEnemy=null;p.chase=null;p.combatLease=0;p.evaluateAt=0;p.decisionTime=10;G.matchTime=90;p.level=2;q.level=8;
+ G.spatialGrid.clear();[p,q,m].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);
+ assert.notEqual(p.targetEnemy,q);assert.equal(p.plan?.kind,'farm');assert.match(p.decisionReason,/Cấp dưới mặt bằng/);
+ p.level=8;q.level=2;p.action=null;p.plan=null;p.targetEnemy=null;p.chase=null;p.combatLease=0;p.combatGroup=null;p.combatFocus=null;p.evaluateAt=0;p.decisionTime=20;G.monsters=[];
+ G.spatialGrid.clear();[p,q].forEach(e=>G.spatialGrid.insert(e));A.update(p,.1,G.spatialGrid,M);
+ assert.equal(A.limitsPawnFights(p),false);assert.equal(p.plan?.kind,'duel');assert.equal(p.targetEnemy,q);
+});
+
+test('10x speed and the P key toggle the auto director',()=>{
+ const w=loadGame(),G=w.GameManager,D=w.GameUI.DirectorControls,camera=w.GameEngine.Camera,handlers={};
+ w.addEventListener=(name,handler)=>{handlers[name]=handler;};G.bindInputs();
+ D.setSpeed(10);assert.equal(G.gameSpeed,10);assert.equal(G.isPaused,false);
+ const before=camera.autoDirector;
+ handlers.keydown({key:'p',repeat:false,target:{matches:()=>false},preventDefault(){}});
+ assert.equal(camera.autoDirector,!before);
+ handlers.keydown({key:'c',repeat:false,target:{matches:()=>false},preventDefault(){}});
+ assert.equal(camera.autoDirector,!before);
+});
+
 test('base plus stat scaling progresses all actives and respects low-level and boss caps',()=>{
  const w=loadGame(42,{openTemple:true}),C=w.GameEntities.CombatSystem,p=w.GameManager.pawns[0];
  for(const level of [1,5,10,15,20,100]){
@@ -1581,7 +1678,7 @@ test('base plus stat scaling progresses all actives and respects low-level and b
  }
  Object.assign(p,{attack:150,maxHp:600});const thunder=w.GameData.Skills.warrior.actives.find(d=>d.id==='w_thunder_slash');
  assert.equal(C.getSkillConfig(p,{id:thunder.id,def:thunder,tier:3}).damage,180);
- const fire=w.GameData.Skills.mage.actives.find(d=>d.id==='m_fireball');p.weapon={attack:50};assert.equal(C.getSkillConfig(p,{id:fire.id,def:fire,tier:3}).damage,220);
+ const fire=w.GameData.Skills.mage.actives.find(d=>d.id==='m_fireball');p.weapon=null;p.skillPower=200;assert.equal(C.getSkillConfig(p,{id:fire.id,def:fire,tier:3}).damage,220);
  for(const m of w.GameManager.monsters.filter(m=>m.tier>=4))for(const s of m.skills){const c=C.getSkillConfig(m,s),range=C.bossDamageRange(m);assert.ok(c.damage>=range[0]&&c.damage<=range[1]);assert.ok(c.scaling.damage.base>0&&c.scaling.damage.ratio>0);}
 });
 
@@ -1625,4 +1722,193 @@ test('progression scaling includes every passive and Blood Body respects its hea
  for(const d of w.GameData.EndgamePassives)for(let tier=1;tier<=3;tier++){const c=C.passiveConfig(p,{...d,tier});assert.ok(Object.keys(c.scaling).length>0,d.id);for(const key of Object.keys(c.scaling))assert.ok(Number.isFinite(c[key+'Amount']));}
  const d=w.GameData.EndgamePassives.find(d=>d.id==='p_blood_body'),c=C.passiveConfig(p,{...d,tier:3});assert.equal(c.regenAmount,11);assert.equal(c.burstAmount,195);assert.ok(c.burstAmount<=p.maxHp*.2);
  const reserve=w.GameData.EndgamePassives.find(d=>d.id==='p_blood_reserve');p.passives=[C.makePassive(reserve)];p.passives[0].tier=3;C.progressionEvent(p,w.GameManager.pawns[1],'strike',{actionId:1,damage:10});assert.equal(p.progression.reserve,1);
+});
+
+function crownSurvivor(seed=7){
+ const w=loadGame(seed,{openTemple:true}),G=w.GameManager,C=w.GameEntities.CombatSystem,A=w.GameAI.AIBrain,p=G.pawns[0],D=w.GameData.Equipments;
+ p.level=9;p.currentExp=2500;p.unspentSkillPoints=0;p.passivePoolOpened=true;p.maxHp=480;p.currentHp=260;p.attack=44;p.defense=21;
+ p.maxMana=160;p.currentMana=80;p.maxStamina=130;p.currentStamina=40;p.critChance=.1;p.healthPotions=4;p.fullHealthPotions=2;p.hasRevived=true;
+ p.skills=[{id:'w_thunder_slash',def:w.GameData.Skills.warrior.actives[0],tier:2,cooldownTimer:4}];
+ p.passives=[C.makePassive(w.GameData.EndgamePassives[0])];p.passives[0].tier=2;p.passives[0].cooldownTimer=3;p.skillPreferences={w_thunder_slash:80};
+ p.targetEnemy=G.pawns[1];p.action={kind:'attack'};
+ for(const relic of ['halberd','core','crown','treads']){const d=D.relics[relic];A.lootItem(p,G.spawnDropItem(p.x,p.y,d,d.slot));}
+ return {w,G,C,A,p};
+}
+
+test('succession captures the living build once, then a new match keeps exactly 100 bots',()=>{
+ const {w,G,C,p}=crownSurvivor(),before=C.combatStats(p),snap=G.captureDemonKing(p);
+ assert.equal(snap.healthPotions,3);assert.equal(snap.fullHealthPotions,0);assert.equal(snap.hasRevived,true);assert.equal(snap.level,p.level);
+ assert.equal(snap.skills[0].tier,2);assert.equal(snap.skills[0].cooldownTimer,0);assert.equal(snap.passives[0].cooldownTimer,0);
+ assert.equal(snap.currentHp,p.currentHp);assert.equal(snap.maxHp,p.maxHp);assert.equal(snap.attack,p.attack);assert.equal(snap.defense,p.defense);
+ assert.notEqual(snap.personality,p.personality);assert.notEqual(snap.weapon,p.weapon);assert.notEqual(snap.armor,p.armor);assert.notEqual(snap.skills[0],p.skills[0]);
+ assert.equal(snap.targetEnemy,undefined);assert.equal(snap.action,undefined);
+ const king=G.materializeDemonKing(snap,{x:p.x,y:p.y});
+ assert.equal(king.maxHp,p.maxHp);assert.equal(king.currentHp,p.currentHp);assert.equal(C.combatStats(king).attack,before.attack);assert.equal(C.combatStats(king).defense,before.defense);
+ king.weapon.attack=1;king.currentHp=1;king.healthPotions=0;assert.equal(snap.weapon.attack,p.weapon.attack);assert.equal(snap.currentHp,p.currentHp);assert.equal(snap.healthPotions,3);
+ G.isGameOver=true;G.winnerPawn=p;assert.equal(G.usurpDemonKing(),true);assert.equal(G.usurpDemonKing(),false);
+ assert.equal(G.pawns.length,100);assert.equal(G.pawns.filter(e=>e.isAlive).length,100);assert.equal(G.monsters.some(m=>m.isDemonKing||m.id==='demon_king'),false);
+ assert.equal(G.demonKing.appearance.skin,snap.appearance.skin);assert.equal(G.demonKing.trait,snap.trait);assert.equal(G.demonKing.healthPotions,3);
+ G.update(.1);assert.equal(G.monsters.some(m=>m.id==='demon_king'),false);
+ let previous=G.demonKing;
+ for(const name of ['Đời Hai','Đời Ba','Đời Tư']){
+  const q=G.pawns[0];q.name=name;q.level=12;q.currentHp=111;q.maxHp=400;q.isAlive=true;G.winnerPawn=q;G.isGameOver=true;
+  assert.equal(G.usurpDemonKing(),true);assert.equal(G.demonKing.name,name);assert.equal(G.demonKing.currentHp,111);assert.equal(G.demonKing.healthPotions,3);
+  assert.notEqual(G.demonKing,previous);assert.equal(G.pawns.length,100);assert.equal(G.monsters.some(m=>m.isDemonKing),false);previous=G.demonKing;
+ }
+ G.startNewMatch();assert.equal(G.demonKing,null);assert.equal(w.GameEntities.AncientSystem.boss,null);
+});
+
+test('a crowned match replaces the god drop, waits out loot, then opens one bot king',()=>{
+ const {w,G,C,p}=crownSurvivor();
+ G.isGameOver=true;G.winnerPawn=p;G.usurpDemonKing();
+ const survivor=G.pawns[0],god=w.GameEntities.EntityManager.worldBoss,A=w.GameEntities.AncientSystem,Brain=w.GameAI.AIBrain;
+ G.pawns.forEach(e=>e.isAlive=e===survivor);survivor.level=15;survivor.unspentSkillPoints=0;survivor.passivePoolOpened=true;survivor.healthPotions=5;
+ G.winnerPawn=survivor;G.battleRoyaleResolved=true;G.resultOpen=false;G.isPaused=false;G.isGameOver=false;
+ G.monsters.filter(m=>m.tier===4).forEach(m=>m.isAlive=false);
+ const exp=survivor.currentExp,drops=G.dropItems.length;C.handleDeath(survivor,god);
+ assert.equal(survivor.currentExp-exp,10000);assert.equal(A.successionLoot.potions.length,3);
+ const prep=G.dropItems.filter(d=>d.successionPrep);assert.equal(prep.length,5);assert.equal(drops+5,G.dropItems.length);
+ assert.equal(prep.filter(d=>d.slot==='weapon'&&d.tier==='ancient').length,1);assert.equal(prep.filter(d=>d.slot==='body'&&d.tier==='ancient').length,1);
+ assert.equal(prep.filter(d=>d.slot==='potion').length,3);assert.equal(prep.some(d=>d.slot==='head'||d.tier==='god'),false);
+ C.handleDeath(survivor,god);assert.equal(G.dropItems.filter(d=>d.successionPrep).length,5);assert.equal(survivor.currentExp-exp,10000);
+ for(const item of prep)assert.ok(Brain.lootValue(survivor,item)>0);
+ A.tick(20);assert.equal(A.boss,null);assert.equal(A.awakened,false);
+ G.isPaused=true;const remain=A.wakeRemaining;G.update(5);assert.equal(A.wakeRemaining,remain);G.isPaused=false;
+ for(const item of prep)Brain.lootItem(survivor,item);
+ survivor.currentHp=survivor.maxHp*.4;survivor.potionCooldown=0;assert.equal(C.usePotion(survivor),true);survivor.action=null;survivor.attackState=null;
+ A.tick(.05);const king=A.boss;
+ assert.equal(king.isDemonKing,true);assert.equal(king.isPawn,true);assert.equal(king.isMonster,undefined);assert.equal(king.isAncient,undefined);assert.equal(king.ccImmune,undefined);assert.equal(king.phase,undefined);
+ assert.equal(A.queue.length,0);assert.equal(G.pawns.includes(king),false);assert.equal(G.pawns.filter(e=>e.isAlive).length,1);
+ assert.equal(king.healthPotions,3);assert.notEqual(king.weapon,G.demonKing.weapon);assert.equal(king.skills[0].id,'w_thunder_slash');
+ king.stunTimer=2;C.updateStatus(king,.1);assert.ok(king.stunTimer>1.5);
+ king.skills=[];survivor.skills=[];king.attackCooldown=9;survivor.attackCooldown=9;king.currentMana=0;king.currentHp=king.maxHp;survivor.currentHp=survivor.maxHp;
+ G.update(1);assert.ok(Math.abs(king.currentMana-8)<.05);assert.equal(A.lightningAt,0);assert.equal(A.fields.length,0);
+ G.updateHUD();const hud=w.document.getElementById('hud-temple-status').innerText,count=w.document.getElementById('hud-pawns-count').innerText;
+ assert.match(hud,/Quỷ Vương/);assert.doesNotMatch(hud,/Phase|1\/5/);assert.equal(count,'1 / 100');
+ w.GameUI.InspectModal.inspect(king);assert.match(w.documentText('inspect-panel'),/Quỷ Vương/);assert.doesNotMatch(w.documentText('inspect-panel'),/Phase undefined|1\/5/);G.render();
+ const R=w.GameEntities.RelicSystem;survivor.x=king.x+20;survivor.y=king.y;G.spatialGrid.clear();G.spatialGrid.insert(survivor);G.spatialGrid.insert(king);
+ const kingHp=king.currentHp;survivor.relicTraps=[{x:king.x,y:king.y,life:2,next:0}];R.update(survivor,.1);assert.ok(king.currentHp<kingHp);
+ survivor.x=king.x+400;const self=king.currentHp;king.relicTraps=[{x:king.x,y:king.y,life:2,next:0}];R.update(king,.1);assert.equal(king.currentHp,self);
+ survivor.x=king.x+20;const pawnHp=survivor.currentHp;king.relicTraps=[{x:survivor.x,y:survivor.y,life:2,next:0}];R.update(king,.1);assert.ok(survivor.currentHp<pawnHp);
+ king.weapon=w.GameData.Equipments.relics.greatbow;king.helmet=king.armor=king.boots=null;const owner=king.currentHp;survivor.currentHp=survivor.maxHp;R.afterDamage(king,survivor,80,{});assert.equal(king.currentHp,owner);
+});
+
+test('the king duel has a winner, no execution reward, and retry restores the saved king',()=>{
+ const {w,G,C,p}=crownSurvivor();
+ G.isGameOver=true;G.winnerPawn=p;G.usurpDemonKing();
+ const survivor=G.pawns[0],god=w.GameEntities.EntityManager.worldBoss,A=w.GameEntities.AncientSystem,Brain=w.GameAI.AIBrain;
+ G.pawns.forEach(e=>e.isAlive=e===survivor);survivor.level=15;survivor.unspentSkillPoints=0;survivor.passivePoolOpened=true;
+ G.winnerPawn=survivor;G.battleRoyaleResolved=true;G.resultOpen=false;G.isPaused=false;G.isGameOver=false;
+ G.monsters.filter(m=>m.tier===4).forEach(m=>m.isAlive=false);
+ C.handleDeath(survivor,god);for(const item of [A.successionLoot.weapon,A.successionLoot.armor,...A.successionLoot.potions])Brain.lootItem(survivor,item);
+ A.tick(20.1);const king=A.boss;survivor.x=king.x-36;survivor.y=king.y;survivor.maxHp=survivor.currentHp=king.maxHp=king.currentHp=100000;survivor.skills=[];king.skills=[];
+ const exp=survivor.currentExp,points=survivor.unspentSkillPoints,kills=survivor.killCount;
+ let acted=false;
+ for(let i=0;i<40&&king.isAlive&&survivor.isAlive;i++){G.update(.1);if(survivor.action||king.action||survivor.attackCooldown>0||king.attackCooldown>0)acted=true;}
+ assert.equal(king.targetEnemy,survivor);assert.equal(survivor.targetEnemy,king);assert.notEqual(king.targetEnemy,king);assert.ok(acted);
+ assert.ok(Number.isFinite(king.x)&&Number.isFinite(survivor.y));assert.ok(king.x>=A.arena.x&&king.x<=A.arena.x+A.arena.w);
+ if(king.isAlive&&survivor.isAlive){
+  king.weapon=w.GameData.Equipments.relics.greatbow;king.x=survivor.x+150;king.action=null;king.attackState=null;king.attackCooldown=0;survivor.action=null;survivor.attackState=null;
+  for(let i=0;i<15&&king.isAlive&&survivor.isAlive;i++)G.update(.1);
+  assert.equal(king.targetEnemy,survivor);assert.ok(king.attackCooldown>0||king.action);
+ }
+ king.armor={reviveOnce:true,name:'Giáp hồi sinh'};king.hasRevived=false;king.currentHp=0;king.isAlive=true;C.handleDeath(survivor,king);
+ assert.equal(king.isAlive,true);assert.equal(G.isGameOver,false);const drops=G.dropItems.length;king.currentHp=0;C.handleDeath(survivor,king);
+ assert.equal(king.isAlive,false);assert.equal(G.isGameOver,true);assert.equal(survivor.currentExp,exp);assert.equal(survivor.unspentSkillPoints,points);assert.equal(survivor.killCount,kills);assert.equal(G.dropItems.length,drops);
+ assert.match(w.documentText('story-card-modal'),/Ván mới/);assert.match(w.documentText('story-card-modal'),/Tiếm ngôi quỷ vương/);assert.match(w.documentText('story-card-modal'),/type="button"/);
+ C.handleDeath(survivor,king);assert.match(w.documentText('story-card-modal'),/HẠ QUỶ VƯƠNG/);
+ const saved=G.demonKing.currentHp;king.currentHp=1;king.healthPotions=0;
+ assert.equal(G.usurpDemonKing(),true);assert.equal(G.demonKing.name,survivor.name);assert.equal(G.demonKing.healthPotions,3);assert.notEqual(G.demonKing.currentHp,saved);
+ G.isGameOver=true;G.pawns.forEach(e=>e.isAlive=false);const again=G.demonKing;G.retryDemonKing();assert.equal(G.demonKing,again);
+});
+
+test('losing to the king offers a rematch and a fresh match clears the crown',()=>{
+ const {w,G,C,p}=crownSurvivor();
+ G.isGameOver=true;G.winnerPawn=p;const crowned=p.name;G.usurpDemonKing();
+ const survivor=G.pawns[0],god=w.GameEntities.EntityManager.worldBoss,A=w.GameEntities.AncientSystem,Brain=w.GameAI.AIBrain;
+ G.pawns.forEach(e=>e.isAlive=e===survivor);survivor.level=15;survivor.unspentSkillPoints=0;survivor.passivePoolOpened=true;
+ G.winnerPawn=survivor;G.battleRoyaleResolved=true;G.resultOpen=false;G.isPaused=false;G.isGameOver=false;
+ G.monsters.filter(m=>m.tier===4).forEach(m=>m.isAlive=false);C.handleDeath(survivor,god);
+ for(const item of [A.successionLoot.weapon,A.successionLoot.armor,...A.successionLoot.potions])Brain.lootItem(survivor,item);
+ A.tick(20.1);const king=A.boss;const snapHp=G.demonKing.currentHp;king.currentHp=king.maxHp*.2;king.healthPotions=0;king.currentMana=0;
+ survivor.currentHp=0;C.handleDeath(king,survivor);assert.equal(survivor.isAlive,false);assert.equal(G.demonKing.currentHp,snapHp);assert.equal(G.demonKing.healthPotions,3);
+ const card=w.documentText('story-card-modal');assert.match(card,/Ván mới/);assert.match(card,/Khiêu chiến lại/);assert.match(card,/100 bot mới/);assert.doesNotMatch(card,/Tiếm ngôi/);
+ assert.equal(G.retryDemonKing(),true);assert.equal(G.retryDemonKing(),false);assert.equal(G.pawns.length,100);assert.equal(G.demonKing.name,crowned);assert.equal(G.demonKing.currentHp,snapHp);
+ const next=G.pawns[0];G.pawns.forEach(e=>e.isAlive=e===next);next.level=15;next.unspentSkillPoints=0;next.passivePoolOpened=true;G.winnerPawn=next;G.battleRoyaleResolved=true;G.isPaused=false;G.isGameOver=false;G.resultOpen=false;
+ G.monsters.filter(m=>m.tier===4).forEach(m=>m.isAlive=false);const boss=w.GameEntities.EntityManager.worldBoss;C.handleDeath(next,boss);
+ const loot=w.GameEntities.AncientSystem.successionLoot;assert.equal(loot.potions.length,3);
+ for(const item of [loot.weapon,loot.armor,...loot.potions])Brain.lootItem(next,item);w.GameEntities.AncientSystem.tick(20.1);
+ assert.equal(w.GameEntities.AncientSystem.boss.isDemonKing,true);assert.equal(G.monsters.filter(m=>m.isDemonKing&&m.isAlive).length,1);
+ G.startNewMatch();assert.equal(G.demonKing,null);
+ const fresh=G.pawns[0],plain=w.GameEntities.EntityManager.worldBoss;G.pawns.forEach(e=>e.isAlive=e===fresh);C.handleDeath(fresh,plain);
+ assert.equal(G.dropItems.filter(d=>d.tier==='god').length,3);assert.equal(G.dropItems.filter(d=>d.successionPrep).length,0);assert.equal(w.GameEntities.AncientSystem.demonKingFight,false);
+});
+
+test('Battle Royale and the first ancient bosses do not offer the crown',()=>{
+ const w=loadGame(),G=w.GameManager;G.pawns.forEach((e,i)=>e.isAlive=i===0);G.checkVictoryCondition();
+ assert.match(w.documentText('story-card-modal'),/btn-continue/);assert.doesNotMatch(w.documentText('story-card-modal'),/Tiếm ngôi/);
+ const a=ancientScenario('void');a.m.currentHp=0;a.C.handleDeath(a.p,a.m);a.m.currentHp=0;a.C.handleDeath(a.p,a.m);
+ assert.equal(a.G.isGameOver,false);assert.doesNotMatch(a.w.documentText('story-card-modal'),/Tiếm ngôi/);
+ a.A.victoryPending=true;a.A.finalAt=a.A.clock;a.A.defeated=5;a.A.showVictory();
+ assert.match(a.w.documentText('story-card-modal'),/đủ 5 boss/);assert.match(a.w.documentText('story-card-modal'),/Tiếm ngôi quỷ vương/);assert.match(a.w.documentText('story-card-modal'),/Ván mới/);
+});
+
+test('level growth follows the build and a weapon swap keeps those stats',()=>{
+ const w=loadGame(),C=w.GameEntities.CombatSystem,A=w.GameAI.AIBrain,D=w.GameData.Equipments;
+ const blank={caution:0,aggression:0,patience:0,curiosity:0,loyalty:0,greed:0,cowardice:0,calm:0};
+ const raise=(points)=>{
+  const p={...w.GameManager.pawns[0],personality:blank,buildPoints:points,level:1,maxHp:160,attack:16,defense:5,critChance:.05,maxMana:100,skillPower:0,hpRegen:0,currentHp:160,currentMana:100};
+  for(let i=0;i<19;i++){const g=C.levelGrowth(p);p.maxHp+=Math.round(g.hp);p.attack+=Math.round(g.attack);p.defense+=Math.round(g.defense);p.critChance+=g.crit;p.maxMana+=Math.round(g.mana);p.skillPower+=Math.round(g.skill);p.hpRegen+=g.hpRegen;}
+  return p;
+ };
+ const tank=raise({fortify:40,assassin:0,archer:0,mage:0,restore:0});
+ const mage=raise({fortify:0,assassin:0,archer:0,mage:40,restore:0});
+ assert.equal(tank.maxHp,920);assert.equal(tank.attack,35);assert.equal(tank.defense,81);assert.equal(tank.skillPower,0);
+ assert.equal(mage.maxHp,464);assert.equal(mage.attack,35);assert.equal(mage.maxMana,385);assert.equal(mage.skillPower,76);
+ assert.ok(tank.maxHp>mage.maxHp);assert.ok(mage.skillPower>tank.skillPower);
+ const live=w.GameManager.pawns[2];live.personality=blank;live.buildPoints={fortify:40,assassin:0,archer:0,mage:0,restore:0};
+ live.x=1400;live.y=1400;const hp=live.maxHp,atk=live.attack;
+ A.lootItem(live,w.GameManager.spawnDropItem(live.x,live.y,D.weapons.w_rusty_dagger));
+ assert.equal(live.maxHp,hp);assert.equal(live.attack,atk);assert.equal(live.weapon.id,'w_rusty_dagger');
+});
+
+test('bots keep the god piece that fits the build',()=>{
+ const w=loadGame(),A=w.GameAI.AIBrain,D=w.GameData.Equipments,blank={caution:0,aggression:0,patience:0,curiosity:0,loyalty:0};
+ const piece=(data,slot)=>({slot,data,tier:data.tier,name:data.name,isCollected:false});
+ const tank={personality:blank,buildPoints:{fortify:40,assassin:0,archer:0,mage:0,restore:0},armor:null,attack:16};
+ const mage={personality:blank,buildPoints:{fortify:0,assassin:0,archer:0,mage:40,restore:0},armor:null,attack:16};
+ const heavy=piece(D.armors.a_archdemon_armor,'body'),robe=piece(D.armors.a_god_vestment,'body');
+ assert.ok(A.lootValue(tank,heavy)>A.lootValue(tank,robe));
+ assert.ok(A.lootValue(mage,robe)>A.lootValue(mage,heavy));
+});
+
+test('weapon types keep separate advantages and magic skills use skill power',()=>{
+ const w=loadGame(),C=w.GameEntities.CombatSystem,D=w.GameData.Equipments.weapons;
+ const axe=D.w_infernal_axe,dagger=D.w_blood_lord_dagger,bow=D.god_solar_bow,staff=D.god_yggdrasil_staff;
+ const cd=weapon=>Math.max(.7,1/weapon.speed);
+ assert.ok(axe.attack>dagger.attack);assert.ok(cd(dagger)<cd(axe));assert.ok(cd(dagger)>=.7);
+ assert.ok(bow.range>axe.range);assert.ok(staff.skillPower>0);
+ const bare={attack:16,isPawn:true,skillPower:0};
+ assert.ok(C.combatStats({...bare,weapon:axe}).attack>C.combatStats({...bare,weapon:staff}).attack);
+ assert.ok(C.combatStats({...bare,weapon:staff}).skillPower>C.combatStats({...bare,weapon:axe}).skillPower);
+ const fire=w.GameData.Skills.mage.actives.find(d=>d.id==='m_fireball');
+ const saved=fire.t1.scaling.damage.stat;
+ const weak=C.getSkillConfig({attack:16,skillPower:20,isPawn:true},{id:fire.id,def:fire,tier:1});
+ const strong=C.getSkillConfig({attack:16,skillPower:200,isPawn:true},{id:fire.id,def:fire,tier:1});
+ assert.equal(weak.scaling.damage.stat,'skill');assert.ok(strong.damage>weak.damage);assert.equal(fire.t1.scaling.damage.stat,saved);
+ const slash=w.GameData.Skills.warrior.actives.find(d=>d.id==='w_thunder_slash');
+ assert.equal(C.getSkillConfig({attack:80,skillPower:200,isPawn:true},{id:slash.id,def:slash,tier:1}).scaling.damage.stat,'attack');
+});
+
+test('heavy armor slows movement, god bodies vary, and the crown keeps build stats',()=>{
+ const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,M=w.GameEngine.MapTerrain,p=G.pawns[0];
+ p.currentStamina=100;p.armor=null;p.helmet=null;p.weapon=null;p.boots=null;
+ const open=M.getMoveSpeed(p);p.armor=w.GameData.Equipments.armors.a_archdemon_armor;
+ assert.ok(M.getMoveSpeed(p)<open);
+ const god=G.monsters.find(m=>m.tier===5),seen=new Set();
+ for(const roll of [.01,.99]){G.dropItems.length=0;w.__math.random=()=>roll;C.dropLootOnDeath(god);seen.add(G.dropItems.find(d=>d.slot==='body').data.id);}
+ assert.ok(seen.size>=2);
+ p.skillPower=44;p.hpRegen=1.7;p.buildPoints={fortify:0,assassin:0,archer:0,mage:8,restore:0};
+ const snap=G.captureDemonKing(p),king=G.materializeDemonKing(snap,{x:10,y:10});
+ assert.equal(snap.skillPower,44);assert.equal(snap.hpRegen,1.7);assert.equal(king.skillPower,44);assert.equal(king.hpRegen,1.7);
 });

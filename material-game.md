@@ -79,7 +79,7 @@ Thiết Giáp Tê Ngưu Vương chỉ xuất hiện ở lượt này, cùng bố
 
 ### Yêu Thần
 
-Mỗi trận một con ngẫu nhiên trong bốn loài sau, tại điện thờ. Nhịp chung 2 giây. Hạ gục thưởng 10.000 EXP, một bình, vũ khí Thần Khí của loài, Thiên Miện Thần Vương và Áo Giáp Hắc Ám Archdemon.
+Mỗi trận một con ngẫu nhiên trong bốn loài sau, tại điện thờ. Nhịp chung 2 giây. Hạ gục thưởng 10.000 EXP. Trận chưa có Quỷ Vương rơi một bình, vũ khí Thần Khí của loài, một thân Thần Khí và một mũ Thần Khí. Thân và mũ rút trong ba hướng nặng, pháp và nhẹ. Trận đã có Quỷ Vương thay bộ đó bằng một vũ khí Thượng Cổ, một giáp thân Thượng Cổ và ba bình thường.
 
 | Tên | Máu | Tấn công | Giáp | Vũ khí rơi |
 | --- | ---: | ---: | ---: | --- |
@@ -167,52 +167,73 @@ Mười tám nội tại, ba bậc. Engine có trigger cho cả mười tám.
 
 ## 3. Trang bị thường
 
-Năm bậc: Thường, Hiếm, Siêu Hiếm (`super_rare`), Cực Phẩm, Thần Khí. Mỗi bậc có đúng các món dưới đây, không có bộ 50 vũ khí hay giày theo bậc. Ô giày chỉ xuất hiện ở Thượng Bảo.
+Năm bậc: Thường, Hiếm, Siêu Hiếm (`super_rare`), Cực Phẩm, Thần Khí. Mỗi bậc vũ khí giữ một loại hình. Mỗi bậc giáp có thân và mũ nặng, pháp, nhẹ. Áo Choàng Niết Bàn là thân hồi phục bậc Cực Phẩm. Không có bộ 50 món hay giày theo bậc. Ô giày chỉ xuất hiện ở Thượng Bảo.
 
-Combat cộng tấn công hoặc phép lực của vũ khí, trần 65 nếu không phải Thượng Bảo, cộng giáp, máu, mana, thể lực, chí mạng, tầm và tốc đánh. `ccImmunity` trên Long Thương chặn khống chế. Áo Choàng Niết Bàn sống lại một lần với 20% máu. Các cờ mô tả như vệt dung nham, tên nảy, hồi 4% mỗi giây, dấu tử toàn bản đồ, kháng lửa, giảm sát thương nặng và hào quang Archdemon được ghi trong data và có thể hiện ở bảng soi, nhưng combat không áp các hiệu ứng đó.
+Combat cộng `attack` của vũ khí thường. Không còn trần 65. `skillPower` chỉ vào phép, không vào đòn thường. Thượng Cổ vẫn cộng đủ `attack` hoặc `magicPower` vào đòn thường, và `magicPower` vào sức kỹ năng. Chí mạng trần 50%, sát thương chí mạng ×1,35. Hồi chiêu đánh thường vẫn sàn 0,7 giây. `moveBonus` trên mọi ô đổi tốc chạy. `ccImmunity` trên Long Thương chặn khống chế. Áo Choàng Niết Bàn sống lại một lần với 20% máu và hồi thêm 1,4 HP/giây.
 
 ### Vũ khí
 
-| Bậc | Tên | Dạng | Công hoặc phép | Tốc | Tầm |
-| --- | --- | --- | ---: | ---: | ---: |
-| Thường | Rìu Gỗ Gãy | Rìu | 12 | 0,85 | 35 |
-| Thường | Kiếm Sắt Rỉ Sét | Kiếm | 14 | 1,00 | 35 |
-| Thường | Que Đũa Phép Tre | Trượng | 15 phép | 0,90 | 90 |
-| Thường | Cung Cành Tre | Cung | 13 | 1,10 | 110 |
-| Thường | Dao Găm Rỉ Sét | Dao | 11, chí mạng 10% | 1,40 | 25 |
-| Thường | Gậy Ngắn Đa Năng | Hỗn hợp | 10 và 10 phép | 1,10 | 35 |
-| Hiếm | Kiếm Thép Luyện Rắn | Kiếm | 28, +5 giáp | 1,05 | 38 |
-| Hiếm | Trượng Thủy Tinh Xanh | Trượng | 32 phép, +30 mana | 0,95 | 100 |
-| Hiếm | Cung Sừng Hươu Nặng | Cung | 26, chí mạng 8% | 1,15 | 130 |
-| Hiếm | Dao Găm Răng Cưa | Dao | 22, chí mạng 18% | 1,50 | 28 |
-| Hiếm | Kiếm Ngắn Phép Thuật | Kiếm | 20 và 20 phép | 1,20 | 36 |
-| Siêu Hiếm | Rìu Chiến Chém Thép | Rìu | 48 | 0,90 | 40 |
-| Siêu Hiếm | Gậy Băng Trụ Vĩnh Cửu | Trượng | 54 phép | 1,00 | 110 |
-| Siêu Hiếm | Cung Bão Tố Tật Phong | Cung | 44 | 1,30 | 140 |
-| Siêu Hiếm | Dao Găm Răng Rắn Kịch Độc | Dao | 38, chí mạng 25% | 1,60 | 30 |
-| Cực Phẩm | Rìu Hủy Diệt Của Viêm Ma | Rìu | 85 | 0,95 | 48 |
-| Cực Phẩm | Trượng Hắc Báo Phẫn Nộ | Trượng | 95 phép | 1,10 | 125 |
-| Cực Phẩm | Cung Bão Tố Ưng Vương | Cung | 78, chí mạng 35% | 1,45 | 160 |
-| Cực Phẩm | Dao Găm Huyết Ma Vương | Dao | 72, chí mạng 40% | 1,80 | 32 |
-| Thần Khí | Long Thương Hỗn Độn Tận Thế | Thương | 130, miễn khống chế | 1,30 | 75 |
-| Thần Khí | Cung Thần Mặt Trời Thái Dương | Cung | 125 | 1,50 | 280 |
-| Thần Khí | Quyền Trượng Cổ Đại Yggdrasil | Trượng | 140 phép, +40 giáp | 1,20 | 130 |
-| Thần Khí | Sổ Sinh Tử Diêm La | Sách | 145 phép | 1,10 | 150 |
+| Bậc | Tên | Dạng | Công | Sức kỹ năng | Chí mạng | Tốc | Tầm |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Thường | Rìu Gỗ Gãy | Rìu | 17 | 0 | 0 | 0,75 | 42 |
+| Thường | Kiếm Sắt Rỉ Sét | Kiếm | 13 | 0 | 5% | 1,00 | 40 |
+| Thường | Que Đũa Phép Tre | Trượng | 6 | 14 | 0 | 0,95 | 100 |
+| Thường | Cung Cành Tre | Cung | 12 | 0 | 8% | 1,10 | 130 |
+| Thường | Dao Găm Rỉ Sét | Dao | 8 | 0 | 22% | 1,35 | 28 |
+| Thường | Gậy Ngắn Đa Năng | Hỗn hợp | 8 | 8 | 0 | 1,05 | 35 |
+| Hiếm | Kiếm Thép Luyện Rắn | Kiếm | 24 | 0 | 5% | 1,00 | 40 |
+| Hiếm | Trượng Thủy Tinh Xanh | Trượng | 11 | 25 | 0 | 0,95 | 108 |
+| Hiếm | Cung Sừng Hươu Nặng | Cung | 20 | 0 | 8% | 1,10 | 150 |
+| Hiếm | Dao Găm Răng Cưa | Dao | 15 | 0 | 22% | 1,35 | 28 |
+| Hiếm | Kiếm Ngắn Phép Thuật | Kiếm | 13 | 13 | 0 | 1,10 | 36 |
+| Siêu Hiếm | Rìu Chiến Chém Thép | Rìu | 48 | 0 | 0 | 0,75 | 42 |
+| Siêu Hiếm | Gậy Băng Trụ Vĩnh Cửu | Trượng | 17 | 39 | 0 | 0,95 | 112 |
+| Siêu Hiếm | Cung Bão Tố Tật Phong | Cung | 32 | 0 | 8% | 1,10 | 170 |
+| Siêu Hiếm | Dao Găm Răng Rắn Kịch Độc | Dao | 23 | 0 | 22% | 1,35 | 28 |
+| Cực Phẩm | Rìu Hủy Diệt Của Viêm Ma | Rìu | 69 | 0 | 0 | 0,75 | 42 |
+| Cực Phẩm | Trượng Hắc Báo Phẫn Nộ | Trượng | 24 | 56 | 0 | 0,95 | 116 |
+| Cực Phẩm | Cung Bão Tố Ưng Vương | Cung | 46 | 0 | 8% | 1,10 | 185 |
+| Cực Phẩm | Dao Găm Huyết Ma Vương | Dao | 33 | 0 | 22% | 1,35 | 28 |
+| Thần Khí | Long Thương Hỗn Độn Tận Thế | Thương | 78, miễn khống chế | 0 | 4% | 1,00 | 72 |
+| Thần Khí | Cung Thần Mặt Trời Thái Dương | Cung | 64 | 0 | 8% | 1,10 | 200 |
+| Thần Khí | Quyền Trượng Cổ Đại Yggdrasil | Trượng | 34 | 78 | 0 | 0,95 | 120 |
+| Thần Khí | Sổ Sinh Tử Diêm La | Sách | 28 | 90 | 0 | 0,95 | 150 |
 
 ### Giáp và mũ
 
-| Bậc | Tên | Ô | Giáp | Máu |
-| --- | --- | --- | ---: | ---: |
-| Thường | Nón Rơm Rách | Đầu | 2 | 20 |
-| Thường | Áo Vải Gai Thô | Thân | 5 | 40 |
-| Hiếm | Mũ Nồi Thép Lính Tuần | Đầu | 10 | 60 |
-| Hiếm | Giáp Da Bọc Đinh Sắt | Thân | 18 | 120 |
-| Siêu Hiếm | Mũ Sắt Rồng Bay | Đầu | 22 | 160 |
-| Siêu Hiếm | Giáp Tấm Thép Cường Lực | Thân | 38 | 280 |
-| Cực Phẩm | Vương Miện Viêm Đế | Đầu | 35 | 300 |
-| Cực Phẩm | Áo Choàng Niết Bàn | Thân | 50 | 450 |
-| Thần Khí | Thiên Miện Thần Vương | Đầu | 60 | 600 |
-| Thần Khí | Áo Giáp Hắc Ám Archdemon | Thân | 85 | 1000 |
+| Bậc | Tên | Ô | Hướng | Giáp | Máu | Phần thêm |
+| --- | --- | --- | --- | ---: | ---: | --- |
+| Thường | Mũ Sắt Thô | Đầu | Nặng | 6 | 63 | tốc −1% |
+| Thường | Mũ Vải Học Việc | Đầu | Pháp | 1 | 21 | +12 mana, +3 sức kỹ năng |
+| Thường | Nón Rơm Rách | Đầu | Nhẹ | 2 | 27 | +1% chí mạng, tốc +1% |
+| Thường | Giáp Gỗ Bọc Sắt | Thân | Nặng | 11 | 135 | tốc −2% |
+| Thường | Áo Vải Gai Thô | Thân | Pháp | 3 | 42 | +18 mana, +5 sức kỹ năng, hồi chiêu −1,2% |
+| Thường | Áo Da Mỏng | Thân | Nhẹ | 4 | 63 | +1,2% chí mạng, tốc +1,2% |
+| Hiếm | Mũ Nồi Thép Lính Tuần | Đầu | Nặng | 13 | 126 | tốc −2% |
+| Hiếm | Vòng Ngọc Học Giả | Đầu | Pháp | 2 | 42 | +24 mana, +7 sức kỹ năng |
+| Hiếm | Mũ Trùm Thợ Săn | Đầu | Nhẹ | 4 | 54 | +1,8% chí mạng, tốc +1,8% |
+| Hiếm | Giáp Đai Sắt | Thân | Nặng | 21 | 270 | tốc −4% |
+| Hiếm | Áo Học Giả | Thân | Pháp | 5 | 84 | +36 mana, +11 sức kỹ năng, hồi chiêu −2,4% |
+| Hiếm | Giáp Da Bọc Đinh Sắt | Thân | Nhẹ | 8 | 126 | +2,4% chí mạng, tốc +2,4% |
+| Siêu Hiếm | Mũ Sắt Rồng Bay | Đầu | Nặng | 21 | 210 | tốc −3% |
+| Siêu Hiếm | Vòng Rune | Đầu | Pháp | 4 | 70 | +40 mana, +11 sức kỹ năng |
+| Siêu Hiếm | Mũ Trùm Ưng | Đầu | Nhẹ | 7 | 90 | +3% chí mạng, tốc +3% |
+| Siêu Hiếm | Giáp Tấm Thép Cường Lực | Thân | Nặng | 35 | 450 | tốc −6% |
+| Siêu Hiếm | Áo Lụa Phù Thủy | Thân | Pháp | 9 | 140 | +60 mana, +18 sức kỹ năng, hồi chiêu −4% |
+| Siêu Hiếm | Áo Da Bóng | Thân | Nhẹ | 14 | 210 | +4% chí mạng, tốc +4% |
+| Cực Phẩm | Vương Miện Viêm Đế | Đầu | Nặng | 30 | 302 | tốc −4% |
+| Cực Phẩm | Miện Tiên Tri | Đầu | Pháp | 6 | 101 | +58 mana, +16 sức kỹ năng |
+| Cực Phẩm | Mũ Trùm Cuồng Phong | Đầu | Nhẹ | 10 | 130 | +4,3% chí mạng, tốc +4,3% |
+| Cực Phẩm | Giáp Bạo Chúa | Thân | Nặng | 50 | 648 | tốc −9% |
+| Cực Phẩm | Áo Tinh Tú | Thân | Pháp | 13 | 202 | +86 mana, +26 sức kỹ năng, hồi chiêu −5,8% |
+| Cực Phẩm | Áo Đêm | Thân | Nhẹ | 20 | 302 | +5,8% chí mạng, tốc +5,8% |
+| Cực Phẩm | Áo Choàng Niết Bàn | Thân | Hồi phục | 26 | 340 | Sống lại với 20% HP một lần, +1,4 HP/giây |
+| Thần Khí | Thiên Miện Thần Vương | Đầu | Nặng | 42 | 420 | tốc −6% |
+| Thần Khí | Miện Pháp Thần | Đầu | Pháp | 8 | 140 | +80 mana, +22 sức kỹ năng |
+| Thần Khí | Mặt Nạ Thần Hành | Đầu | Nhẹ | 14 | 180 | +6% chí mạng, tốc +6% |
+| Thần Khí | Áo Giáp Hắc Ám Archdemon | Thân | Nặng | 70 | 900 | tốc −12% |
+| Thần Khí | Pháp Bào Thần | Thân | Pháp | 18 | 280 | +120 mana, +36 sức kỹ năng, hồi chiêu −8% |
+| Thần Khí | Áo Choàng Thần Tốc | Thân | Nhẹ | 28 | 420 | +8% chí mạng, tốc +8% |
 
 Bình máu thường hồi 35% HP, trần 220. Không phải trang bị.
 
@@ -230,7 +251,7 @@ Năm boss, mỗi boss sáu nội tại và sáu chiêu. Thanh máu một bằng 
 
 Phản Chiếu chạy cùng tốc người sống sót và sao chép mana, thể lực, chí mạng, ngoại hình, kỹ năng. Phân thân phase 2 mang một nửa chỉ số và chia vai ép gần hoặc khống chế. Zero Protocol phase 2 bỏ cooldown riêng từng chiêu nhưng vẫn giữ nhịp 1 giây; sau ba chiêu phải xả nhiệt. Phá lõi lúc Tự Hủy đang niệm sẽ ngắt vụ nổ.
 
-Mỗi boss rơi một Thượng Bảo chưa dùng trong trận. Không thay Thượng Bảo bằng đồ bậc thấp. Phần cộng chỉ số có hiệu lực thật, không bị trần 65 của vũ khí thường.
+Mỗi boss rơi một Thượng Bảo chưa dùng trong trận. Không thay Thượng Bảo bằng đồ bậc thấp. Phần cộng chỉ số có hiệu lực thật. Vũ khí thường không còn trần 65.
 
 | Món | Ô | Hiệu lực đang chạy |
 | --- | --- | --- |

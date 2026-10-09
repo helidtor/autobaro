@@ -24,18 +24,17 @@ window.GameData.Equipments = {
 
   // Danh mục Vũ khí
   weapons: {
-    // 3.1. BẬC THƯỜNG (Common)
+    // Công theo loại, không còn trần chung. Tốc dưới 1,43 để không dính sàn hồi chiêu 0,7 giây.
     w_rusty_axe: {
       id: 'w_rusty_axe',
       name: 'Rìu Gỗ Gãy',
       type: 'axe',
       classReq: 'warrior',
       tier: 'common',
-      attack: 12,
-      speed: 0.85,
-      range: 35,
-      weight: 'heavy',
-      desc: 'Chiếc rìu thô sơ chém chậm nhưng có lực.'
+      attack: 17,
+      speed: 0.75,
+      range: 42,
+      desc: 'Chém chậm, mỗi nhát nặng hơn kiếm và dao cùng bậc.'
     },
     w_rusty_sword: {
       id: 'w_rusty_sword',
@@ -43,11 +42,11 @@ window.GameData.Equipments = {
       type: 'sword',
       classReq: 'warrior',
       tier: 'common',
-      attack: 14,
-      speed: 1.0,
-      range: 35,
-      weight: 'medium',
-      desc: 'Thanh kiếm cùn nhặt từ bãi phế tích.'
+      attack: 13,
+      critChance: 0.05,
+      speed: 1,
+      range: 40,
+      desc: 'Nhịp và sức đánh ở giữa rìu và dao.'
     },
     w_wooden_wand: {
       id: 'w_wooden_wand',
@@ -55,11 +54,11 @@ window.GameData.Equipments = {
       type: 'staff',
       classReq: 'mage',
       tier: 'common',
-      magicPower: 15,
-      speed: 0.9,
-      range: 90,
-      weight: 'light',
-      desc: 'Cành tre khô dẫn truyền một chút ma lực.'
+      attack: 6,
+      skillPower: 14,
+      speed: 0.95,
+      range: 100,
+      desc: 'Đòn thường yếu. Sức kỹ năng dùng cho phép.'
     },
     w_crude_bow: {
       id: 'w_crude_bow',
@@ -67,11 +66,11 @@ window.GameData.Equipments = {
       type: 'bow',
       classReq: 'archer',
       tier: 'common',
-      attack: 13,
+      attack: 12,
+      critChance: 0.08,
       speed: 1.1,
-      range: 110,
-      weight: 'light',
-      desc: 'Cung buộc dây dừa đơn sơ săn bắt thỏ hoang.'
+      range: 130,
+      desc: 'Sát thương duy trì vừa, tầm xa hơn mọi vũ khí cận chiến.'
     },
     w_rusty_dagger: {
       id: 'w_rusty_dagger',
@@ -79,12 +78,11 @@ window.GameData.Equipments = {
       type: 'dagger',
       classReq: 'assassin',
       tier: 'common',
-      attack: 11,
-      critChance: 0.1,
-      speed: 1.4,
-      range: 25,
-      weight: 'very_light',
-      desc: 'Mũi dao găm sứt mẻ chuyên dùng rạch bao tải.'
+      attack: 8,
+      critChance: 0.22,
+      speed: 1.35,
+      range: 28,
+      desc: 'Mỗi nhát yếu, ra đòn nhanh và nhiều chí mạng.'
     },
     w_hybrid_cane: {
       id: 'w_hybrid_cane',
@@ -92,12 +90,11 @@ window.GameData.Equipments = {
       type: 'hybrid_cane',
       classReq: 'hybrid',
       tier: 'common',
-      attack: 10,
-      magicPower: 10,
-      speed: 1.1,
+      attack: 8,
+      skillPower: 8,
+      speed: 1.05,
       range: 35,
-      weight: 'medium',
-      desc: 'Vũ khí cân bằng đấm cận chiến và dẫn truyền phép.'
+      desc: 'Nửa sức kiếm, nửa sức phép của trượng cùng bậc.'
     },
 
     // 3.2. BẬC HIẾM (Rare)
@@ -107,12 +104,11 @@ window.GameData.Equipments = {
       type: 'sword',
       classReq: 'warrior',
       tier: 'rare',
-      attack: 28,
-      defense: 5,
-      speed: 1.05,
-      range: 38,
-      weight: 'medium',
-      desc: '+15 Sát thương vật lý, thép tôi dầu bền bỉ.'
+      attack: 24,
+      critChance: 0.05,
+      speed: 1,
+      range: 40,
+      desc: 'Kiếm hiếm, nhịp đều và lực ở giữa rìu với dao.'
     },
     w_crystal_staff: {
       id: 'w_crystal_staff',
@@ -120,12 +116,11 @@ window.GameData.Equipments = {
       type: 'staff',
       classReq: 'mage',
       tier: 'rare',
-      magicPower: 32,
-      manaMax: 30,
+      attack: 11,
+      skillPower: 25,
       speed: 0.95,
-      range: 100,
-      weight: 'light',
-      desc: '+20 Sát thương phép, ngọc xanh tích tụ linh khí.'
+      range: 108,
+      desc: 'Đòn thường thấp. Sức kỹ năng cao hơn kiếm cùng bậc.'
     },
     w_stag_bow: {
       id: 'w_stag_bow',
@@ -133,12 +128,11 @@ window.GameData.Equipments = {
       type: 'bow',
       classReq: 'archer',
       tier: 'rare',
-      attack: 26,
+      attack: 20,
       critChance: 0.08,
-      speed: 1.15,
-      range: 130,
-      weight: 'light',
-      desc: '+16 Sát thương, cánh cung đàn hồi từ gạc hươu rừng.'
+      speed: 1.1,
+      range: 150,
+      desc: 'Bắn xa, sát thương mỗi phát ở mức duy trì.'
     },
     w_serrated_dagger: {
       id: 'w_serrated_dagger',
@@ -146,13 +140,11 @@ window.GameData.Equipments = {
       type: 'dagger',
       classReq: 'assassin',
       tier: 'rare',
-      attack: 22,
-      critChance: 0.18,
-      speed: 1.5,
+      attack: 15,
+      critChance: 0.22,
+      speed: 1.35,
       range: 28,
-      weight: 'very_light',
-      bleedOnHit: 0.02,
-      desc: '+12 Sát thương, đòn đánh có 10% gây chảy máu.'
+      desc: 'Nhát yếu, tốc đánh cao và 22% chí mạng.'
     },
     w_enchanted_shortblade: {
       id: 'w_enchanted_shortblade',
@@ -160,12 +152,11 @@ window.GameData.Equipments = {
       type: 'sword',
       classReq: 'hybrid',
       tier: 'rare',
-      attack: 20,
-      magicPower: 20,
-      speed: 1.2,
+      attack: 13,
+      skillPower: 13,
+      speed: 1.1,
       range: 36,
-      weight: 'medium',
-      desc: '+10 Công vật lý, +10 Phép, cân bằng hoàn hảo.'
+      desc: 'Chia đều công vật lý và sức kỹ năng.'
     },
 
     // 3.3. BẬC SIÊU HIẾM (Super Rare)
@@ -176,12 +167,9 @@ window.GameData.Equipments = {
       classReq: 'warrior',
       tier: 'super_rare',
       attack: 48,
-      speed: 0.9,
-      range: 40,
-      weight: 'heavy',
-      passive: 'Đòn đánh thường trừ 5 giáp địch, cộng dồn 4 lần',
-      armorShredPerHit: 5,
-      desc: 'Rìu chiến khổng lồ chém nát khiên giáp đối thủ.'
+      speed: 0.75,
+      range: 42,
+      desc: 'Rìu siêu hiếm. Một nhát nặng, hồi chiêu dài.'
     },
     w_frost_pillar_staff: {
       id: 'w_frost_pillar_staff',
@@ -189,13 +177,11 @@ window.GameData.Equipments = {
       type: 'staff',
       classReq: 'mage',
       tier: 'super_rare',
-      magicPower: 54,
-      speed: 1.0,
-      range: 110,
-      weight: 'light',
-      passive: 'Kỹ năng phép làm chậm tăng thêm 20%',
-      bonusSlowPct: 0.2,
-      desc: 'Gậy kết tinh từ băng bắc địa ngưng đọng thời gian.'
+      attack: 17,
+      skillPower: 39,
+      speed: 0.95,
+      range: 112,
+      desc: 'Phần lớn sức nằm ở kỹ năng, không ở đòn thường.'
     },
     w_tempest_bow: {
       id: 'w_tempest_bow',
@@ -203,13 +189,11 @@ window.GameData.Equipments = {
       type: 'bow',
       classReq: 'archer',
       tier: 'super_rare',
-      attack: 44,
-      speed: 1.3,
-      range: 140,
-      weight: 'light',
-      passive: 'Mỗi phát bắn tăng 4% tốc chạy trong 2s (cộng dồn 5 lần)',
-      speedOnShoot: 0.04,
-      desc: 'Cung gió thần tốc giúp cung thủ lướt nhẹ trên chiến trường.'
+      attack: 32,
+      critChance: 0.08,
+      speed: 1.1,
+      range: 170,
+      desc: 'Tầm bắn dài, nhịp bắn ổn định.'
     },
     w_viper_venom_dagger: {
       id: 'w_viper_venom_dagger',
@@ -217,14 +201,11 @@ window.GameData.Equipments = {
       type: 'dagger',
       classReq: 'assassin',
       tier: 'super_rare',
-      attack: 38,
-      critChance: 0.25,
-      speed: 1.6,
-      range: 30,
-      weight: 'very_light',
-      passive: 'Tấn công mục tiêu dính độc hồi 5 HP cho bản thân',
-      poisonLeechHp: 5,
-      desc: 'Lưỡi dao nhúng nọc mãng xà đầm lầy xanh lét.'
+      attack: 23,
+      critChance: 0.22,
+      speed: 1.35,
+      range: 28,
+      desc: 'Dao siêu hiếm, nhanh và nhiều chí mạng hơn rìu.'
     },
 
     // 3.4. BẬC CỰC PHẨM (Supreme - Rơi từ Yêu Vương)
@@ -234,13 +215,10 @@ window.GameData.Equipments = {
       type: 'axe',
       classReq: 'warrior',
       tier: 'supreme',
-      attack: 85,
-      speed: 0.95,
-      range: 48,
-      weight: 'heavy',
-      passive: 'Tạo vệt dung nham cháy rực dưới chân mỗi nhát bổ',
-      lavaSlash: true,
-      desc: 'Rìu khổng lồ rỉ dung nham cháy xèo xèo từ Viêm Ma Bạo Chúa.'
+      attack: 69,
+      speed: 0.75,
+      range: 42,
+      desc: 'Rìu cực phẩm. Nhát mạnh nhất bậc này, ra đòn chậm nhất.'
     },
     w_black_panther_staff: {
       id: 'w_black_panther_staff',
@@ -248,13 +226,11 @@ window.GameData.Equipments = {
       type: 'staff',
       classReq: 'mage',
       tier: 'supreme',
-      magicPower: 95,
-      speed: 1.1,
-      range: 125,
-      weight: 'light',
-      passive: 'Kỹ năng diện rộng AoE tăng gấp rưỡi bán kính tác động (+50%)',
-      aoeRadiusBonus: 0.5,
-      desc: 'Trượng khảm linh hồn hắc báo khuếch đại ma pháp khủng khiếp.'
+      attack: 24,
+      skillPower: 56,
+      speed: 0.95,
+      range: 116,
+      desc: 'Sức kỹ năng áp đảo đòn thường.'
     },
     w_thunderbird_bow: {
       id: 'w_thunderbird_bow',
@@ -262,14 +238,11 @@ window.GameData.Equipments = {
       type: 'bow',
       classReq: 'archer',
       tier: 'supreme',
-      attack: 78,
-      critChance: 0.35,
-      speed: 1.45,
-      range: 160,
-      weight: 'light',
-      passive: 'Mũi tên biến thành tia chớp giật nảy 3 mục tiêu xung quanh',
-      chainLightningArrow: 3,
-      desc: 'Mũi tên tích điện giật tung chiến trường từ Ưng Vương Sấm Sét.'
+      attack: 46,
+      critChance: 0.08,
+      speed: 1.1,
+      range: 185,
+      desc: 'Cung cực phẩm, giữ lợi thế tầm xa.'
     },
     w_blood_lord_dagger: {
       id: 'w_blood_lord_dagger',
@@ -277,14 +250,11 @@ window.GameData.Equipments = {
       type: 'dagger',
       classReq: 'assassin',
       tier: 'supreme',
-      attack: 72,
-      critChance: 0.40,
-      speed: 1.8,
-      range: 32,
-      weight: 'very_light',
-      passive: 'Hút 25% máu gây ra chuyển hóa thành khiên ảo cho sát thủ',
-      bloodShieldLeech: 0.25,
-      desc: 'Lưỡi dao thèm khát máu tươi cướp sinh lực đối thủ thành lá chắn.'
+      attack: 33,
+      critChance: 0.22,
+      speed: 1.35,
+      range: 28,
+      desc: 'Dao cực phẩm, nhiều nhát và 22% chí mạng.'
     },
 
     // 3.5. BẬC THẦN KHÍ (God Artifacts - Độc nhất vô nhị từ World Boss)
@@ -294,14 +264,12 @@ window.GameData.Equipments = {
       type: 'spear',
       classReq: 'all',
       tier: 'god',
-      attack: 130,
-      speed: 1.3,
-      range: 75,
-      weight: 'divine',
-      passive: 'Đòn đánh quét tia năng lượng tím 8m mang SÁT THƯƠNG CHUẨN. Miễn nhiễm hoàn toàn mọi khống chế cứng.',
-      trueDamageBeam: true,
+      attack: 78,
+      critChance: 0.04,
+      speed: 1,
+      range: 72,
       ccImmunity: true,
-      desc: 'Thần khí tối cao từ Thái Cổ Hỗn Độn Ma Long, biến người cầm thành chiến thần.'
+      desc: 'Thương tầm trung. Miễn khống chế cứng khi đang cầm.'
     },
     god_solar_bow: {
       id: 'god_solar_bow',
@@ -309,14 +277,11 @@ window.GameData.Equipments = {
       type: 'bow',
       classReq: 'all',
       tier: 'god',
-      attack: 125,
-      speed: 1.5,
-      range: 280, // Gần như toàn màn hình
-      weight: 'divine',
-      passive: 'Tầm bắn bao quát toàn camera. Mũi tên nổ thành biển lửa thiêu đốt 5% máu tối đa/giây.',
-      infiniteRange: true,
-      solarBurnDot: 0.05,
-      desc: 'Thần khí từ Viêm Đế Phượng Hoàng, thiêu rụi mọi thứ trong tầm mắt.'
+      attack: 64,
+      critChance: 0.08,
+      speed: 1.1,
+      range: 200,
+      desc: 'Cung Thần Khí. Tầm 200, sát thương duy trì ngang rìu chậm.'
     },
     god_yggdrasil_staff: {
       id: 'god_yggdrasil_staff',
@@ -324,15 +289,11 @@ window.GameData.Equipments = {
       type: 'staff',
       classReq: 'all',
       tier: 'god',
-      magicPower: 140,
-      defense: 40,
-      speed: 1.2,
-      range: 130,
-      weight: 'divine',
-      passive: 'Tự hồi phục 4% máu và mana mỗi giây. Rễ cây gai tự động mọc lên trói và đâm nát kẻ địch trong bán kính 12m.',
-      regenAllPercent: 0.04,
-      autoRootsAoe: true,
-      desc: 'Thần khí từ Tru Tiên Thần Cây, sức mạnh sinh sôi bất diệt của đại ngàn.'
+      attack: 34,
+      skillPower: 78,
+      speed: 0.95,
+      range: 120,
+      desc: 'Đòn thường thấp, sức kỹ năng cao cho phép.'
     },
     god_death_tome: {
       id: 'god_death_tome',
@@ -340,13 +301,11 @@ window.GameData.Equipments = {
       type: 'tome',
       classReq: 'all',
       tier: 'god',
-      magicPower: 145,
-      speed: 1.1,
+      attack: 28,
+      skillPower: 90,
+      speed: 0.95,
       range: 150,
-      weight: 'divine',
-      passive: 'Tự động đánh dấu tử thần lên bot có máu cao nhất. Mỗi 10s giáng sét rút 20% máu bất kể khoảng cách.',
-      deathMarkGlobal: true,
-      desc: 'Thần khí phán quyết sinh tử từ U Minh Diêm La Vương.'
+      desc: 'Sách Thần Khí. Đòn thường yếu nhất, sức kỹ năng cao nhất.'
     }
   },
 
@@ -384,24 +343,41 @@ window.GameData.Equipments = {
 
   // Danh mục Đồ Phòng Thủ (Paperdoll Helmets & Armors)
   armors: {
-    // Thường
-    a_straw_hat: { id: 'a_straw_hat', slot: 'head', name: 'Nón Rơm Rách', tier: 'common', defense: 2, hp: 20 },
-    a_cloth_robe: { id: 'a_cloth_robe', slot: 'body', name: 'Áo Vải Gai Thô', tier: 'common', defense: 5, hp: 40 },
+    // Cùng bậc có thân/mũ nặng, pháp và nhẹ. Áo Choàng Niết Bàn là thân hồi phục bậc Cực Phẩm.
+    a_iron_cap: { id: 'a_iron_cap', slot: 'head', name: 'Mũ Sắt Thô', tier: 'common', defense: 6, hp: 63, moveBonus: -0.01, desc: 'Mũ nặng. Nhiều máu và giáp, chạy chậm hơn.' },
+    a_apprentice_hood: { id: 'a_apprentice_hood', slot: 'head', name: 'Mũ Vải Học Việc', tier: 'common', defense: 1, hp: 21, manaMax: 12, skillPower: 3, desc: 'Mũ pháp. Ít máu, thêm mana và sức kỹ năng.' },
+    a_straw_hat: { id: 'a_straw_hat', slot: 'head', name: 'Nón Rơm Rách', tier: 'common', defense: 2, hp: 27, critChance: 0.01, moveBonus: 0.01, desc: 'Mũ nhẹ. Ít máu, thêm chí mạng và tốc chạy.' },
+    a_wood_plate: { id: 'a_wood_plate', slot: 'body', name: 'Giáp Gỗ Bọc Sắt', tier: 'common', defense: 11, hp: 135, moveBonus: -0.02, desc: 'Giáp nặng. Nhiều máu, chậm.' },
+    a_cloth_robe: { id: 'a_cloth_robe', slot: 'body', name: 'Áo Vải Gai Thô', tier: 'common', defense: 3, hp: 42, manaMax: 18, skillPower: 5, cooldownReduction: 0.012, desc: 'Áo pháp. Ít máu, hỗ trợ phép.' },
+    a_hide_wrap: { id: 'a_hide_wrap', slot: 'body', name: 'Áo Da Mỏng', tier: 'common', defense: 4, hp: 63, critChance: 0.012, moveBonus: 0.012, desc: 'Giáp nhẹ. Máu vừa, nhanh và nhiều chí mạng hơn.' },
 
-    // Hiếm
-    a_guard_helmet: { id: 'a_guard_helmet', slot: 'head', name: 'Mũ Nồi Thép Lính Tuần', tier: 'rare', defense: 10, hp: 60 },
-    a_studded_leather: { id: 'a_studded_leather', slot: 'body', name: 'Giáp Da Bọc Đinh Sắt', tier: 'rare', defense: 18, hp: 120 },
+    a_guard_helmet: { id: 'a_guard_helmet', slot: 'head', name: 'Mũ Nồi Thép Lính Tuần', tier: 'rare', defense: 13, hp: 126, moveBonus: -0.02, desc: 'Mũ nặng bậc Hiếm.' },
+    a_jade_circlet: { id: 'a_jade_circlet', slot: 'head', name: 'Vòng Ngọc Học Giả', tier: 'rare', defense: 2, hp: 42, manaMax: 24, skillPower: 7, desc: 'Mũ pháp bậc Hiếm.' },
+    a_hunter_hood: { id: 'a_hunter_hood', slot: 'head', name: 'Mũ Trùm Thợ Săn', tier: 'rare', defense: 4, hp: 54, critChance: 0.018, moveBonus: 0.018, desc: 'Mũ nhẹ bậc Hiếm.' },
+    a_band_plate: { id: 'a_band_plate', slot: 'body', name: 'Giáp Đai Sắt', tier: 'rare', defense: 21, hp: 270, moveBonus: -0.04, desc: 'Giáp nặng bậc Hiếm.' },
+    a_scholar_robe: { id: 'a_scholar_robe', slot: 'body', name: 'Áo Học Giả', tier: 'rare', defense: 5, hp: 84, manaMax: 36, skillPower: 11, cooldownReduction: 0.024, desc: 'Áo pháp bậc Hiếm.' },
+    a_studded_leather: { id: 'a_studded_leather', slot: 'body', name: 'Giáp Da Bọc Đinh Sắt', tier: 'rare', defense: 8, hp: 126, critChance: 0.024, moveBonus: 0.024, desc: 'Giáp nhẹ bậc Hiếm.' },
 
-    // Siêu Hiếm
-    a_dragon_iron_helm: { id: 'a_dragon_iron_helm', slot: 'head', name: 'Mũ Sắt Rồng Bay', tier: 'super_rare', defense: 22, hp: 160, fireResist: 0.2 },
-    a_reinforced_plate: { id: 'a_reinforced_plate', slot: 'body', name: 'Giáp Tấm Thép Cường Lực', tier: 'super_rare', defense: 38, hp: 280, heavyDmgReduction: 25 },
+    a_dragon_iron_helm: { id: 'a_dragon_iron_helm', slot: 'head', name: 'Mũ Sắt Rồng Bay', tier: 'super_rare', defense: 21, hp: 210, moveBonus: -0.03, desc: 'Mũ nặng bậc Siêu Hiếm.' },
+    a_rune_circlet: { id: 'a_rune_circlet', slot: 'head', name: 'Vòng Rune', tier: 'super_rare', defense: 4, hp: 70, manaMax: 40, skillPower: 11, desc: 'Mũ pháp bậc Siêu Hiếm.' },
+    a_hawk_hood: { id: 'a_hawk_hood', slot: 'head', name: 'Mũ Trùm Ưng', tier: 'super_rare', defense: 7, hp: 90, critChance: 0.03, moveBonus: 0.03, desc: 'Mũ nhẹ bậc Siêu Hiếm.' },
+    a_reinforced_plate: { id: 'a_reinforced_plate', slot: 'body', name: 'Giáp Tấm Thép Cường Lực', tier: 'super_rare', defense: 35, hp: 450, moveBonus: -0.06, desc: 'Giáp nặng bậc Siêu Hiếm.' },
+    a_silk_robe: { id: 'a_silk_robe', slot: 'body', name: 'Áo Lụa Phù Thủy', tier: 'super_rare', defense: 9, hp: 140, manaMax: 60, skillPower: 18, cooldownReduction: 0.04, desc: 'Áo pháp bậc Siêu Hiếm.' },
+    a_shadow_leather: { id: 'a_shadow_leather', slot: 'body', name: 'Áo Da Bóng', tier: 'super_rare', defense: 14, hp: 210, critChance: 0.04, moveBonus: 0.04, desc: 'Giáp nhẹ bậc Siêu Hiếm.' },
 
-    // Cực Phẩm
-    a_tyrant_crown: { id: 'a_tyrant_crown', slot: 'head', name: 'Vương Miện Viêm Đế', tier: 'supreme', defense: 35, hp: 300, burnImmune: true, fireDmgReduction: 0.5 },
-    a_phoenix_cloak: { id: 'a_phoenix_cloak', slot: 'body', name: 'Áo Choàng Niết Bàn', tier: 'supreme', defense: 50, hp: 450, reviveOnce: true, desc: 'Sống lại với 20% HP khi nhận đòn chí tử (1 lần/trận)' },
+    a_tyrant_crown: { id: 'a_tyrant_crown', slot: 'head', name: 'Vương Miện Viêm Đế', tier: 'supreme', defense: 30, hp: 302, moveBonus: -0.04, desc: 'Mũ nặng bậc Cực Phẩm.' },
+    a_oracle_crown: { id: 'a_oracle_crown', slot: 'head', name: 'Miện Tiên Tri', tier: 'supreme', defense: 6, hp: 101, manaMax: 58, skillPower: 16, desc: 'Mũ pháp bậc Cực Phẩm.' },
+    a_wind_hood: { id: 'a_wind_hood', slot: 'head', name: 'Mũ Trùm Cuồng Phong', tier: 'supreme', defense: 10, hp: 130, critChance: 0.043, moveBonus: 0.043, desc: 'Mũ nhẹ bậc Cực Phẩm.' },
+    a_tyrant_plate: { id: 'a_tyrant_plate', slot: 'body', name: 'Giáp Bạo Chúa', tier: 'supreme', defense: 50, hp: 648, moveBonus: -0.09, desc: 'Giáp nặng bậc Cực Phẩm.' },
+    a_astral_robe: { id: 'a_astral_robe', slot: 'body', name: 'Áo Tinh Tú', tier: 'supreme', defense: 13, hp: 202, manaMax: 86, skillPower: 26, cooldownReduction: 0.058, desc: 'Áo pháp bậc Cực Phẩm.' },
+    a_night_mail: { id: 'a_night_mail', slot: 'body', name: 'Áo Đêm', tier: 'supreme', defense: 20, hp: 302, critChance: 0.058, moveBonus: 0.058, desc: 'Giáp nhẹ bậc Cực Phẩm.' },
+    a_phoenix_cloak: { id: 'a_phoenix_cloak', slot: 'body', name: 'Áo Choàng Niết Bàn', tier: 'supreme', defense: 26, hp: 340, hpRegen: 1.4, reviveOnce: true, desc: 'Sống lại với 20% HP khi nhận đòn chí tử (1 lần). Hồi thêm 1,4 HP mỗi giây.' },
 
-    // Thần Khí
-    a_god_crown: { id: 'a_god_crown', slot: 'head', name: 'Thiên Miện Thần Vương', tier: 'god', defense: 60, hp: 600, desc: 'Vương miện Thần Khí, tăng 60 phòng ngự và 600 HP tối đa.' },
-    a_archdemon_armor: { id: 'a_archdemon_armor', slot: 'body', name: 'Áo Giáp Hắc Ám Archdemon', tier: 'god', defense: 85, hp: 1000, desc: 'Hóa Ma Thần Khổng Lồ x2 Máu, thiêu đốt 50 HP/giây kẻ dám lại gần 6m' }
+    a_god_crown: { id: 'a_god_crown', slot: 'head', name: 'Thiên Miện Thần Vương', tier: 'god', defense: 42, hp: 420, moveBonus: -0.06, desc: 'Mũ nặng Thần Khí. Nhiều máu và giáp, chạy chậm.' },
+    a_god_diadem: { id: 'a_god_diadem', slot: 'head', name: 'Miện Pháp Thần', tier: 'god', defense: 8, hp: 140, manaMax: 80, skillPower: 22, desc: 'Mũ pháp Thần Khí. Ít máu, nhiều mana và sức kỹ năng.' },
+    a_god_visor: { id: 'a_god_visor', slot: 'head', name: 'Mặt Nạ Thần Hành', tier: 'god', defense: 14, hp: 180, critChance: 0.06, moveBonus: 0.06, desc: 'Mũ nhẹ Thần Khí. Chí mạng và tốc chạy.' },
+    a_archdemon_armor: { id: 'a_archdemon_armor', slot: 'body', name: 'Áo Giáp Hắc Ám Archdemon', tier: 'god', defense: 70, hp: 900, moveBonus: -0.12, desc: 'Giáp nặng Thần Khí. Máu và giáp cao, tốc chạy giảm 12%.' },
+    a_god_vestment: { id: 'a_god_vestment', slot: 'body', name: 'Pháp Bào Thần', tier: 'god', defense: 18, hp: 280, manaMax: 120, skillPower: 36, cooldownReduction: 0.08, desc: 'Áo pháp Thần Khí. Ít máu, mạnh phép và giảm hồi chiêu.' },
+    a_god_mantle: { id: 'a_god_mantle', slot: 'body', name: 'Áo Choàng Thần Tốc', tier: 'god', defense: 28, hp: 420, critChance: 0.08, moveBonus: 0.08, desc: 'Giáp nhẹ Thần Khí. Máu vừa, chí mạng và tốc chạy.' }
   }
 };
