@@ -1,6 +1,6 @@
 /**
- * cloudSystem.js - Đám mây Hư Không Loki (riêng, không đụng long thần Alioth)
- * Trôi chậm xuyên mọi địa hình. Lướt qua bot/quái nào thì thực thể đó biến mất.
+ * cloudSystem.js - Đám mây Hư Không Alioth (Loki)
+ * Trôi chậm xuyên mọi địa hình. Không giết bot, chỉ áp chế tinh thần làm bot hoảng sợ cực độ và tháo chạy.
  */
 window.GameEntities = window.GameEntities || {};
 
@@ -15,15 +15,15 @@ window.GameEntities.CloudSystem = {
     this.bolts = [];
     this.clock = 0;
     const corners = [
-      { x: 250, y: 250 },
-      { x: mapWidth - 250, y: 250 },
-      { x: 250, y: mapHeight - 250 },
-      { x: mapWidth - 250, y: mapHeight - 250 }
+      { x: 300, y: 300 },
+      { x: mapWidth - 300, y: 300 },
+      { x: 300, y: mapHeight - 300 },
+      { x: mapWidth - 300, y: mapHeight - 300 }
     ];
     const spawn = corners[Math.floor(Math.random() * corners.length)];
     this.cloud = {
       id: 'loki_cloud',
-      name: 'Đám Mây Hư Không',
+      name: 'Đám Mây Hư Không Alioth',
       isCloud: true,
       isAlive: true,
       invincible: true,
@@ -33,7 +33,7 @@ window.GameEntities.CloudSystem = {
       vy: 0,
       targetX: mapWidth / 2,
       targetY: mapHeight / 2,
-      speed: 32,
+      speed: 34,
       radius: 95,
       visualRadius: 150,
       aimAngle: 0,
@@ -56,17 +56,11 @@ window.GameEntities.CloudSystem = {
         alpha: 0.55 + Math.random() * 0.35
       });
     }
-    window.GameUI?.CombatTicker?.log('🌌 Đám mây Hư Không Loki xuất hiện và bắt đầu nuốt chửng dòng thời gian!');
+    window.GameUI?.CombatTicker?.log('🌌 Đám mây Hư Không Alioth xuất hiện, gieo rắc kinh hoàng khắp đấu trường!');
   },
 
   reset(mapWidth, mapHeight) {
     this.init(mapWidth, mapHeight);
-  },
-
-  protected(entity) {
-    if (!entity?.isAlive || entity.isAlioth || entity.isCloud || entity.isSplit) return true;
-    if (entity.isAncient || entity.isAncientClone || entity.isDemonKing) return true;
-    return entity === window.GameEntities.EntityManager?.worldBoss;
   },
 
   update(dt) {
@@ -79,13 +73,13 @@ window.GameEntities.CloudSystem = {
 
     c.retarget -= dt;
     if (c.retarget <= 0 || !c.prey?.isAlive) {
-      c.retarget = 2 + Math.random() * 1.5;
+      c.retarget = 2.5 + Math.random() * 1.5;
       let closest = null, closestDist = Infinity;
       for (const p of (G?.pawns || []).filter(e => e.isAlive)) {
         const d = Math.hypot(p.x - c.x, p.y - c.y);
         if (d < closestDist) { closestDist = d; closest = p; }
       }
-      if (!closest || closestDist > 1200) {
+      if (!closest || closestDist > 1400) {
         for (const m of (G?.monsters || []).filter(e => e.isAlive && !e.isAncientClone)) {
           const d = Math.hypot(m.x - c.x, m.y - c.y);
           if (d < closestDist) { closestDist = d; closest = m; }
@@ -115,7 +109,8 @@ window.GameEntities.CloudSystem = {
     c.x = Math.max(80, Math.min(mapW - 80, c.x));
     c.y = Math.max(80, Math.min(mapH - 80, c.y));
 
-    this.devour();
+    // Áp chế tinh thần sinh vật trong vùng mây (không giết, chỉ hoảng sợ)
+    this.frightenEntities(dt);
 
     for (const puff of this.puffs) puff.rot += puff.rotSpeed * dt;
     if (Math.random() < 0.25) this.bolt();
@@ -125,42 +120,46 @@ window.GameEntities.CloudSystem = {
     }
   },
 
-  devour() {
-    const c = this.cloud, G = window.GameManager;
+  frightenEntities(dt) {
+    const c = this.cloud, G = window.GameManager, V = window.GameRenderer?.VfxManager;
     if (!c || !G) return;
-    for (const victim of [...(G.pawns || []), ...(G.monsters || [])]) {
-      if (this.protected(victim)) continue;
-      if (Math.hypot(victim.x - c.x, victim.y - c.y) <= c.radius) this.executeDevour(victim);
-    }
-  },
+    const now = G.matchTime || this.clock;
 
-  executeDevour(victim) {
-    if (!victim?.isAlive || this.protected(victim)) return;
-    const V = window.GameRenderer?.VfxManager;
-    const oldX = victim.x, oldY = victim.y;
-    V?.addEffect?.('impact', oldX, oldY, { radius: 75, color: '#9b59b6', life: 0.9 });
-    V?.addBurstParticles?.(oldX, oldY, '#a55eea', 30);
-    V?.addBurstParticles?.(oldX, oldY, '#ff3838', 25);
-    V?.addBurstParticles?.(oldX, oldY, '#180a29', 35);
-    V?.addDamageNumber?.(oldX, oldY - 30, 'BIẾN MẤT', 'crit');
-    window.GameEngine?.Audio?.play?.('death', victim, undefined, { tier: victim.tier });
-    window.GameUI?.CombatTicker?.log(`⚡ Đám mây Hư Không nuốt chửng ${victim.name} — Biến mất hoàn toàn!`);
-    victim.isAlive = false;
-    victim.despawned = true;
-    victim.currentHp = 0;
-    victim.action = null;
-    victim.attackState = null;
-    victim.targetEnemy = null;
-    victim.plan = null;
-    victim.chase = null;
-    victim.combatLease = 0;
-    victim.x = -9999;
-    victim.y = -9999;
-    victim.vx = 0;
-    victim.vy = 0;
-    const G = window.GameManager;
-    G?.updateHUD?.();
-    G?.checkVictoryCondition?.();
+    const victims = (G.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
+    for (const p of victims) {
+      const dist = Math.hypot(p.x - c.x, p.y - c.y);
+      if (dist <= c.radius + 30) {
+        // Gây hoảng loạn cực độ
+        p.fear = 100;
+        p.panicTimer = Math.max(p.panicTimer || 0, 3.0);
+        p.despair = Math.min(100, (p.despair || 0) + 40 * dt);
+        p.confidence = Math.max(0, (p.confidence || 50) - 60 * dt);
+        p.plan = null;
+        p.targetEnemy = null;
+        p.chase = null;
+        p.meditating = false;
+        p.objective = '😱 HOẢNG LOẠN TRƯỚC ĐÁM MÂY HƯ KHÔNG!';
+        p.thought = 'Khí tức Hư Không hủy diệt ý chí! Đầu óc hỗn loạn, chạy mau!';
+
+        // Đẩy nhẹ bot ra xa tâm đám mây
+        const away = Math.atan2(p.y - c.y, p.x - c.x);
+        const M = window.GameEngine?.MapTerrain;
+        if (M) {
+          const pushSpeed = M.getMoveSpeed(p) * 1.4;
+          M.moveEntity(p, Math.cos(away) * pushSpeed * dt, Math.sin(away) * pushSpeed * dt);
+        }
+
+        // Hiệu ứng định kỳ mỗi 1.8s
+        if (!p.lastCloudScaredAt || now - p.lastCloudScaredAt > 1.8) {
+          p.lastCloudScaredAt = now;
+          V?.addEmotionMote?.(p, '😱', '#9b59b6');
+          V?.addBurstParticles?.(p.x, p.y, '#9b59b6', 12);
+          V?.addDamageNumber?.(p.x, p.y - 25, 'HOẢNG LOẠN', 'crit');
+          window.GameEngine?.Audio?.play?.('evade', p);
+          window.GameUI?.CombatTicker?.log(`😱 ${p.name} thất thần hoảng loạn khi đám mây Hư Không tràn qua!`);
+        }
+      }
+    }
   },
 
   bolt() {
@@ -193,7 +192,7 @@ window.GameEntities.CloudSystem = {
     pawn.meditating = false;
     pawn.fear = Math.min(100, (pawn.fear || 0) + 40);
     pawn.objective = '🚨 THÁO CHẠY KHỎI ĐÁM MÂY HƯ KHÔNG!';
-    pawn.thought = 'Đám mây Hư Không đang tới! Chạy trước khi bị nuốt chửng!';
+    pawn.thought = 'Đám mây Hư Không đang tới gần! Uy áp nghẹt thở, mau tránh xa!';
     const away = Math.atan2(pawn.y - c.y, pawn.x - c.x);
     pawn.aimAngle = away;
     const speed = M.getMoveSpeed(pawn) * 1.25;
@@ -297,10 +296,10 @@ window.GameEntities.CloudSystem = {
     ctx.fillStyle = '#e056fd';
     ctx.shadowColor = '#000';
     ctx.shadowBlur = 6;
-    ctx.fillText('⚡ HƯ KHÔNG ⚡', c.x, c.y - c.visualRadius * 0.75);
+    ctx.fillText('⚡ ALIOT HƯ KHÔNG ⚡', c.x, c.y - c.visualRadius * 0.75);
     ctx.font = '11px Arial';
     ctx.fillStyle = '#ff7979';
-    ctx.fillText('Bất Tử • Nuốt Chửng', c.x, c.y - c.visualRadius * 0.75 + 14);
+    ctx.fillText('Uy Áp • Hoảng Sợ', c.x, c.y - c.visualRadius * 0.75 + 14);
     ctx.restore();
   }
 };

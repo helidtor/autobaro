@@ -1,7 +1,7 @@
 /**
- * aliothSystem.js - Alioth, long thần riêng, không thuộc đàn quái.
- * Thân rắn kiểu châu Á bám một vòng bay khép kín khắp map.
- * Đầu dẫn, các đốt sau lấy mẫu lùi dọc đường bay nên thân uốn theo quỹ đạo.
+ * aliothSystem.js - 3 Long thần Alioth (Xích Long, Long Thanh, Long Huyền)
+ * Quỹ đạo bay tự do, tính toán động dựa trên vị trí 5 bot gần nhất + biến số ngẫu nhiên.
+ * Thân rắn kiểu châu Á dùng kinematic trailing segment uốn lượn mượt mà theo đầu rồng.
  */
 window.GameEntities = window.GameEntities || {};
 
@@ -9,138 +9,180 @@ window.GameEntities.AliothSystem = {
   alioth: null,
   dragons: [],
   spine: [],
-  sparks: [],
   clock: 0,
-  travel: 0,
-  path: null,
-  pathCum: null,
-  pathLen: 0,
-  mapW: 0,
-  mapH: 0,
-  speed: 240,
+  mapW: 5200,
+  mapH: 5200,
   segments: 34,
   spacing: 18,
 
   init(mapWidth, mapHeight) {
-    this.sparks = [];
     this.clock = 0;
+    this.mapW = mapWidth || 5200;
+    this.mapH = mapHeight || 5200;
     this.dragons = [];
-    this.buildPath(mapWidth, mapHeight);
-    const colors = [
-      { name: 'Alioth', scale: '#c4342d', deep: '#8d241f', belly: '#f6d48a', gold: '#f0c14d', mane: '#f7f1e4' },
-      { name: 'Long Thanh', scale: '#1f6f4a', deep: '#134a31', belly: '#d8f3e2', gold: '#e8c15a', mane: '#f4fff8' },
-      { name: 'Long Huyền', scale: '#3a2f8a', deep: '#241c5c', belly: '#e4defa', gold: '#f0c14d', mane: '#f6f2ff' }
+
+    const configs = [
+      {
+        name: 'Alioth',
+        speed: 240,
+        turnSpeed: 1.6,
+        seed: 1.37,
+        phase: 0,
+        startX: this.mapW * 0.25,
+        startY: this.mapH * 0.25,
+        angle: 0.3,
+        colors: { scale: '#c4342d', deep: '#8d241f', belly: '#f6d48a', gold: '#f0c14d', mane: '#f7f1e4' }
+      },
+      {
+        name: 'Long Thanh',
+        speed: 225,
+        turnSpeed: 1.8,
+        seed: 4.82,
+        phase: Math.PI * 0.66,
+        startX: this.mapW * 0.75,
+        startY: this.mapH * 0.35,
+        angle: 2.1,
+        colors: { scale: '#1f6f4a', deep: '#134a31', belly: '#d8f3e2', gold: '#e8c15a', mane: '#f4fff8' }
+      },
+      {
+        name: 'Long Huyền',
+        speed: 235,
+        turnSpeed: 1.5,
+        seed: 7.91,
+        phase: Math.PI * 1.33,
+        startX: this.mapW * 0.5,
+        startY: this.mapH * 0.8,
+        angle: -1.4,
+        colors: { scale: '#3a2f8a', deep: '#241c5c', belly: '#e4defa', gold: '#f0c14d', mane: '#f6f2ff' }
+      }
     ];
-    for (let i = 0; i < colors.length; i++) {
-      const travel = this.pathLen * (0.18 + i / colors.length);
-      const head = this.sample(travel);
-      const spine = this.spineAt(travel);
+
+    for (let i = 0; i < configs.length; i++) {
+      const cfg = configs[i];
+      const head = {
+        x: cfg.startX,
+        y: cfg.startY,
+        tx: Math.cos(cfg.angle),
+        ty: Math.sin(cfg.angle),
+        nx: -Math.sin(cfg.angle),
+        ny: Math.cos(cfg.angle)
+      };
+
+      // Khởi tạo chuỗi đốt thân ban đầu thẳng hàng lùi về sau đầu
+      const spine = [head];
+      for (let s = 1; s < this.segments; s++) {
+        spine.push({
+          x: head.x - head.tx * s * this.spacing,
+          y: head.y - head.ty * s * this.spacing,
+          tx: head.tx,
+          ty: head.ty,
+          nx: head.nx,
+          ny: head.ny
+        });
+      }
+
       this.dragons.push({
-        id: 'alioth_entity_' + i,
-        name: colors[i].name,
+        id: 'alioth_dragon_' + i,
+        index: i,
+        name: cfg.name,
         title: 'Long Thần',
         isAlioth: true,
         isAlive: true,
         invincible: true,
         x: head.x,
         y: head.y,
-        vx: 0,
-        vy: 0,
-        aimAngle: Math.atan2(head.ty, head.tx),
-        speed: this.speed,
+        vx: head.tx * cfg.speed,
+        vy: head.ty * cfg.speed,
+        aimAngle: cfg.angle,
+        speed: cfg.speed,
+        turnSpeed: cfg.turnSpeed,
         radius: 36,
-        travel,
+        targetX: this.mapW / 2,
+        targetY: this.mapH / 2,
+        targetTimer: 0,
+        seed: cfg.seed,
+        phase: cfg.phase,
         spine,
         sparks: [],
-        colors: colors[i]
+        colors: cfg.colors
       });
     }
+
     this.alioth = this.dragons[0];
     this.spine = this.dragons[0].spine;
-    window.GameUI?.CombatTicker?.log('🐉 Ba long thần cất cánh và bay tuần tra khắp đấu trường.');
+    window.GameUI?.CombatTicker?.log('🐉 Ba long thần cất cánh, bay lượn ngẫu nhiên săn lùng theo vết 5 bot gần nhất!');
   },
 
   reset(mapWidth, mapHeight) {
     this.init(mapWidth, mapHeight);
   },
 
-  buildPath(mapW, mapH) {
-    const marks = [
-      [.16, .22], [.40, .12], [.66, .18], [.86, .34],
-      [.90, .56], [.74, .80], [.48, .90], [.24, .78],
-      [.10, .56], [.12, .36]
-    ].map(([x, y]) => ({ x: x * mapW, y: y * mapH }));
-    const steps = marks.length * 28;
-    const path = [];
-    for (let i = 0; i < steps; i++) path.push(this.catmull(marks, (i / steps) * marks.length));
-    const cum = [0];
-    for (let i = 1; i < path.length; i++) cum.push(cum[i - 1] + Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y));
-    const close = Math.hypot(path[0].x - path[path.length - 1].x, path[0].y - path[path.length - 1].y);
-    path.push({ ...path[0] });
-    cum.push(cum[cum.length - 1] + close);
-    this.path = path;
-    this.pathCum = cum;
-    this.pathLen = cum[cum.length - 1] || 1;
-    this.mapW = mapW;
-    this.mapH = mapH;
-  },
+  /**
+   * Tính toán mục tiêu bay ngẫu nhiên dựa vào tọa độ của 5 bot gần nhất
+   */
+  pickTargetFromNearestBots(dragon, mapW, mapH) {
+    const G = window.GameManager;
+    const pawns = (G?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
 
-  catmull(points, t) {
-    const n = points.length;
-    const i = Math.floor(t) % n;
-    const f = t - Math.floor(t);
-    const p0 = points[(i - 1 + n) % n], p1 = points[i], p2 = points[(i + 1) % n], p3 = points[(i + 2) % n];
-    const f2 = f * f, f3 = f2 * f;
-    const axis = k => 0.5 * ((2 * p1[k]) + (-p0[k] + p2[k]) * f + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * f2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * f3);
-    return { x: axis('x'), y: axis('y') };
-  },
-
-  pointAlong(dist) {
-    const len = this.pathLen || 1;
-    dist = ((dist % len) + len) % len;
-    const cum = this.pathCum;
-    let lo = 1, hi = cum.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (cum[mid] < dist) lo = mid + 1;
-      else hi = mid;
+    if (!pawns.length) {
+      // Không còn bot, bay lượn ngẫu nhiên quanh tâm map
+      const t = this.clock * 0.4 + dragon.phase;
+      dragon.targetX = mapW * 0.5 + Math.cos(t) * (mapW * 0.35);
+      dragon.targetY = mapH * 0.5 + Math.sin(t * 0.9) * (mapH * 0.35);
+      return;
     }
-    const span = cum[lo] - cum[lo - 1] || 1;
-    const f = (dist - cum[lo - 1]) / span;
-    const a = this.path[lo - 1], b = this.path[lo];
-    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
-  },
 
-  sample(dist) {
-    const base = this.pointAlong(dist);
-    const ahead = this.pointAlong(dist + 16);
-    let tx = ahead.x - base.x, ty = ahead.y - base.y;
-    const mag = Math.hypot(tx, ty) || 1;
-    tx /= mag; ty /= mag;
-    const nx = -ty, ny = tx;
-    const wave = Math.sin(dist * 0.017 + this.clock * 2.4) * 24;
-    return { x: base.x + nx * wave, y: base.y + ny * wave, tx, ty, nx, ny };
-  },
+    // Tìm 5 bot gần đầu rồng nhất
+    pawns.sort((a, b) => Math.hypot(a.x - dragon.x, a.y - dragon.y) - Math.hypot(b.x - dragon.x, b.y - dragon.y));
+    const top5 = pawns.slice(0, 5);
 
-  spineAt(travel) {
-    const spine = [];
-    for (let i = 0; i < this.segments; i++) spine.push(this.sample(travel - i * this.spacing));
-    return spine;
+    // 1. Trọng tâm của 5 bot gần nhất
+    const cx = top5.reduce((sum, b) => sum + b.x, 0) / top5.length;
+    const cy = top5.reduce((sum, b) => sum + b.y, 0) / top5.length;
+
+    // 2. Độ phân tán không gian giữa 5 bot
+    const spreadX = top5.reduce((acc, b) => acc + Math.abs(b.x - cx), 0) / top5.length;
+    const spreadY = top5.reduce((acc, b) => acc + Math.abs(b.y - cy), 0) / top5.length;
+    const spread = Math.max(120, Math.min(800, (spreadX + spreadY) * 0.5));
+
+    // 3. Hàm băm ngẫu nhiên phụ thuộc tọa độ thực tế của từng bot trong top 5
+    const botHash = top5.reduce((acc, b, idx) => {
+      return acc + (b.x * 17.3 + b.y * 31.7) * (idx + 1);
+    }, 0);
+
+    // 4. Biến ngẫu nhiên biến thiên theo thời gian + hash 5 bot + seed riêng mỗi rồng
+    const t = this.clock * 0.9 + dragon.phase + Math.sin(botHash * 0.0002) * 2;
+    const orbitAngle = t + Math.sin(t * 1.7 + dragon.seed) * 1.4;
+    const orbitDist = spread * (0.6 + 0.7 * Math.sin(t * 1.3 + dragon.seed * 2));
+
+    // 5. Chọn 1 bot ngẫu nhiên trong top 5 làm tâm lượn sóng
+    const anchorIdx = Math.floor(Math.abs(Math.sin(this.clock * 0.3 + dragon.seed) * top5.length)) % top5.length;
+    const anchor = top5[anchorIdx];
+
+    // Kết hợp giữa trọng tâm top 5, vị trí bot neo và offset ngẫu nhiên
+    const targetX = (cx * 0.4 + anchor.x * 0.6) + Math.cos(orbitAngle) * orbitDist;
+    const targetY = (cy * 0.4 + anchor.y * 0.6) + Math.sin(orbitAngle) * orbitDist;
+
+    // Giữ mục tiêu trong giới hạn an toàn của map
+    dragon.targetX = Math.max(250, Math.min(mapW - 250, targetX));
+    dragon.targetY = Math.max(250, Math.min(mapH - 250, targetY));
   },
 
   protected(entity) {
-    if (!entity?.isAlive || entity.isAlioth || entity.isSplit) return true;
+    if (!entity?.isAlive || entity.isAlioth || entity.isCloud || entity.isSplit) return true;
     if (entity.isAncient || entity.isAncientClone || entity.isDemonKing) return true;
     return entity === window.GameEntities.EntityManager?.worldBoss;
   },
 
   nearest(x, y) {
-    let best = null, dist = Infinity;
-    for (const dragon of this.dragons) for (const point of dragon.spine) {
-      const d = Math.hypot(point.x - x, point.y - y);
-      if (d < dist) { dist = d; best = point; }
+    let best = null, dist = Infinity, bestDragon = null;
+    for (const dragon of this.dragons) {
+      for (const point of dragon.spine) {
+        const d = Math.hypot(point.x - x, point.y - y);
+        if (d < dist) { dist = d; best = point; bestDragon = dragon; }
+      }
     }
-    return { point: best, dist };
+    return { point: best, dist, dragon: bestDragon };
   },
 
   avoid(pawn, dt) {
@@ -167,24 +209,85 @@ window.GameEntities.AliothSystem = {
     const G = window.GameManager;
     const mapW = G?.width || this.mapW || 5200;
     const mapH = G?.height || this.mapH || 5200;
-    if (mapW !== this.mapW || mapH !== this.mapH || !this.path) this.buildPath(mapW, mapH);
     this.clock += dt;
+
     for (const dragon of this.dragons) {
       if (!dragon.isAlive) continue;
-      dragon.travel += this.speed * dt;
-      dragon.spine = this.spineAt(dragon.travel);
+
+      // Cập nhật mục tiêu bay ngẫu nhiên dựa vào 5 bot gần nhất
+      dragon.targetTimer = (dragon.targetTimer || 0) - dt;
+      if (dragon.targetTimer <= 0) {
+        dragon.targetTimer = 0.8 + Math.random() * 0.6;
+        this.pickTargetFromNearestBots(dragon, mapW, mapH);
+      }
+
+      // 1. Góc lái đầu rồng mượt mà
+      const dx = dragon.targetX - dragon.x;
+      const dy = dragon.targetY - dragon.y;
+      let desiredAngle = Math.atan2(dy, dx);
+
+      // Tránh đâm vào mép map: uốn hướng vào trong nếu quá gần mép
+      const margin = 280;
+      if (dragon.x < margin) desiredAngle = Math.atan2(dy, Math.abs(dx) + 300);
+      else if (dragon.x > mapW - margin) desiredAngle = Math.atan2(dy, -Math.abs(dx) - 300);
+      if (dragon.y < margin) desiredAngle = Math.atan2(Math.abs(dy) + 300, dx);
+      else if (dragon.y > mapH - margin) desiredAngle = Math.atan2(-Math.abs(dy) - 300, dx);
+
+      let diff = desiredAngle - dragon.aimAngle;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+
+      // Dao động uốn lượn hình sin đặc trưng của thân rồng
+      const slither = Math.sin(this.clock * 3.6 + dragon.seed) * 0.45;
+      dragon.aimAngle += Math.sign(diff) * Math.min(Math.abs(diff), dragon.turnSpeed * dt) + slither * dt;
+
+      // 2. Di chuyển đầu rồng
+      dragon.vx = Math.cos(dragon.aimAngle) * dragon.speed;
+      dragon.vy = Math.sin(dragon.aimAngle) * dragon.speed;
+      dragon.x += dragon.vx * dt;
+      dragon.y += dragon.vy * dt;
+
+      dragon.x = Math.max(80, Math.min(mapW - 80, dragon.x));
+      dragon.y = Math.max(80, Math.min(mapH - 80, dragon.y));
+
+      // Cập nhật đốt đầu tiên (Head)
       const head = dragon.spine[0];
-      dragon.x = head.x;
-      dragon.y = head.y;
-      dragon.vx = head.tx * this.speed;
-      dragon.vy = head.ty * this.speed;
-      dragon.aimAngle = Math.atan2(head.ty, head.tx);
-      if (Math.random() < dt * 4) dragon.sparks.push({ life: 0.16 + Math.random() * 0.08, seed: Math.random() * 6 });
+      head.x = dragon.x;
+      head.y = dragon.y;
+      head.tx = Math.cos(dragon.aimAngle);
+      head.ty = Math.sin(dragon.aimAngle);
+      head.nx = -head.ty;
+      head.ny = head.tx;
+
+      // 3. Kinematic trailing constraint: mỗi đốt sau bám theo đốt trước đúng khoảng cách `spacing`
+      for (let s = 1; s < this.segments; s++) {
+        const prev = dragon.spine[s - 1];
+        const curr = dragon.spine[s];
+        const segDx = curr.x - prev.x;
+        const segDy = curr.y - prev.y;
+        const segDist = Math.hypot(segDx, segDy) || 1;
+
+        // Giữ khoảng cách chính xác
+        curr.x = prev.x + (segDx / segDist) * this.spacing;
+        curr.y = prev.y + (segDy / segDist) * this.spacing;
+
+        // Hướng tiếp tuyến và pháp tuyến của đốt thân
+        curr.tx = -segDx / segDist;
+        curr.ty = -segDy / segDist;
+        curr.nx = -curr.ty;
+        curr.ny = curr.tx;
+      }
+
+      // Hiệu ứng tia lửa quanh đầu rồng
+      if (Math.random() < dt * 4) {
+        dragon.sparks.push({ life: 0.16 + Math.random() * 0.08 });
+      }
       for (let i = dragon.sparks.length - 1; i >= 0; i--) {
         dragon.sparks[i].life -= dt;
         if (dragon.sparks[i].life <= 0) dragon.sparks.splice(i, 1);
       }
     }
+
     this.alioth = this.dragons[0];
     this.spine = this.dragons[0].spine;
     this.devour();
@@ -197,16 +300,17 @@ window.GameEntities.AliothSystem = {
     for (const victim of victims) {
       if (this.protected(victim)) continue;
       const hit = this.nearest(victim.x, victim.y);
-      if (hit.dist <= 48) this.executeDevour(victim);
+      if (hit.dist <= 48) this.executeDevour(victim, hit.dragon);
     }
   },
 
-  executeDevour(victim) {
+  executeDevour(victim, dragon) {
     if (!victim?.isAlive || this.protected(victim)) return;
     const V = window.GameRenderer?.VfxManager;
     const G = window.GameManager;
     const oldX = victim.x;
     const oldY = victim.y;
+    const dragonName = dragon?.name || 'Long Thần Alioth';
 
     V?.addEffect?.('impact', oldX, oldY, { radius: 65, color: '#e7c56a', life: 0.8 });
     V?.addBurstParticles?.(oldX, oldY, '#f4d48a', 25);
@@ -214,7 +318,7 @@ window.GameEntities.AliothSystem = {
     V?.addBurstParticles?.(oldX, oldY, '#2c0b4d', 30);
     V?.addDamageNumber?.(oldX, oldY - 30, 'BIẾN MẤT', 'crit');
     window.GameEngine?.Audio?.play?.('death', victim, undefined, { tier: victim.tier });
-    window.GameUI?.CombatTicker?.log(`⚡ Alioth nuốt chửng ${victim.name} — Biến mất hoàn toàn!`);
+    window.GameUI?.CombatTicker?.log(`⚡ ${dragonName} nuốt chửng ${victim.name} — Biến mất hoàn toàn!`);
 
     // Bot lập tức biến mất hoàn toàn khỏi map (không để lại xác hay đồ rơi)
     victim.isAlive = false;
@@ -231,7 +335,9 @@ window.GameEntities.AliothSystem = {
     victim.vx = 0;
     victim.vy = 0;
 
-    if (victim === window.GameEntities.EntityManager?.worldBoss) window.GameEntities.AncientSystem?.awaken?.(victim, this.alioth);
+    if (victim === window.GameEntities.EntityManager?.worldBoss) {
+      window.GameEntities.AncientSystem?.awaken?.(victim, dragon || this.alioth);
+    }
 
     if (G) {
       G.updateHUD?.();
@@ -243,12 +349,14 @@ window.GameEntities.AliothSystem = {
     if (!this.dragons.length) return;
     ctx.save();
     ctx.fillStyle = 'rgba(28, 18, 16, 0.16)';
-    for (const dragon of this.dragons) for (let i = 0; i < dragon.spine.length; i += 2) {
-      const point = dragon.spine[i];
-      const girth = 14 + (1 - i / dragon.spine.length) * 10;
-      ctx.beginPath();
-      ctx.ellipse(point.x, point.y + 30, girth * 1.7, girth * 0.62, Math.atan2(point.ty, point.tx), 0, Math.PI * 2);
-      ctx.fill();
+    for (const dragon of this.dragons) {
+      for (let i = 0; i < dragon.spine.length; i += 2) {
+        const point = dragon.spine[i];
+        const girth = 14 + (1 - i / dragon.spine.length) * 10;
+        ctx.beginPath();
+        ctx.ellipse(point.x, point.y + 30, girth * 1.7, girth * 0.62, Math.atan2(point.ty, point.tx), 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.restore();
   },
@@ -261,9 +369,13 @@ window.GameEntities.AliothSystem = {
       const spine = dragon.spine;
       if (!spine.length) continue;
       const c = dragon.colors;
-      for (let i = spine.length - 1; i >= 1; i--) this.drawSegment(ctx, kit, spine, i, c.scale, c.deep, c.belly, c.gold, c.mane, time);
+      for (let i = spine.length - 1; i >= 1; i--) {
+        this.drawSegment(ctx, kit, spine, i, c.scale, c.deep, c.belly, c.gold, c.mane, time);
+      }
       this.drawHead(ctx, kit, spine[0], c.scale, c.deep, c.belly, c.gold, c.mane, time);
-      for (const spark of dragon.sparks) this.drawSpark(ctx, kit, spine[0], spark);
+      for (const spark of dragon.sparks) {
+        this.drawSpark(ctx, kit, spine[0], spark);
+      }
       this.drawName(ctx, spine[0], dragon.name);
     }
   },
@@ -285,17 +397,25 @@ window.GameEntities.AliothSystem = {
     kit.oval(0, 0, rad * 1.55, rad * 0.78, index % 2 ? scale : deep, 2);
     kit.oval(rad * 0.15, rad * 0.22, rad * 0.72, rad * 0.3, belly, 1.3);
     kit.poly([[-rad * 0.5, -rad * 0.25], [sway, -rad * 1.25], [rad * 0.45, -rad * 0.15]], mane, 1.4);
-    if (index === spine.length - 1) kit.poly([[-rad, -rad * 0.2], [-rad * 2.4, -rad * 0.1], [-rad * 1.6, rad * 0.7], [-rad * 0.2, rad * 0.2]], gold, 1.5);
-    if ([8, 14, 21, 27].includes(index)) this.drawClaw(kit, rad, gold, time, index);
+    if (index === spine.length - 1) {
+      kit.poly([[-rad, -rad * 0.2], [-rad * 2.4, -rad * 0.1], [-rad * 1.6, rad * 0.7], [-rad * 0.2, rad * 0.2]], gold, 1.5);
+    }
+    if ([8, 14, 21, 27].includes(index)) {
+      this.drawClaw(kit, rad, gold, time, index);
+    }
     ctx.restore();
-    if (index % 7 === 3) this.drawCloud(ctx, kit, point.x + point.nx * 34, point.y + point.ny * 34, 1, time + index);
+    if (index % 7 === 3) {
+      this.drawCloud(ctx, kit, point.x + point.nx * 34, point.y + point.ny * 34, 1, time + index);
+    }
   },
 
   drawClaw(kit, rad, gold, time, index) {
     const step = Math.sin(time * 5 + index) * 3;
     kit.line(rad * 0.2, rad * 0.35, rad * 0.15 + step, rad * 1.25, gold, 3);
     kit.oval(rad * 0.15 + step, rad * 1.35, rad * 0.34, rad * 0.22, gold, 1.3);
-    for (const toe of [-4, 0, 4]) kit.line(rad * 0.15 + step + toe * 0.35, rad * 1.3, rad * 0.15 + step + toe, rad * 1.62, '#f8e7b4', 1.4);
+    for (const toe of [-4, 0, 4]) {
+      kit.line(rad * 0.15 + step + toe * 0.35, rad * 1.3, rad * 0.15 + step + toe, rad * 1.62, '#f8e7b4', 1.4);
+    }
   },
 
   drawCloud(ctx, kit, x, y, size, time) {
