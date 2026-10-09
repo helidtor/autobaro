@@ -20,7 +20,7 @@ window.GameAI.AiBrain = {
     const foot=this.findBestItemToLoot(pawn,drops.filter(i=>Math.hypot(i.x-pawn.x,i.y-pawn.y)<28));
     if(foot)this.lootItem(pawn,foot);
     if(pawn.action)return;
-    if(window.GameEntities.AliothSystem?.avoid?.(pawn,dt) || window.GameEntities.CloudSystem?.avoid?.(pawn,dt))return;
+    if(window.GameEntities.AliothSystem?.avoid?.(pawn,dt) || window.GameEntities.CloudSystem?.avoid?.(pawn,dt) || window.GameEntities.HuaguoSystem?.avoid?.(pawn,dt))return;
     if(pawn.meditating){
       if(C.underAttack(pawn))pawn.meditating=false;
       else{pawn.vx=pawn.vy=0;pawn.navPath=[];pawn.objective='Thiền định đến 75% máu';pawn.thought='Đứng yên, không di chuyển. Giao tranh sẽ ngắt thiền định.';return;}
@@ -146,6 +146,8 @@ window.GameAI.AiBrain = {
       pawn.evaluateAt=pawn.decisionTime+.3;
       const choices=[];
       if(loot){const score=this.lootPriority(pawn,loot,threats)+(pawn.style==='looter'?40:0);if(score>0)choices.push({kind:'loot',target:loot,score});}
+      const pilgrimage=window.GameEntities.HuaguoSystem?.pilgrimageScore?.(pawn);
+      if(pilgrimage>0)choices.push({kind:'pilgrimage',score:pilgrimage});
       const farmingFirst=this.limitsPawnFights(pawn);
       for(const m of G.monsters){if(!this.canHunt(pawn,m))continue;
         const dist=Math.hypot(m.x-pawn.x,m.y-pawn.y),chance=this.calculateWinRate(pawn,m);if(dist<450&&!C.canApproach(pawn,m))continue;
@@ -173,6 +175,7 @@ window.GameAI.AiBrain = {
     }
     if(pawn.plan){const {kind,target}=pawn.plan;
       if(kind==='loot'){this.seekLoot(pawn,target,dt);return;}
+      if(kind==='pilgrimage'){window.GameEntities.HuaguoSystem.seekPilgrimage(pawn,dt);return;}
       if(kind==='ambush'){this.ambush(pawn,target,enemies,dt);return;}
       pawn.isHiding=false;
       pawn.thought=kind==='farm'?'Ước tính có thể thắng '+Math.round(this.calculateWinRate(pawn,target)*100)+'%; chọn con mồi để thăng tiến.':P.patience>70?'Chờ sơ hở, chọn người đã yếu máu để ra tay.':'Chủ động áp lực đối thủ khi có lợi thế.';
@@ -415,6 +418,7 @@ window.GameAI.AiBrain = {
     return chance>=.68||resolve>=P.caution*.4;
   },
   planValid(p,plan){
+    if(plan.kind==='pilgrimage')return (window.GameEntities.HuaguoSystem?.pilgrimageScore?.(p)>0);
     if(plan.kind==='loot')return this.lootValue(p,plan.target)>0&&window.GameEngine.MapTerrain.canTravel(p,plan.target.x,plan.target.y);
     if(plan.kind==='ambush')return !plan.target.bush.isBurned&&plan.target.battle?.isAlive&&!(p.combatLease>0);
     if(!plan.target.isAlive||!this.keepChasing(p,plan.target))return false;
