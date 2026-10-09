@@ -95,7 +95,8 @@ window.GameManager = {
       skillPreferences: copy(pawn.skillPreferences) || null, weapon: copy(pawn.weapon), secondaryWeapon: copy(pawn.secondaryWeapon),
       helmet: copy(pawn.helmet), armor: copy(pawn.armor), boots: copy(pawn.boots), keptRelics: copy(pawn.keptRelics) || [],
       hasRevived: !!pawn.hasRevived, passivePoolOpened: !!pawn.passivePoolOpened, lastSkillInvestment: pawn.lastSkillInvestment || '',
-      healthPotions: 3, fullHealthPotions: 0, killCount: pawn.killCount || 0
+      healthPotions: 3, fullHealthPotions: 0, killCount: pawn.killCount || 0,
+      mythics: copy(pawn.mythics)||[], mythicState: copy(pawn.mythicState)||{}, mythicPicks: copy(pawn.mythicPicks)||{}, mythicLog: copy(pawn.mythicLog)||[]
     };
   },
   materializeDemonKing: function(snap, pos) {
@@ -114,6 +115,7 @@ window.GameManager = {
       skillPreferences: copy(snap.skillPreferences), keptRelics: copy(snap.keptRelics) || [], hasRevived: !!snap.hasRevived,
       passivePoolOpened: !!snap.passivePoolOpened, lastSkillInvestment: snap.lastSkillInvestment || '', healthPotions: 3, fullHealthPotions: 0,
       killCount: snap.killCount || 0, appearance: copy(snap.appearance), thought: 'Giữ ngôi trước kẻ thách đấu.', objective: 'Đấu với người thách đấu',
+      mythics: copy(snap.mythics)||[], mythicState: copy(snap.mythicState)||{}, mythicPicks: copy(snap.mythicPicks)||{}, mythicLog: copy(snap.mythicLog)||[],
       battleWill: 0, anger: 0, fear: 0, confidence: 20, despair: 0, attackCooldown: 0, attackState: { isAttacking: false, progress: 0 },
       action: null, targetEnemy: null, allyPawn: null, isAllied: false, expReward: 0
     };

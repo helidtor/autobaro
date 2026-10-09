@@ -19,7 +19,7 @@ window.GameEntities.CombatSystem = {
     this.fieldClock+=dt;
     for(const f of [...this.fields]){
       f.life-=dt;f.delay-=dt;f.next-=dt;
-      if(!f.owner.isAlive||f.life<=0||f.delay>0||f.next>0||f.smoke)continue;
+      if((!f.owner.isAlive&&!f.mythicBomb)||f.life<=0||f.delay>0||f.next>0||f.smoke)continue;
       f.next=f.tick;
       if(f.bend)for(const p of window.GameRenderer.VfxManager.projectiles)if(p.source!==f.owner&&!p.vortexBent&&this.fieldContains(f,p.x,p.y)){p.vortexBent=true;const angle=Math.atan2(f.y-p.y,f.x-p.x),speed=Math.hypot(p.vx,p.vy);p.vx=Math.cos(angle)*speed;p.vy=Math.sin(angle)*speed;}
       if(f.target&&(!f.target.isAlive||Math.hypot(f.owner.x-f.target.x,f.owner.y-f.target.y)>240||!window.GameEngine.MapTerrain.segmentClear(f.owner.x,f.owner.y,f.target.x,f.target.y,false,0))) {f.life=0;continue;}
@@ -28,7 +28,7 @@ window.GameEntities.CombatSystem = {
         if(!e.isAlive||!this.fieldContains(f,e.x,e.y))continue;
         if(f.heal){if(e===f.owner||e===f.owner.allyPawn){e.currentHp=Math.min(e.maxHp,e.currentHp+this.healthRegenRate(e,'aura',f)*f.tick);if(f.cleanse&&(f.healTicks=(f.healTicks||0)+1)>=2){e.slowTimer=0;f.cleanse=false;}}continue;}
         if(!this.isEnemy(f.owner,e))continue;
-        const dealt=f.damage>0?this.applyDamage(f.owner,e,null,{baseDamage:f.damage,skill:true,magic:f.magic,damageBudget:f.damageBudget,sourceSkill:f.sourceSkill,dot:'field'}):(this.canEngage(f.owner,e)&&this.reserveCombat(f.owner,e)?1:0);
+        const dealt=f.damage>0?this.applyDamage(f.owner,e,null,{baseDamage:f.damage,skill:true,magic:f.magic,damageBudget:f.damageBudget,sourceSkill:f.sourceSkill,dot:'field',aoe:true,mythicBomb:!!f.mythicBomb}):(this.canEngage(f.owner,e)&&this.reserveCombat(f.owner,e)?1:0);
         if(!dealt||!e.isAlive)continue;
         if(f.pull&&!e.ccImmune&&!window.GameEntities.RelicSystem.knockbackImmune(e)){const a=Math.atan2(f.y-e.y,f.x-e.x);window.GameEngine.MapTerrain.moveEntity(e,Math.cos(a)*f.pull,Math.sin(a)*f.pull);}
         if(f.slow&&!(e.fieldPassUntil>(window.GameManager.matchTime||0))){e.slowTimer=Math.max(e.slowTimer||0,.6);e.slowPct=Math.min(.35,Math.max(e.slowPct||0,f.slow));}
@@ -241,6 +241,7 @@ window.GameEntities.CombatSystem = {
  visionRange(e){return e.isMonster?(e.tier>=4?300:220):230+(e.personality?.curiosity||50);},
  canSee(observer,target,ignoreConcealment=false){
   if(!target?.isAlive||observer===target)return false;
+  if((target.mythicUntargetable||0)>(window.GameManager.matchTime||0))return false;
   const M=window.GameEngine.MapTerrain,d=Math.hypot(target.x-observer.x,target.y-observer.y);
   if(d>this.visionRange(observer)||!M.segmentClear(observer.x,observer.y,target.x,target.y,false,0))return false;
   if(ignoreConcealment)return true;
@@ -331,7 +332,8 @@ window.GameEntities.CombatSystem = {
  },
  canEngage(a,t){
   const M=window.GameEngine.MapTerrain;
-  return this.isEnemy(a,t) && M.templeAccess(a,t.x,t.y) && M.templeAccess(t,a.x,a.y) && (!a.isMonster || M.monsterCanTarget(a,t)) && !M.isInWater(a.x,a.y) && !M.isInWater(t.x,t.y) && this.canJoin(a,t) && M.segmentClear(a.x,a.y,t.x,t.y,false,0);
+  const pierce=window.GameEntities.MythicSystem?.has(a,'myth_ballista')&&['bow','crossbow','staff','tome'].includes(this.weaponStyle(a));
+  return this.isEnemy(a,t) && M.templeAccess(a,t.x,t.y) && M.templeAccess(t,a.x,a.y) && (!a.isMonster || M.monsterCanTarget(a,t)) && !M.isInWater(a.x,a.y) && !M.isInWater(t.x,t.y) && this.canJoin(a,t) && M.segmentClear(a.x,a.y,t.x,t.y,false,0,null,pierce);
  },
  grantLevel(p){
   p.currentExp=Math.max(p.currentExp,window.GameData.LevelTable.expForLevel(p.level+1));
@@ -359,12 +361,15 @@ window.GameEntities.CombatSystem = {
   if(R.has(e,'voidblade')&&steal?.timer>0&&steal.target?.isAlive){const t=steal.target;attack+=steal.stacks*.02*((t.defense||0)*2+R.equipment(t).reduce((v,d)=>v+(d.defense||0)+(d.magicDefense||0),0));}
   const defense=(e.defense||0)+gear.reduce((v,d)=>v+(d.defense||0),0),debuff=e.relicState?.voidArmor;
   const crackApplies=!e.crackOwner||!attacker||attacker===e.crackOwner&&Math.cos(Math.atan2(attacker.y-e.y,attacker.x-e.x)-e.crackAngle)>.5;
-  const modifier=(e.armorBreakTimer>0&&crackApplies?1-(e.armorBreak||0):1)*(debuff?.timer>0?1-debuff.stacks*.02:1);
+  const breakTimer=window.GameEntities.MythicSystem?.has(e,'myth_sever')?0:e.armorBreakTimer;
+  const modifier=(breakTimer>0&&crackApplies?1-(e.armorBreak||0):1)*(debuff?.timer>0?1-debuff.stacks*.02:1);
   const range=this.bossDamageRange(e);
   const skillPower=((e.skillPower||0)+gear.reduce((v,d)=>v+(d.skillPower||0),0)+(ancient?(e.weapon?.magicPower||0):0))*scale;
-  return {attack:range?Math.max(range[0],Math.min(range[1],attack*scale)):attack*scale,defense:defense*scale*modifier,magicDefense:(defense+gear.reduce((v,d)=>v+(d.magicDefense||0),0))*scale*modifier,skillPower,range:e.weapon?.range||(['bow','crossbow','staff','tome'].includes(this.weaponStyle(e))?130:e.isAncient?150:e.tier>=4?75:38),speed:window.GameEngine.MapTerrain.getMoveSpeed(e)};
+  const stats={attack:range?Math.max(range[0],Math.min(range[1],attack*scale)):attack*scale,defense:defense*scale*modifier,magicDefense:(defense+gear.reduce((v,d)=>v+(d.magicDefense||0),0))*scale*modifier,skillPower,range:e.weapon?.range||(['bow','crossbow','staff','tome'].includes(this.weaponStyle(e))?130:e.isAncient?150:e.tier>=4?75:38),speed:window.GameEngine.MapTerrain.getMoveSpeed(e)};
+  return window.GameEntities.MythicSystem?.adjustStats(e,stats)||stats;
  },
  critChance(e){
+  if(window.GameEntities.MythicSystem?.has(e,'myth_combust'))return 0;
   return Math.min(.5,(e?.critChance||0)+window.GameEntities.RelicSystem.equipment(e).reduce((v,d)=>v+(d.critChance||0),0));
  },
  buildRows:{
@@ -425,7 +430,7 @@ window.GameEntities.CombatSystem = {
 
   canAttack(e) {
     return !!e?.isAlive && !e.action && !e.isSplit && !(e.stunTimer > 0) && !(e.pacifyTimer > 0) && !(e.stasisTimer>0) && !(e.relicInterrupt>0) &&
-      !window.GameEngine.MapTerrain.isInWater(e.x, e.y);
+      !window.GameEntities.MythicSystem?.blocksAction(e) && !window.GameEngine.MapTerrain.isInWater(e.x, e.y);
   },
   isEnemy(a, t) {
     return !!t?.isAlive && !t.isSplit && !a?.isSplit && !(a?.isMonster && t.isMonster) && t !== a && t !== a?.allyPawn && t.allyPawn !== a && (t.isPawn || t.isMonster);
@@ -458,6 +463,7 @@ window.GameEntities.CombatSystem = {
     return true;
   },
   executeAttack(a, target) {
+    if(window.GameEntities.MythicSystem?.blocksAction(a)){window.GameEntities.MythicSystem.requestExit(a);return false;}
     if (!this.canAttack(a) || a.attackCooldown > 0 || !this.isEnemy(a, target)) return false;
     if(a.isAncient&&a.ancientKind==='chaos'){
       const i=a.weaponCycle=(a.weaponCycle||0)+1;
@@ -468,7 +474,10 @@ window.GameEntities.CombatSystem = {
     const range = this.combatStats(a).range;
     if (Math.hypot(target.x - a.x, target.y - a.y) > range + 8) return false;
     const glide=ranged&&a.movingShotReady&&a.speedBuffTimer>0;if(glide)a.movingShotReady=false;
-    const weapon=a.weapon?{...a.weapon}:null,snapshot={baseDamage:this.combatStats(a).attack,actionId:(a.actionSerial||0)+1};
+    const Mythic=window.GameEntities.MythicSystem;
+    const wrath=!!(Mythic?.has(a,'myth_wrath')&&((Mythic.state(a).wrath||0)+1)>=4);
+    const weapon=a.weapon?{...a.weapon}:null,snapshot={baseDamage:this.combatStats(a).attack,actionId:(a.actionSerial||0)+1,wrath};
+    const timing=this.styles[style]||{windup:.2};
     const ok = this.startAction(a, 'attack', target, () => {
       if (!this.isEnemy(a, target)) return;
       if (ranged) this.launchProjectile(a, target, weapon, {...snapshot,magic:weapon?.effect==='tome'}, ['staff', 'tome'].includes(style) ? '#bba3ff' : '#ffde9a');
@@ -476,8 +485,8 @@ window.GameEntities.CombatSystem = {
         this.applyDamage(a, target, weapon,snapshot);
         window.GameRenderer.VfxManager.addEffect('slash', a.x, a.y, { angle: a.aimAngle, radius: range, color: a.weapon?.color||'#ffe9b1', life: 0.25 });
       }
-    }, { style,movingShot:glide,...(low?{windup:low[0],recovery:low[1]}:{}) });
-    if (ok) a.attackCooldown = Math.max(a.isAncient?.25:0.7, 1 / ((a.weapon?.speed || 0.9) * (a.isBerserk ? 1.25 : 1)*(a.isAncient&&a.ancientKind==='colossus'&&a.phase===2?1.5:1)*(a.attackSpeedMultiplier||1)*(a.relicState?.tomeSlow?.timer>0?1-a.relicState.tomeSlow.stacks*.15:1)));
+    }, { style,movingShot:glide,wrath,windup:(low?low[0]:timing.windup)+(wrath?.4:0),...(low?{recovery:low[1]}:{}) });
+    if (ok) {Mythic?.payBlood(a,'basic');if(Mythic?.has(a,'myth_wrath'))Mythic.markBasic(a);a.attackCooldown=Mythic?.attackInterval(a,(a.weapon?.speed||.9)*(a.isBerserk?1.25:1)*(a.attackSpeedMultiplier||1))??Math.max(a.isAncient?.25:.7,1/((a.weapon?.speed||.9)*(a.isBerserk?1.25:1)*(a.attackSpeedMultiplier||1)));}
     return ok;
   },
   bossDamageRange(e){
@@ -529,6 +538,8 @@ window.GameEntities.CombatSystem = {
     this.evaluateScaling(e,c);
     c.radius = Math.min(100, c.radius || 50);
     c.range = Math.min(240, Math.max(c.range || 100, c.radius));
+    window.GameEntities.MythicSystem?.adjustSkill(e,skill,c);
+    if(window.GameEntities.MythicSystem?.has(e,'myth_ballista')&&/projectile|arrows|snipe|bolt/.test(c.type||''))c.range=(c.range||0)+70;
     c.stun = Math.min(e.isMonster ? 0.7 : 0.9, c.stunDur || c.freezeDuration || 0);
     c.slow = Math.min(0.35, c.slowPct || c.slow || 0);
     return c;
@@ -553,7 +564,8 @@ window.GameEntities.CombatSystem = {
     const utility = ['teleport', 'speed_buff', 'ethereal_speed', 'stealth', 'smoke_cloud', 'weapon_swap', 'weapon_buff', 'self_heal', 'aura_heal', 'shield_stance', 'counter_stance', 'mana_shield_toggle', 'stasis'].includes(type);
     if (!utility && (!this.isEnemy(e, target) || Math.hypot(target.x - e.x, target.y - e.y) > c.range)) return false;
     if (['self_heal', 'aura_heal'].includes(type) && e.currentHp >= e.maxHp * 0.85) return false;
-    if (type === 'weapon_swap' && !e.secondaryWeapon) return false;
+    if (type === 'weapon_swap' && (!e.secondaryWeapon || window.GameEntities.MythicSystem?.blocksWeaponLoot(e))) return false;
+    if (window.GameEntities.MythicSystem?.blocksDash(e,type)) return false;
     const mana = (c.manaCost || 0) + (c.extraManaPct || 0) * e.maxMana;
     const stamina = (c.staminaCost || 0) + (c.extraStaminaPct || 0) * e.maxStamina;
     if (e.currentMana < mana || e.currentStamina < stamina) return false;
@@ -573,7 +585,7 @@ window.GameEntities.CombatSystem = {
     if(type==='dash_stun'){e.guardTimer=windup;e.guardReduction=.35;e.guardAngle=angle;}
     e.currentMana -= mana; e.currentStamina -= stamina;
     skill.cooldownTimer = c.cooldown; if(e.isMonster){e.globalSkillCooldown=e.isAncientClone?1:e.tier===5?2:3;if(e.isAncientClone)owner.globalSkillCooldown=1;} e.attackCooldown = windup + 0.35;
-    if(!e.isMonster)e.globalSkillCooldown=1.8;
+    if(!e.isMonster){e.globalSkillCooldown=window.GameEntities.MythicSystem?.globalCooldown(e)??1.8;window.GameEntities.MythicSystem?.payBlood(e,'skill');}
     e.skillsCast = (e.skillsCast || 0) + 1;
     const V=window.GameRenderer.VfxManager,mm=c.monsterEffect,fx={fx:skill.id,mon:mm,el:element,tint:V.ownerTint(e),tier:skill.tier};
     if (!utility && (area || type==='cone_slash')) {
@@ -619,7 +631,7 @@ window.GameEntities.CombatSystem = {
       if((c.knockback||c.pull)&&!window.GameEntities.RelicSystem.knockbackImmune(victim)){const direction=c.pull?-1:1,a=Math.atan2(victim.y-e.y,victim.x-e.x),distance=c.knockback||c.pull;window.GameEngine.MapTerrain.moveEntity(victim,Math.cos(a)*distance*direction,Math.sin(a)*distance*direction);}
       if (c.stun && !(victim.controlImmunityTimer > 0)) { victim.stunTimer = window.GameEntities.RelicSystem.control(victim,'stunTimer',c.stun,e); victim.controlImmunityTimer = 3; }
       if (c.slow) { victim.slowPct = c.slow; victim.slowTimer = Math.min(2, c.slowDur || 2); }
-      if (c.silenceDur) victim.silenceTimer = Math.min(1.5, c.silenceDur);
+      if (c.silenceDur){const sil=window.GameEntities.MythicSystem?.ccDuration(victim,c.silenceDur)??c.silenceDur;victim.silenceTimer=Math.min(window.GameEntities.MythicSystem?.has(victim,'myth_sever')?2.25:1.5,sil);}
     };
       const V = window.GameRenderer.VfxManager,fxo=o=>({fx:skill.id,mon:c.monsterEffect,el:element,tier:skill.tier,tint:V.ownerTint(e),...o});
       if (['teleport', 'teleport_backstab', 'backstep_shot', 'linear_dash', 'dash_stun'].includes(type)) {
@@ -630,7 +642,7 @@ window.GameEntities.CombatSystem = {
         if(type==='teleport'&&skill.tier>=2){V.addEffect('rune',originX,originY,fxo({radius:22,color,life:1,ph:'after'}));if(skill.tier===3)e.blinkReturn={x:originX,y:originY,until:(window.GameManager.matchTime||0)+1.5};}
       }
       if (['self_heal', 'aura_heal'].includes(type)) {
-        const total=c.healAmount||0,anti=1-Math.min(.5,e.antiHealUntil>(window.GameManager.matchTime||0)?e.antiHeal||0:0);
+        const total=(c.healAmount||0)*(window.GameEntities.MythicSystem?.blocksHealing(e)?0:1),anti=1-Math.min(.5,e.antiHealUntil>(window.GameManager.matchTime||0)?e.antiHeal||0:0);
         e.healTimer=3;e.healPerSecond=total*.3/3;
         if(type==='self_heal'){e.healInterruptibleTimer=3;e.healCompleteRank=skill.tier;e.currentHp=Math.min(e.maxHp,e.currentHp+total*.7*anti);}
         if(type==='aura_heal'){e.healTimer=0;if(skill.tier>=2)e.slowTimer=0;e.healingAura=this.field(e,c,originX,originY,{radius:100,life:3,heal:total/3,cleanse:skill.tier>=2,convertible:skill.tier===3,color:'#86efb5'});}
@@ -767,15 +779,17 @@ window.GameEntities.CombatSystem = {
     return this.defend(e, dodge ? 'dodge' : 'block', dodge ? angle + Math.PI / 2 : angle);
   },
   usePotion(e) {
-    if (!e?.isAlive || window.GameEngine.MapTerrain.isInWater(e.x,e.y) || e.action || !(e.healthPotions||e.fullHealthPotions) || e.potionCooldown > 0 || e.currentHp >= e.maxHp) return false;
+    if (!e?.isAlive || window.GameEngine.MapTerrain.isInWater(e.x,e.y) || e.action || !(e.healthPotions||e.fullHealthPotions) || e.potionCooldown > 0 || e.currentHp >= e.maxHp || window.GameEntities.MythicSystem?.blocksPotion(e)) return false;
     const full=e.fullHealthPotions>0;if(full)e.fullHealthPotions--;else e.healthPotions--; e.potionCooldown = 8;
+    const factor=window.GameEntities.MythicSystem?.potionFactor(e)??1;
     return this.startAction(e, 'drink', null, () => {
-      const hp = full?e.maxHp-e.currentHp:Math.min(220, e.maxHp * 0.35);
+      const hp = (full?e.maxHp-e.currentHp:Math.min(220, e.maxHp * 0.35))*factor;
       e.currentHp = Math.min(e.maxHp, e.currentHp + hp);
+      window.GameEntities.MythicSystem?.onPotion(e);
       window.GameEngine.Audio?.play('potion',e);
       window.GameRenderer.VfxManager.addEffect('heal', e.x, e.y, { radius: 35, color: '#86efb5', life: 0.8 });
       window.GameRenderer.VfxManager.addDamageNumber(e.x, e.y - 20, '+' + Math.round(hp), 'heal');
-    }, { windup: 0.65, active: 0.1, recovery: 0.15, style: 'unarmed' });
+    }, { windup: window.GameEntities.MythicSystem?.drinkWindup(e)??0.65, active: 0.1, recovery: 0.15, style: 'unarmed' });
   },
   underAttack(e) {
     if (!e) return false;
@@ -787,7 +801,7 @@ window.GameEntities.CombatSystem = {
     return near.some(t => t !== e && t.isAlive && this.isEnemy(t, e) && (t.targetEnemy === e || t.action?.target === e));
   },
   healthRegenRate(e, source = 'total', field = null) {
-    if (!e?.isAlive) return 0;
+    if (!e?.isAlive||e.isPawn&&window.GameEntities.MythicSystem?.blocksHealing(e)) return 0;
     const now = window.GameManager.matchTime || 0;
     if (source === 'idle') return (e.isMonster ? e.maxHp * ({3:.01,4:.03,5:.05}[e.tier] || 0) || 1 : 1) + this.bonusHealthRegen(e);
     if (source === 'base') return e.isSplit ? 0 :
@@ -828,14 +842,17 @@ window.GameEntities.CombatSystem = {
     if(!e.isSplit){
       const engaged=e.targetEnemy?.isAlive&&this.canSee(e,e.targetEnemy);
       const combatTime=engaged?dt:Math.min(dt,Math.max(e.combatLease||0,e.action?.target?e.action.duration-e.action.elapsed:0));
-      e.currentHp=Math.min(e.maxHp,e.currentHp+combatTime*(1+this.bonusHealthRegen(e))+(dt-combatTime)*this.healthRegenRate(e,'idle'));
+      const regen=window.GameEntities.MythicSystem?.regenFactor(e)??1;
+      e.currentHp=Math.min(e.maxHp,e.currentHp+regen*(combatTime*(1+this.bonusHealthRegen(e))+(dt-combatTime)*this.healthRegenRate(e,'idle')));
     }
+    window.GameEntities.MythicSystem?.tick(e,dt);
     if(e.isHiding&&!this.canHideInBush(e))e.isHiding=false;
     if(e.ccImmune)e.stunTimer=e.slowTimer=e.silenceTimer=e.panicTimer=0;
+    if(window.GameEntities.MythicSystem?.immuneHardCC(e))e.stunTimer=0;
     for (const k of ['relicInterrupt','relicSlowTimer','riposteTimer','manaShieldTimer','panicTimer','auraSlowTimer','dodgeLockedTimer','armorBreakTimer','healInterruptibleTimer','stasisTimer','deathMarkTimer','globalSkillCooldown', 'combatLease', 'stunTimer', 'slowTimer', 'silenceTimer', 'speedBuffTimer', 'waterWalkTimer', 'pacifyTimer', 'weaponBuffTimer', 'stealthTimer', 'guardTimer', 'controlImmunityTimer', 'defenseCooldown', 'potionCooldown', 'attackCooldown', 'hitFlashTimer']) e[k] = Math.max(0, (e[k] || 0) - dt);
     for (const p of this.passiveList(e)) if(!e.isAncientClone)p.cooldownTimer=Math.max(0,(p.cooldownTimer||0)-dt);
     for (const s of e.skills || []) s.cooldownTimer = Math.max(0, (s.cooldownTimer || 0) - dt);
-    if (e.healTimer > 0) { const time = Math.min(dt, e.healTimer); e.currentHp = Math.min(e.maxHp, e.currentHp + this.healthRegenRate(e,'hot') * time); e.healTimer -= time; }
+    if (e.healTimer > 0) { const time = Math.min(dt, e.healTimer); if(!window.GameEntities.MythicSystem?.blocksHealing(e))e.currentHp = Math.min(e.maxHp, e.currentHp + this.healthRegenRate(e,'hot') * time); e.healTimer -= time; }
     this.tickMeditation(e, dt);
     if(e.sporeExposure>0&&!this.fields.some(f=>f.spore&&this.fieldContains(f,e.x,e.y)))e.sporeExposure=Math.max(0,e.sporeExposure-dt);
     if(e.guardAdvanceUntil>(window.GameManager.matchTime||0)&&!e.action&&e.targetEnemy?.isAlive){const angle=Math.atan2(e.targetEnemy.y-e.y,e.targetEnemy.x-e.x);window.GameEngine.MapTerrain.moveEntity(e,Math.cos(angle)*20*dt,Math.sin(angle)*20*dt);}
@@ -855,12 +872,17 @@ window.GameEntities.CombatSystem = {
     if (a.elapsed >= a.duration) {if(['attack','skill'].includes(a.kind)&&a.target?.isAlive&&this.canSee(a.target,e)&&(e.lastDamageDealtAt??-Infinity)<(a.startedAt??0))this.progressionEvent(a.target,e,'opening'); e.action = null; e.attackState = null; }
   },
   applyDamage(a, t, weapon, c = {}) {
-    if (!a || !this.canEngage(a,t) || t.invincible || t.relicInvulnerable>0 || !this.reserveCombat(a,t)) return 0;
+    if (!a || !t) return 0;
+    if (c.mythicBomb){ if(!this.isEnemy(a,t)) return 0; }
+    else if (!this.canEngage(a,t) || t.invincible || t.relicInvulnerable>0 || !this.reserveCombat(a,t)) return 0;
     if(t.phoenixEgg){const dealt=Math.max(1,c.baseDamage??this.combatStats(a).attack);t.phoenixEgg.hp-=dealt;a.lastHostileAt=t.lastHostileAt=window.GameManager.matchTime||0;window.GameRenderer.VfxManager.addDamageNumber(t.x,t.y,dealt,'normal');if(t.phoenixEgg.hp<=0){t.phoenixEgg=null;t.currentHp=0;this.handleDeath(a,t);}return dealt;}
     if(t.afterimageReady&&c.projectile&&!c.dot&&t.action?.kind==='dodge'){t.afterimageReady=0;return 0;}
     if (t.action?.kind === 'dodge' && t.action.elapsed < 0.3) {
       if(t.windShotUntil>(window.GameManager.matchTime||0))t.movingShotReady=true;this.progressionEvent(t,a,'dodge',c);this.counterOpening(t,a);window.GameRenderer.VfxManager.addDamageNumber(t.x,t.y-15,'NÉ','block');window.GameEngine.Audio?.play('evade',t);return 0;
     }
+    const Mythic=window.GameEntities.MythicSystem;
+    if(c.dot&&['poison','burn','bleed'].includes(c.dot)&&Mythic?.has(t,'myth_sever'))return 0;
+    if(Mythic?.tryEvade(t,c)){window.GameRenderer.VfxManager.addDamageNumber(t.x,t.y-15,'NÉ','block');return 0;}
     const hpBefore=t.currentHp;
     let raw=c.baseDamage??this.combatStats(a).attack;
     if(t.icePieceReady&&c.projectile){t.icePieceReady=false;raw*=.8;}
@@ -878,8 +900,11 @@ window.GameEntities.CombatSystem = {
       }
     }
     if (!c.trueDamage && a.currentHp < a.maxHp * 0.25) raw *= 1 + (window.GameData.Traits[a.trait]?.lowHpDamageBonus || 0);
-    const crit = !c.trueDamage && Math.random() < this.critChance(a);
-    if (crit) raw *= 1.35;
+    const prepared=Mythic?.beforeHit(a,c)||{};
+    c.mythicHit=prepared;
+    if(prepared.armEdge&&a)Mythic.state(a).edgeReadyAt=(window.GameManager.matchTime||0)+5;
+    const crit = !c.trueDamage && (prepared.forceCrit || (!prepared.noCrit && Math.random() < this.critChance(a)));
+    if (crit) raw *= prepared.critMult || 1.35;
     const ambush=this.passiveList(a).find(p=>p.type==='ambush'&&p.cooldownTimer<=0);
     if(!c.trueDamage&&ambush&&window.GameEngine.MapTerrain.isInBush(a.x,a.y)){raw*=1+.2*(a.passiveMultiplier||1);ambush.cooldownTimer=ambush.cooldown;}
     const M=window.GameEngine.MapTerrain;
@@ -911,6 +936,7 @@ window.GameEntities.CombatSystem = {
     damage=window.GameEntities.AncientSystem.incoming(a,t,Math.max(1,damage),c,weapon);
     damage=window.GameEntities.RelicSystem.incoming(a,t,damage,c);
     if(bossRange||c.damageBudget)damage=Math.min(damage,raw);
+    damage=Mythic?.onDamage(a,t,damage,c,raw,armor)??damage;
     if(damage<=0)return 0;
     const now=window.GameManager.matchTime||0;
     const aura=t.healingAura;if(aura?.convertible&&aura.life>0&&this.fieldContains(aura,t.x,t.y)&&t.currentHp-damage<t.maxHp*.4){const budget=Math.min(t.maxHp*.08,aura.heal*aura.life);aura.life=0;aura.convertible=false;t.progression=t.progression||{};t.progression.shield=budget;t.progression.shieldUntil=now+1;t.progression.shieldAngle=Math.atan2(a.y-t.y,a.x-t.x);}
@@ -919,6 +945,7 @@ window.GameEntities.CombatSystem = {
     damage=Math.max(1,Math.round(damage));
     if(c.damageBudget){const used=c.damageBudget.dealt.get(t.id)||0;damage=Math.min(damage,Math.max(0,Math.floor(c.damageBudget.limit)-used));if(damage<=0)return 0;c.damageBudget.dealt.set(t.id,used+damage);}
     t.currentHp = Math.max(0, t.currentHp - damage);
+    if((t.mythicImmortal||0)>(window.GameManager.matchTime||0))t.currentHp=Math.max(1,t.currentHp);
     a.lastHostileAt=t.lastHostileAt=window.GameManager.matchTime||0;
     const blood=this.passiveList(t).find(p=>p.id==='p_blood_body'),bs=t.progression||(t.progression={});
     if(t.currentHp>0&&blood?.tier>=2&&!bs.bloodLocked&&blood.cooldownTimer<=0&&!window.GameEngine.MapTerrain.isInWater(t.x,t.y)){const threshold=blood.tier===3?.4:.35;if(hpBefore>t.maxHp*threshold&&t.currentHp<=t.maxHp*threshold){bs.bloodRemaining=blood.tier===3?3:4;bs.bloodRate=this.passiveConfig(t,blood).burstAmount/bs.bloodRemaining;bs.bloodLocked=true;bs.procUntil=(window.GameManager.matchTime||0)+2;blood.cooldownTimer=60;}}
@@ -935,6 +962,7 @@ window.GameEntities.CombatSystem = {
     window.GameEntities.RelicSystem.afterDamage(a,t,damage,c);
     if(weapon?.onHitStun&&!t.ccImmune&&!(t.controlImmunityTimer>0)){t.stunTimer=window.GameEntities.RelicSystem.control(t,'stunTimer',weapon.onHitStun,a);t.controlImmunityTimer=3;}
     if (t.currentHp <= 0) this.handleDeath(a, t);
+    if(damage>0)Mythic?.afterHit(a,t,damage,c);
     const successionKill=!t.isAlive&&(t.isDemonKing||a.isDemonKing&&t===window.GameEntities.AncientSystem.original);
     if(a.isAlive && !t.isAlive && !successionKill)this.progressionEvent(a,t,'kill',c);
     if(a.isAlive&&t.isAlive&&!c.skill&&!c.dot&&!c.reflected&&a.nextAttackStride){const step=a.nextAttackStride;a.nextAttackStride=0;const direction=Math.atan2(t.y-a.y,t.x-a.x)+(a.armamentDefense?Math.PI:Math.PI/2);M.moveEntity(a,Math.cos(direction)*step,Math.sin(direction)*step);}
@@ -963,9 +991,12 @@ window.GameEntities.CombatSystem = {
     if(window.GameEntities.AncientSystem.beforeDeath(victim,killer))return;
     if(victim.defId==='eternal_solar_phoenix'&&!victim.phoenixReborn){victim.phoenixReborn=true;victim.currentHp=1;victim.action=null;victim.attackState=null;victim.stasisTimer=4;victim.phoenixEgg={hp:80,until:(window.GameManager.matchTime||0)+4};window.GameRenderer.VfxManager.addEffect('rune',victim.x,victim.y,{radius:48,color:'#ffb449',life:4});return;}
     if (!victim.isAncient && victim.armor?.reviveOnce && !victim.hasRevived) { victim.hasRevived = true; victim.currentHp = victim.maxHp * 0.2; return; }
+    if (window.GameEntities.MythicSystem?.tryDefiant(victim)) return;
     const duel=victim.isDemonKing||window.GameEntities.AncientSystem.demonKingFight&&victim===window.GameEntities.AncientSystem.original;
     window.GameEngine.Audio?.play('death',victim,undefined,{tier:victim.tier});
     victim.isAlive = false; victim.action = null;
+    window.GameEntities.MythicSystem?.explode(victim);
+    if(killer?.isAlive)window.GameEntities.MythicSystem?.onKill(killer,victim);
     if(duel){
       window.GameRenderer.VfxManager.addBurstParticles(victim.x, victim.y, '#d8c4a3', 12);
       window.GameEntities.AncientSystem.clearDuelHazards();
@@ -995,6 +1026,8 @@ window.GameEntities.CombatSystem = {
       p.maxHp += Math.round(g.hp); p.currentHp = p.maxHp; p.attack += Math.round(g.attack); p.defense += Math.round(g.defense);
       p.critChance=(p.critChance||0)+g.crit; p.maxMana=(p.maxMana||0)+Math.round(g.mana); p.currentMana=Math.min(p.maxMana,(p.currentMana||0)+Math.max(0,Math.round(g.mana)));
       p.skillPower=(p.skillPower||0)+Math.round(g.skill); p.hpRegen=(p.hpRegen||0)+g.hpRegen;
+      window.GameEntities.MythicSystem?.offer(p);
+      p.currentHp=Math.min(p.currentHp,p.maxHp);
       window.GameRenderer.VfxManager.addEffect('heal', p.x, p.y, { radius: 36, color: '#ffe5a4', life: 0.8 });
       window.GameUI.CombatTicker.log('⭐ ' + p.name + ' lên cấp ' + p.level + ', hồi đầy máu.');
     }

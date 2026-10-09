@@ -146,8 +146,9 @@ window.GameUI.InspectModal = {
     const c=passive?s:window.GameEntities.CombatSystem.getSkillConfig(e,s),remaining=Math.max(0,s.cooldownTimer||0);
     const duration=Math.max(c.cooldown||0,remaining),progress=duration?Math.max(0,Math.min(100,(1-remaining/duration)*100)):100;
     const cooldown=c.cooldown?c.cooldown.toFixed(1).replace('.0','')+' giây':'Liên tục';
+    const tier=typeof s.tier==='number'?' <span class="skill-tier">Bậc '+s.tier+'</span>':'';
     return '<div class="inspect-skill-item '+(remaining?'skill-cooling':'skill-ready')+'" style="--skill-progress:'+progress+'%">'+
-      '<span class="skill-name">'+(s.def?.name||s.name)+(passive?' · Nội tại':'')+'</span><div class="skill-desc">'+this.skillDescription(e,s,passive)+'</div><div class="skill-desc">'+this.scalingDescription(e,s,passive)+'</div>'+
+      '<span class="skill-name">'+(s.def?.name||s.name)+tier+(passive?' · Nội tại':'')+'</span><div class="skill-desc">'+this.skillDescription(e,s,passive)+'</div><div class="skill-desc">'+this.scalingDescription(e,s,passive)+'</div>'+
       '<div class="skill-cooldown">'+(c.cooldown?'Hồi chiêu: ':'')+cooldown+(remaining?' · Còn '+remaining.toFixed(1)+' giây':'')+'</div>'+
       '<div class="skill-progress" role="progressbar" aria-label="Hồi chiêu '+(s.def?.name||s.name)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(progress)+'"></div></div>';
   },
@@ -181,6 +182,12 @@ window.GameUI.InspectModal = {
 
     const actives=this.activeSkills(p),passives=window.GameEntities.CombatSystem.passiveList(p);
     const skillsHtml=actives.map(s=>this.skillCard(p,s)).join('')||'<div class="text-muted">Chưa học kỹ năng chủ động</div>';
+    const myths=(p.mythics||[]).map(id=>(window.GameData.MythicSkills||[]).find(s=>s.id===id)).filter(Boolean);
+    const logs=Array.isArray(p.mythicLog)?p.mythicLog:[];
+    const mythHtml=myths.map(s=>{
+      const rejected=logs.filter(entry=>entry.picked===s.id).flatMap(entry=>(entry.options||[]).filter(id=>id!==s.id).map(id=>(window.GameData.MythicSkills||[]).find(x=>x.id===id)?.name).filter(Boolean));
+      return '<div class="inspect-skill-item skill-ready"><span class="skill-name" style="color:'+(s.color||'#e6c15a')+'">'+s.name+'</span><div class="skill-desc">'+s.law+'</div><div class="skill-desc">'+s.price+'</div><div class="skill-desc">'+s.boss+'</div>'+(rejected.length?'<div class="skill-cooldown">Đã bỏ: '+rejected.join(', ')+'</div>':'')+'</div>';
+    }).join('');
 
     this.setContent(`
       <div class="inspect-header">
@@ -247,6 +254,8 @@ window.GameUI.InspectModal = {
         <div class="section-title">Kỹ năng (${actives.length+passives.length})</div><div class="skill-summary">${actives.length} chủ động • ${passives.length} nội tại</div>
         ${skillsHtml}
         ${passives.map(s=>this.skillCard(p,s,true)).join('')}
+        <div class="section-title">Thần thoại (${myths.length})</div>
+        ${mythHtml||'<div class="text-muted">Chưa nhận kỹ năng thần thoại</div>'}
       </div>
     `);
   },

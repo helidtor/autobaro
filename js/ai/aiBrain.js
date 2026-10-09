@@ -520,6 +520,7 @@ window.GameAI.AiBrain = {
 
   lootValue(p,item){
     if(!item||item.isCollected)return 0;
+    if(item.slot==='weapon'&&window.GameEntities.MythicSystem?.blocksWeaponLoot(p))return 0;
     if(item.slot==='potion'&&item.data?.fullHeal)return 200;
     if(item.slot==='potion'&&item.successionPrep)return 180;
     if(item.slot==='potion')return (p.healthPotions||0)<5?(p.currentHp<p.maxHp*.65?110:35)-(p.healthPotions||0)*5:0;
@@ -573,6 +574,7 @@ window.GameAI.AiBrain = {
   // Nhặt và trang bị đồ
   lootItem: function(pawn, item) {
     if(!item||item.isCollected)return false;
+    if(window.GameEntities.MythicSystem?.beginLoot(pawn,item))return false;
     if(this.lootValue(pawn,item)>0)for(const other of window.GameManager.pawns||[])if(other!==pawn&&other.isAlive&&(other.plan?.target===item||other.combatLoot?.item===item))this.noteGrudge(other,pawn,'loot');
     if(this.lootValue(pawn,item)<=0){if(item.tier!=='ancient')return false;pawn.keptRelics=pawn.keptRelics||[];pawn.keptRelics.push(item.data);item.isCollected=true;return true;}
     if (item.slot === 'potion') { window.GameEngine.Audio?.play('loot',pawn,'potion');if(item.data?.fullHeal)pawn.fullHealthPotions=(pawn.fullHealthPotions||0)+1;else pawn.healthPotions = (pawn.healthPotions || 0) + 1; item.isCollected = true; return true; }
@@ -592,6 +594,7 @@ window.GameAI.AiBrain = {
     } else if (item.slot === 'body') {
       pawn.armor = eqData;
     } else if(item.slot==='feet'){pawn.boots=eqData;}
+    window.GameEntities.MythicSystem?.onEquipment(pawn);
 
     const hpChange = (eqData.hp || 0) - (oldEquipment?.hp || 0);
     pawn.maxHp += hpChange;
@@ -720,6 +723,8 @@ window.GameAI.AiBrain = {
   },
   engageCombat: function(pawn, target, dt) {
     if (!target || !target.isAlive || pawn.allyPawn === target) return;
+    const boss=pawn.targetEnemy;
+    if(boss?.isAlive&&boss.isMonster&&(boss.tier||0)>=4&&target!==boss&&['myth_lone','myth_chain','myth_array','myth_gravity'].some(id=>window.GameEntities.MythicSystem?.has(pawn,id)))target=boss;
     const M=window.GameEngine.MapTerrain,C=window.GameEntities.CombatSystem,G=window.GameManager,P=pawn.personality,now=G.matchTime||0;
     const focus=pawn.combatFocus,held=focus?.target;
     const seenAt=e=>pawn.strikeSeen?.[e?.id]||0;

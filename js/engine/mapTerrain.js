@@ -85,7 +85,7 @@ window.GameEngine.MapTerrain = {
  isInFord(x,y){if(this.ancientArena)return false;return this.fords.some(f=>Math.abs(y-f.y)<24*this.scale)&&Math.abs(x-this.riverX(y))<54*this.scale;},
  isInMarsh(x,y){if(this.ancientArena)return false;return this.marshes.some(m=>((x-m.x)/m.rx)**2+((y-m.y)/m.ry)**2<1)||this.habitats.some(c=>c.kind==='marsh'&&Math.hypot(x-c.x,y-c.y)<c.radius);},
  isOnCliff(x,y){if(this.ancientArena)return false;return this.cliffs.some(c=>Math.hypot(x-c.x,y-c.y)<c.radius)||this.habitats.some(c=>c.kind==='mountain'&&Math.hypot(x-c.x,y-c.y)<c.radius);},
- getMoveSpeed(e){if(e.stunTimer>0)return 0;let s=e.moveSpeed||e.speed||100;if(e.auraSlowTimer>0)s*=1-(e.auraSlow||0);if(e.isPawn&&e.currentStamina<18)s*=.6;if(e.isClutchEscape)s*=2;if(e.isSprinting)s*=1.25;if(e.speedBuffTimer>0)s*=1+(e.speedBuff||0);if(e.slowTimer>0)s*=1-(e.slowPct||0);if(e.relicSlowTimer>0)s*=1-(e.relicSlow||0);s*=1+[e.weapon,e.armor,e.helmet,e.boots].reduce((v,d)=>v+(d?.moveBonus||0),0);if(e.boots?.effect==='treads')return s;if(this.isInWater(e.x,e.y))s*=.45;else if(this.isInFord(e.x,e.y))s*=.65;else if(this.isOnCliff(e.x,e.y)&&e.ancientKind!=='mecha')s*=.7;else if(e.ancientKind!=='mecha'&&this.isInMarsh(e.x,e.y))s*=.8;return s;},
+ getMoveSpeed(e){if(e.stunTimer>0)return 0;let s=e.moveSpeed||e.speed||100;if(e.auraSlowTimer>0)s*=1-(e.auraSlow||0);if(e.isPawn&&e.currentStamina<18)s*=.6;if(e.isClutchEscape)s*=2;if(e.isSprinting)s*=1.25;if(e.speedBuffTimer>0)s*=1+(e.speedBuff||0);if(e.slowTimer>0)s*=1-(e.slowPct||0);if(e.relicSlowTimer>0)s*=1-(e.relicSlow||0);s*=1+[e.weapon,e.armor,e.helmet,e.boots].reduce((v,d)=>v+(d?.moveBonus||0),0);const myth=n=>window.GameEntities.MythicSystem?.moveSpeed(e,n)??n;if(e.boots?.effect==='treads')return myth(s);if(this.isInWater(e.x,e.y))s*=.45;else if(this.isInFord(e.x,e.y))s*=.65;else if(this.isOnCliff(e.x,e.y)&&e.ancientKind!=='mecha')s*=.7;else if(e.ancientKind!=='mecha'&&this.isInMarsh(e.x,e.y))s*=.8;return myth(s);},
 
  buildObstacles(){
   const s=this.scale,L=this.layout;this.obstacles=[];this.obstacleBuckets=new Map();this.tileCache=null;
@@ -114,13 +114,15 @@ window.GameEngine.MapTerrain = {
    this.navSlow[i]=this.isInFord(px,py)||this.isInMarsh(px,py)||this.isOnCliff(px,py)?1:0; // pathing prefers dry flat ground when the detour is short
   }
  },
- canStand(x,y,r=9){
+ canStand(x,y,r=9,ignoreSoft=false){
   const a=this.ancientArena;
-  if(window.GameEntities.CombatSystem?.fields?.some(f=>f.wall&&f.life>0&&x>f.wall.x-r&&x<f.wall.x+f.wall.w+r&&y>f.wall.y-r&&y<f.wall.y+f.wall.h+r))return false;
+  if(!ignoreSoft&&window.GameEntities.CombatSystem?.fields?.some(f=>f.wall&&f.life>0&&x>f.wall.x-r&&x<f.wall.x+f.wall.w+r&&y>f.wall.y-r&&y<f.wall.y+f.wall.h+r))return false;
   if(a){
    if(x<a.x+r||y<a.y+r||x>a.x+a.w-r||y>a.y+a.h-r)return false;
+   if(ignoreSoft)return true;
    return ![...a.covers,...(window.GameEntities.AncientSystem?.walls||[])].some(o=>!o.destroyed&&x>o.x-r&&x<o.x+o.w+r&&y>o.y-r&&y<o.y+o.h+r);
   }
+  if(ignoreSoft)return !(x<r||y<r||x>this.MAP_WIDTH-r||y>this.MAP_HEIGHT-r);
   if(x<r||y<r||x>this.MAP_WIDTH-r||y>this.MAP_HEIGHT-r)return false;
   if(window.GameEntities.AncientSystem?.walls.some(o=>x>o.x-r&&x<o.x+o.w+r&&y>o.y-r&&y<o.y+o.h+r))return false;
   return !(this.obstacleBuckets?.get(Math.floor(x/100)+','+Math.floor(y/100)) || []).some(o=>
@@ -136,10 +138,10 @@ window.GameEngine.MapTerrain = {
   }
   return this.ancientArena?{x:this.ancientArena.cx,y:this.ancientArena.cy}:{x:this.MAP_WIDTH/2,y:this.MAP_HEIGHT/2};
  },
- segmentClear(x1,y1,x2,y2,avoidWater=false,r=9,e=null){
+ segmentClear(x1,y1,x2,y2,avoidWater=false,r=9,e=null,ignoreSoft=false){
   const n=Math.max(1,Math.ceil(Math.hypot(x2-x1,y2-y1)/12));
   for(let i=0;i<=n;i++){const t=i/n,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
-   if(!this.canStand(x,y,r)||(avoidWater&&this.isInWater(x,y))||!this.templeAccess(e,x,y)||(e&&!this.canTravel(e,x,y)))return false;}
+   if(!this.canStand(x,y,r,ignoreSoft)||(avoidWater&&this.isInWater(x,y))||!this.templeAccess(e,x,y)||(e&&!this.canTravel(e,x,y)))return false;}
   return true;
  },
  remainingLords(){
