@@ -230,7 +230,7 @@ window.GameEntities.AliothSystem = {
     this.clock += dt;
 
     for (const dragon of this.dragons) {
-      if (!dragon.isAlive) continue;
+      if (!dragon.isAlive || dragon.captured) continue;
 
       dragon.targetTimer = (dragon.targetTimer || 0) - dt;
       if (dragon.targetTimer <= 0) {

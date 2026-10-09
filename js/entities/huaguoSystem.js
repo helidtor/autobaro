@@ -12,6 +12,7 @@ window.GameEntities.HuaguoSystem = {
   pilgrims: [],
   wukong: null,
   clouds: [],
+  capturedDragons: [],
   clock: 0,
   ritualTime: 0,
   ritualNeeded: 8,
@@ -25,6 +26,7 @@ window.GameEntities.HuaguoSystem = {
     this.cooldown = 0;
     this.pilgrims = [];
     this.clouds = [];
+    this.capturedDragons = [];
     this.wukong = null;
     this.mapW = mapWidth || 5200;
     this.mapH = mapHeight || 5200;
@@ -182,10 +184,30 @@ window.GameEntities.HuaguoSystem = {
       if (w.timer <= 0) { w.state = 'return'; w.timer = 8; }
     } else if (w.state === 'strike') {
       if (w.timer <= 0) {
-        if (w.target?.isAlive) this.slayDragon(w.target);
-        w.state = 'return';
-        w.timer = 8;
+        if (w.target?.isAlive) this.captureDragon(w.target);
+        else { w.state = 'return'; w.timer = 8; }
       }
+    } else if (w.state === 'drag') {
+      const m = this.mountain;
+      const cap = w.captive;
+      const dx = m.x - w.x, dy = (m.y - 40) - w.y, dist = Math.hypot(dx, dy);
+      w.angle = Math.atan2(dy, dx);
+      if (dist > 30) {
+        const step = Math.min(dist, 420 * dt);
+        w.x += dx / dist * step;
+        w.y += dy / dist * step;
+        if (cap) {
+          cap.x = w.x - Math.cos(w.angle) * 70;
+          cap.y = w.y - Math.sin(w.angle) * 70;
+          cap.aimAngle = w.angle + Math.PI;
+        }
+      } else {
+        if (cap) this.imprisonDragon(cap);
+        w.state = 'return';
+        w.timer = 2;
+        w.captive = null;
+      }
+      if (w.timer <= 0) { w.state = 'return'; w.timer = 2; }
     } else if (w.state === 'return') {
       const m = this.mountain;
       const dx = m.x - w.x, dy = (m.y - 40) - w.y, dist = Math.hypot(dx, dy);
@@ -197,6 +219,7 @@ window.GameEntities.HuaguoSystem = {
       } else {
         window.GameUI?.CombatTicker?.log('☁️ Tôn Ngộ Không trở về Hoa Quả Sơn nghỉ ngơi.');
         this.wukong = null;
+        this.clouds = [];
         this.cooldown = 45;
       }
     }
@@ -209,16 +232,34 @@ window.GameEntities.HuaguoSystem = {
     }
   },
 
-  slayDragon(dragon) {
-    const A = window.GameEntities.AliothSystem;
-    dragon.isAlive = false;
-    if (A) A.dragons = A.dragons.filter(d => d !== dragon);
+  captureDragon(dragon) {
+    const w = this.wukong;
+    if (!w || !dragon?.isAlive) return;
+    dragon.captured = true;
+    dragon.invincible = true;
+    w.captive = dragon;
+    w.state = 'drag';
+    w.timer = 14;
     const V = window.GameRenderer?.VfxManager;
-    V?.addEffect?.('impact', dragon.x, dragon.y, { radius: 180, color: '#f6d48a', life: 1.4 });
-    V?.addBurstParticles?.(dragon.x, dragon.y, '#f97316', 40);
-    V?.addBurstParticles?.(dragon.x, dragon.y, '#f6d48a', 30);
-    window.GameEngine?.Audio?.play?.('death', dragon, undefined, { tier: 6 });
-    window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không vung gậy Như Ý, đánh bại ${dragon.name}!`);
+    V?.addEffect?.('impact', dragon.x, dragon.y, { radius: 140, color: '#f6d48a', life: 1.2 });
+    V?.addBurstParticles?.(dragon.x, dragon.y, '#f6d48a', 24);
+    window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không trói ${dragon.name} bằng gậy Như Ý, lôi cổ về Hoa Quả Sơn!`);
+    V?.addEffect?.('glow', dragon.x, dragon.y, { color: '#f6d48a', life: 0.6, radius: 60 });
+  },
+
+  imprisonDragon(dragon) {
+    const m = this.mountain;
+    dragon.captured = true;
+    dragon.isAlive = false;
+    dragon.x = m.x;
+    dragon.y = m.y + 6;
+    dragon.vx = 0;
+    dragon.vy = 0;
+    this.capturedDragons.push(dragon);
+    const A = window.GameEntities.AliothSystem;
+    if (A) A.dragons = A.dragons.filter(d => d !== dragon);
+    window.GameRenderer?.VfxManager?.addEffect?.('rune', m.x, m.y, { radius: 120, color: '#f6d48a', life: 2 });
+    window.GameUI?.CombatTicker?.log(`🔒 ${dragon.name} bị nhốt trong động Thủy Liêm, Hoa Quả Sơn.`);
   },
 
   render(ctx) {
@@ -228,6 +269,7 @@ window.GameEntities.HuaguoSystem = {
     this.drawMonkeys(ctx);
     this.drawClouds(ctx);
     if (this.wukong) this.drawWukong(ctx, this.wukong);
+    this.drawCaptives(ctx, m);
     this.drawRitual(ctx, m);
   },
 
@@ -382,7 +424,7 @@ window.GameEntities.HuaguoSystem = {
     ctx.ellipse(13, 12, 11, 6.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Choàng đỏ bay sau lưng.
+    // Choàng đỏ bay sau lưng (hào quang đỏ).
     ctx.fillStyle = '#b91c1c';
     ctx.beginPath();
     ctx.moveTo(-6, -12);
@@ -391,7 +433,7 @@ window.GameEntities.HuaguoSystem = {
     ctx.closePath();
     ctx.fill();
 
-    // Thân giáp vàng.
+    // Thân giáp vàng kim hào quang.
     ctx.fillStyle = '#e2b007';
     ctx.strokeStyle = '#7a4e06';
     ctx.lineWidth = 1.6;
@@ -412,7 +454,7 @@ window.GameEntities.HuaguoSystem = {
     ctx.lineTo(9, -2);
     ctx.stroke();
 
-    // Đai đỏ.
+    // Đai đỏ ngọc hào quang.
     ctx.fillStyle = '#c0392b';
     ctx.fillRect(-11, 6, 22, 4);
     ctx.fillStyle = '#f6d48a';
@@ -420,7 +462,7 @@ window.GameEntities.HuaguoSystem = {
     ctx.arc(0, 8, 2.2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Váy giáp dưới đai.
+    // Váy giáp chiến bào.
     ctx.fillStyle = '#b45309';
     ctx.beginPath();
     ctx.moveTo(-11, 10);
@@ -430,12 +472,12 @@ window.GameEntities.HuaguoSystem = {
     ctx.closePath();
     ctx.fill();
 
-    // Ủng vàng.
+    // Ủng vàng hào quang.
     ctx.fillStyle = '#e2b007';
     ctx.fillRect(-7, 17, 5, 5);
     ctx.fillRect(2, 17, 5, 5);
 
-    // Đầu lông khỉ.
+    // Đầu lông khỉ hào quang.
     ctx.fillStyle = '#c9843f';
     ctx.strokeStyle = '#5c3a1e';
     ctx.lineWidth = 1.4;
@@ -443,18 +485,15 @@ window.GameEntities.HuaguoSystem = {
     ctx.arc(0, -16, 8.4, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    // Tai.
     ctx.beginPath();
     ctx.arc(-8, -17, 3, 0, Math.PI * 2);
     ctx.arc(8, -17, 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    // Mặt.
     ctx.fillStyle = '#f3d2a2';
     ctx.beginPath();
     ctx.ellipse(0, -15, 5, 4.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Mắt + miệng.
     ctx.fillStyle = '#1d1a26';
     ctx.beginPath();
     ctx.arc(-2, -16, 0.9, 0, Math.PI * 2);
@@ -466,13 +505,12 @@ window.GameEntities.HuaguoSystem = {
     ctx.arc(0, -13.4, 1.6, 0.15, Math.PI - 0.15);
     ctx.stroke();
 
-    // Kim cô.
+    // Kim cô vàng kim hào quang.
     ctx.strokeStyle = '#f6d48a';
     ctx.lineWidth = 2.2;
     ctx.beginPath();
     ctx.arc(0, -18, 8.6, 0.15, Math.PI - 0.15);
     ctx.stroke();
-    // Lông vũ mão.
     ctx.fillStyle = '#c0392b';
     ctx.beginPath();
     ctx.moveTo(-2, -26);
@@ -481,7 +519,7 @@ window.GameEntities.HuaguoSystem = {
     ctx.closePath();
     ctx.fill();
 
-    // Đuôi khỉ cong.
+    // Đuôi khỉ cong hào quang.
     ctx.strokeStyle = '#a86b30';
     ctx.lineWidth = 2.4;
     ctx.beginPath();
@@ -489,7 +527,7 @@ window.GameEntities.HuaguoSystem = {
     ctx.quadraticCurveTo(-20, 2, -16, -12);
     ctx.stroke();
 
-    // Gậy Như Ý.
+    // Gậy Như Ý viền vàng hào quang.
     const swing = w.state === 'strike' ? -0.9 : 0.5;
     ctx.save();
     ctx.translate(10, -4);
@@ -509,6 +547,48 @@ window.GameEntities.HuaguoSystem = {
     ctx.fillRect(-4, 12, 8, 6);
     ctx.restore();
 
+    // Hào quang vàng kim quanh thân.
+    ctx.save();
+    ctx.globalAlpha = 0.75;
+    const glow = ctx.createRadialGradient(0, 0, 4, 0, 0, 28);
+    glow.addColorStop(0, '#f6d48a');
+    glow.addColorStop(1, 'rgba(246, 212, 138, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, 28, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    if (w.state === 'strike') {
+      ctx.save();
+      ctx.globalAlpha = 0.8;
+      const staffGlow = ctx.createRadialGradient(0, -22, 2, 0, -22, 18);
+      staffGlow.addColorStop(0, '#f6d48a');
+      staffGlow.addColorStop(1, 'rgba(246, 212, 138, 0)');
+      ctx.fillStyle = staffGlow;
+      ctx.beginPath();
+      ctx.arc(0, -22, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  },
+
+  drawCaptives(ctx, m) {
+    if (!this.capturedDragons.length) return;
+    ctx.save();
+    ctx.translate(m.x, m.y + 10);
+    ctx.font = 'bold 11px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f6e7a8';
+    ctx.fillText('🔒 ' + this.capturedDragons.length + ' long thần', 0, 36);
+    for (let i = 0; i < this.capturedDragons.length; i++) {
+      ctx.fillStyle = this.capturedDragons[i].colors?.scale || '#c4342d';
+      ctx.beginPath();
+      ctx.arc(-16 + i * 16, 20, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   },
 
