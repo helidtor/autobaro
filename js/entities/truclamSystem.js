@@ -986,6 +986,7 @@ window.GameEntities.TrucLamSystem = {
     const gen = leg.general;
     gen.gallopPhase = (gen.gallopPhase || 0) + dt * 12;
     gen.attackCooldown = Math.max(0, (gen.attackCooldown || 0) - dt);
+    gen.swingTimer = Math.max(0, (gen.swingTimer || 0) - dt);
 
     if (target) {
       // Lao đến đánh mục tiêu
@@ -998,6 +999,7 @@ window.GameEntities.TrucLamSystem = {
       } else if (gen.attackCooldown <= 0) {
         // Tướng đâm thương diệt mục tiêu
         gen.attackCooldown = 0.95;
+        gen.swingTimer = 0.38;
         const dmg = Math.round(gen.attack * (1.2 + Math.random() * 0.4));
         target.currentHp = Math.max(0, target.currentHp - dmg);
         V?.addDamageNumber?.(target.x, target.y - 25, 'KỴ KÍCH: -' + dmg, 'crit');
@@ -1031,6 +1033,7 @@ window.GameEntities.TrucLamSystem = {
     // 3. Cập nhật Binh Sĩ Hộ Vệ
     leg.soldiers.forEach((sol, idx) => {
       sol.attackCooldown = Math.max(0, (sol.attackCooldown || 0) - dt);
+      sol.swingTimer = Math.max(0, (sol.swingTimer || 0) - dt);
       if (target) {
         const dTarget = Math.hypot(target.x - sol.x, target.y - sol.y);
         sol.aimAngle = Math.atan2(target.y - sol.y, target.x - sol.x);
@@ -1040,6 +1043,7 @@ window.GameEntities.TrucLamSystem = {
           sol.y += Math.sin(sol.aimAngle) * step;
         } else if (sol.attackCooldown <= 0) {
           sol.attackCooldown = 1.1;
+          sol.swingTimer = 0.35;
           const dmg = Math.round(sol.attack * (1 + Math.random() * 0.3));
           target.currentHp = Math.max(0, target.currentHp - dmg);
           V?.addDamageNumber?.(target.x, target.y - 18, '-' + dmg, 'normal');
@@ -1099,6 +1103,8 @@ window.GameEntities.TrucLamSystem = {
   },
 
   drawMonasteryGate(ctx) {
+    const zoom = window.GameEngine.Camera?.zoom || 1;
+    if (zoom < 0.45) return;
     const gateX = this.gate?.x || 1020, gateY = this.gate?.y || 1670;
     ctx.save();
     // Biển tên Cổng Nam
@@ -1126,6 +1132,21 @@ window.GameEntities.TrucLamSystem = {
   },
 
   drawEmperor(ctx, emp) {
+    if (!emp?.isAlive) return;
+    const isSelected = window.GameManager?.selectedEntity === emp;
+    const zoom = window.GameEngine.Camera?.zoom || 1;
+    if (zoom < 0.45 && !isSelected) {
+      ctx.save();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(emp.x, emp.y - 8, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#fde047';
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
     const time = this.clock || 0;
     const isDecreeing = this.decreeEvent?.active && this.decreeEvent.phase === 'decree';
     const bob = Math.sin(time * 3) * 1.5;
@@ -1316,6 +1337,21 @@ window.GameEntities.TrucLamSystem = {
   },
 
   drawGuardianPawn(ctx, g) {
+    if (!g?.isAlive) return;
+    const isSelected = window.GameManager?.selectedEntity === g;
+    const zoom = window.GameEngine.Camera?.zoom || 1;
+    if (zoom < 0.45 && !isSelected) {
+      ctx.save();
+      ctx.fillStyle = g.color || '#b91c1c';
+      ctx.beginPath();
+      ctx.arc(g.x, g.y - 8, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 2.0;
+      ctx.strokeStyle = g.armorCol || '#f59e0b';
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
     const time = this.clock || 0;
     const bob = Math.abs(Math.sin(time * 9 + (g.id === 'tl_gen_tran' ? 0 : g.id === 'tl_gen_tien' ? 2 : 4))) * 3.5;
     const facing = Math.cos(g.aimAngle || 0) < 0 ? -1 : 1;
@@ -1616,8 +1652,26 @@ window.GameEntities.TrucLamSystem = {
   },
 
   drawMountedGeneral(ctx, gen, leg) {
+    if (!gen?.isAlive) return;
+    const isSelected = window.GameManager?.selectedEntity === gen;
+    const zoom = window.GameEngine.Camera?.zoom || 1;
+    if (zoom < 0.45 && !isSelected) {
+      ctx.save();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(gen.x, gen.y - 8, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#dc2626';
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
     const time = this.clock || 0;
     const facing = Math.cos(gen.aimAngle || 0) < 0 ? -1 : 1;
+    const isAttacking = (gen.swingTimer || 0) > 0;
+    const attackThrust = isAttacking ? Math.sin((gen.swingTimer / 0.38) * Math.PI) * 32 : 0;
     const gallop = Math.sin(gen.gallopPhase || (time * 12));
     const gallopBob = Math.abs(gallop) * 4;
 
@@ -1630,8 +1684,8 @@ window.GameEntities.TrucLamSystem = {
     ctx.ellipse(0, 16, 26, 9, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Nhịp phi nước đại
-    ctx.translate(0, -gallopBob);
+    // Nhịp phi nước đại + chồm lên khi đâm thương
+    ctx.translate(attackThrust * facing * 0.4, -gallopBob - attackThrust * 0.15);
     ctx.scale(facing, 1);
 
     // 1. VẼ CHIẾN MÃ HOẠT HỌA THEO PHONG CÁCH BOT (Cartoon Warhorse)
@@ -1818,7 +1872,10 @@ window.GameEntities.TrucLamSystem = {
     ctx.quadraticCurveTo(-6, genHeadY - 16, 0, genHeadY - 16);
     ctx.fill();
 
-    // Cán đại thương kỵ binh cắm cờ Trúc Lâm
+    // Cán đại thương kỵ binh cắm cờ Trúc Lâm (đâm thương khi tấn công)
+    ctx.save();
+    ctx.translate(attackThrust, 0);
+
     ctx.strokeStyle = '#94a3b8';
     ctx.lineWidth = 3.0;
     ctx.beginPath();
@@ -1837,6 +1894,22 @@ window.GameEntities.TrucLamSystem = {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+
+    // Vệt đâm thương sấm sét / kim quang khi ra đòn
+    if (attackThrust > 8) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(254, 240, 138, 0.9)';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(42, -12);
+      ctx.lineTo(76, -12);
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(74, -12, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
     // Cờ lệnh Trúc Lâm đuôi én
     const bannerWave = Math.sin(time * 8) * 4;
@@ -1868,6 +1941,7 @@ window.GameEntities.TrucLamSystem = {
     };
     drawHand(14, -8);
     drawHand(-2, -6);
+    ctx.restore();
 
     ctx.restore(); // Xong Tướng
     ctx.restore(); // Xong Toàn bộ Kỵ Binh
@@ -1888,7 +1962,25 @@ window.GameEntities.TrucLamSystem = {
   },
 
   drawEscortSoldier(ctx, sol) {
+    if (!sol?.isAlive) return;
+    const isSelected = window.GameManager?.selectedEntity === sol;
+    const zoom = window.GameEngine.Camera?.zoom || 1;
+    if (zoom < 0.45 && !isSelected) {
+      ctx.save();
+      ctx.fillStyle = '#0f766e';
+      ctx.beginPath();
+      ctx.arc(sol.x, sol.y - 6, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = '#334155';
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
     const time = this.clock || 0;
+    const isAttacking = (sol.swingTimer || 0) > 0;
+    const attackThrust = isAttacking ? Math.sin((sol.swingTimer / 0.35) * Math.PI) * 16 : 0;
     const bob = Math.abs(Math.sin(time * 12 + (sol.id === 'tl_guard_1' ? 0 : 3))) * 3.0;
 
     ctx.save();
@@ -1987,7 +2079,10 @@ window.GameEntities.TrucLamSystem = {
     ctx.arc(4, -9, 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Vũ khí tay phải
+    // Vũ khí tay phải (đâm về phía trước khi ra đòn)
+    ctx.save();
+    ctx.translate(attackThrust, 0);
+
     if (sol.weapon === 'spear') {
       ctx.strokeStyle = '#94a3b8';
       ctx.lineWidth = 2.0;
@@ -2016,6 +2111,8 @@ window.GameEntities.TrucLamSystem = {
       ctx.stroke();
       drawHand(4, 6);
     }
+    ctx.restore();
+
     drawHand(4, -7);
 
     ctx.restore();

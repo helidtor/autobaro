@@ -2221,6 +2221,39 @@ test('in 1-bot survivor mode with escort army, sole survivor does not freeze and
  assert.match(p.objective, /Farm|cấp 15|Yêu Vương/);
 });
 
+test('Truc Lam generals, mounted general and soldiers shrink to dots when zoom < 0.45 and trigger attack animations', () => {
+ const w=loadGame(),G=w.GameManager,TL=w.GameEntities.TrucLamSystem,p=G.pawns[0];
+ const Cam=w.GameEngine.Camera;
+ Cam.zoom = 0.3; // Zoom out
+ assert.doesNotThrow(() => TL.render(G.ctx));
+
+ // Kích hoạt legion
+ TL.legion = {
+   active: true,
+   owner: p,
+   life: 480,
+   marching: false,
+   general: { id: 'tl_gen', name: 'Thiết Kỵ Tướng Quân', x: 1000, y: 1000, speed: 165, attack: 48, attackCooldown: 0, isAlive: true },
+   soldiers: [{ id: 'tl_s1', name: 'Trúc Lâm Tiền Vệ', x: 1000, y: 1000, speed: 140, attack: 24, attackCooldown: 0, isAlive: true, weapon: 'spear' }]
+ };
+ const monster = G.monsters[0];
+ monster.x = 1030; monster.y = 1000; monster.currentHp = 500; monster.maxHp = 500; monster.isAlive = true;
+ p.targetEnemy = monster;
+
+ // Update đòn đánh: swingTimer kích hoạt
+ TL.updateLegion(0.1);
+ assert.ok(TL.legion.general.swingTimer > 0, 'Mounted general swingTimer should be active on attack');
+ assert.ok(TL.legion.soldiers[0].swingTimer > 0, 'Soldier swingTimer should be active on attack');
+
+ // Render ở zoom bình thường khi đang tấn công (attack thrust active)
+ Cam.zoom = 1.0;
+ assert.doesNotThrow(() => TL.render(G.ctx));
+
+ // Render ở zoom < 0.45 (dot rendering)
+ Cam.zoom = 0.3;
+ assert.doesNotThrow(() => TL.render(G.ctx));
+});
+
 test('mythic skills are offered at levels 10 and 15 and change the fight',()=>{
  const w=loadGame(7),G=w.GameManager,C=w.GameEntities.CombatSystem,M=w.GameEntities.MythicSystem,D=w.GameData.LevelTable,A=w.GameAI.AIBrain;
  assert.equal(w.GameData.MythicSkills.length,30);
