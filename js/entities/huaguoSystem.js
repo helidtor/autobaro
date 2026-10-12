@@ -13,6 +13,7 @@ window.GameEntities.HuaguoSystem = {
   wukong: null,
   clouds: [],
   capturedDragons: [],
+  spiritOrbs: [],
   clock: 0,
   ritualTime: 0,
   ritualNeeded: 5,
@@ -27,6 +28,7 @@ window.GameEntities.HuaguoSystem = {
     this.pilgrims = [];
     this.clouds = [];
     this.capturedDragons = [];
+    this.spiritOrbs = [];
     this.wukong = null;
     this.mapW = mapWidth || 5200;
     this.mapH = mapHeight || 5200;
@@ -122,6 +124,21 @@ window.GameEntities.HuaguoSystem = {
       const d = this.capturedDragons[i];
       d.fade = (d.fade ?? 10) - dt;
       if (d.fade <= 0) this.capturedDragons.splice(i, 1);
+    }
+
+    // Cập nhật các Linh Ngọc bay về Hoa Quả Sơn
+    for (const orb of (this.spiritOrbs || [])) {
+      orb.pulse = (orb.pulse || 0) + dt * 4;
+      const dX = orb.targetX - orb.x, dY = orb.targetY - orb.y;
+      const d = Math.hypot(dX, dY);
+      if (d > 12) {
+        const step = Math.min(d, (orb.speed || 380) * dt);
+        orb.x += dX / d * step;
+        orb.y += dY / d * step;
+        this.clouds.push({ x: orb.x, y: orb.y, life: 0.6, r: 8 + Math.random() * 6 });
+      } else {
+        orb.arrived = true;
+      }
     }
 
     // Tôn Ngộ Không đang xuất kích.
@@ -570,20 +587,8 @@ window.GameEntities.HuaguoSystem = {
       w.assistClock = (w.assistClock || 0) + dt;
       w.assistStrikeTimer = (w.assistStrikeTimer || 0) - dt;
 
-      // Tìm mục tiêu quái hoặc kẻ thù giao tranh với host
-      let targetEnemy = host.targetEnemy?.isAlive ? host.targetEnemy : null;
-      if (!targetEnemy) {
-        const threatEnemies = (G?.pawns || []).filter(p => p.isAlive && p !== host && !p.isDemonKing && Math.hypot(p.x - host.x, p.y - host.y) < 450 && (p.targetEnemy === host || host.targetEnemy === p));
-        if (threatEnemies.length > 0) {
-          targetEnemy = threatEnemies[0];
-        } else {
-          const candidates = (G?.monsters || []).filter(m => m.isAlive && !m.isDemonKing && Math.hypot(m.x - host.x, m.y - host.y) < 700);
-          if (candidates.length > 0) {
-            candidates.sort((a, b) => Math.hypot(a.x - host.x, a.y - host.y) - Math.hypot(b.x - host.x, b.y - host.y));
-            targetEnemy = candidates[0];
-          }
-        }
-      }
+      // CHỈ TẤN CÔNG KHI CHỦ NHÂN ĐANG TARGET HOẶC TẤN CÔNG ĐÍCH DANH (Không tự ý đi đánh quái lung tung)
+      const targetEnemy = (host.targetEnemy?.isAlive ? host.targetEnemy : (host.action?.target?.isAlive ? host.action.target : null));
 
       w.inCombat = !!targetEnemy?.isAlive;
 
@@ -598,8 +603,15 @@ window.GameEntities.HuaguoSystem = {
         const orbitDist = w.isMini ? 58 : 72;
         const targetX = targetEnemy.x - Math.cos(w.angle + Math.sin(orbit) * 0.45) * orbitDist;
         const targetY = targetEnemy.y - Math.sin(w.angle + Math.sin(orbit) * 0.45) * orbitDist;
-        w.x += (targetX - w.x) * Math.min(1, 10 * dt);
-        w.y += (targetY - w.y) * Math.min(1, 10 * dt);
+
+        // Bay từ từ đến vị trí địch với tốc độ Cân Đẩu Vân (Không dịch chuyển tức thời)
+        const distM = Math.hypot(targetX - w.x, targetY - w.y);
+        if (distM > 4) {
+          const flySpeed = w.isMini ? 340 : 440;
+          const step = Math.min(distM, flySpeed * dt);
+          w.x += (targetX - w.x) / distM * step;
+          w.y += (targetY - w.y) / distM * step;
+        }
 
         w.beatT = (w.beatT || 0) + dt;
         if (w.assistStrikeTimer <= 0) {
@@ -635,8 +647,15 @@ window.GameEntities.HuaguoSystem = {
         const escortDist = w.isMini ? 45 : 55;
         const targetX = host.x + Math.cos(escortAngle) * escortDist;
         const targetY = host.y - 30 + Math.sin(escortAngle * 2) * 12;
-        w.x += (targetX - w.x) * Math.min(1, 8 * dt);
-        w.y += (targetY - w.y) * Math.min(1, 8 * dt);
+
+        // Bay từ từ bám sát chủ nhân
+        const distE = Math.hypot(targetX - w.x, targetY - w.y);
+        if (distE > 4) {
+          const flySpeed = w.isMini ? 300 : 380;
+          const step = Math.min(distE, flySpeed * dt);
+          w.x += (targetX - w.x) / distE * step;
+          w.y += (targetY - w.y) / distE * step;
+        }
         w.angle = host.aimAngle || 0;
 
         host.fear = Math.max(0, (host.fear || 0) - 25 * dt);
@@ -719,47 +738,67 @@ window.GameEntities.HuaguoSystem = {
   captureDragon(dragon) {
     const w = this.wukong;
     if (!w || !dragon?.isAlive) return;
-    dragon.duelResolve = 100;
-    dragon.isBreathingFire = false;
-    dragon.captured = true;
-    dragon.invincible = true;
-    w.captive = dragon;
-    w.state = 'drag';
-    w.timer = 14;
-    const V = window.GameRenderer?.VfxManager;
-    V?.addEffect?.('impact', dragon.x, dragon.y, { radius: 140, color: '#f6d48a', life: 1.2 });
-    V?.addBurstParticles?.(dragon.x, dragon.y, '#f6d48a', 24);
-    window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không trói ${dragon.name} bằng gậy Như Ý, lôi cổ về Hoa Quả Sơn!`);
-    V?.addEffect?.('glow', dragon.x, dragon.y, { color: '#f6d48a', life: 0.6, radius: 60 });
-    V?.addEffect?.('chain', dragon.x, dragon.y, { color: '#f6d48a', life: 0.8, radius: 55 });
-  },
-
-  imprisonDragon(dragon) {
     const m = this.mountain;
+    const V = window.GameRenderer?.VfxManager;
+
     dragon.captured = true;
     dragon.isAlive = false;
-    const slot = this.capturedDragons.length;
+    dragon.isBreathingFire = false;
+
+    // 1. Hiệu ứng đánh bay nguyên hồn
+    V?.addEffect?.('shockwave', dragon.x, dragon.y, { radius: 180, color: '#f6d48a', life: 1.4 });
+    V?.addBurstParticles?.(dragon.x, dragon.y, dragon.colors?.gold || '#f59e0b', 36);
+    V?.addBurstParticles?.(dragon.x, dragon.y, '#ffffff', 28);
+    window.GameEngine?.Audio?.play?.('impact', dragon, 'heavy');
+
+    // 2. Chuyển hóa thành Linh Ngọc bay về Hoa Quả Sơn
+    const slot = this.spiritOrbs.length;
     const side = slot % 2 === 0 ? -1 : 1;
     const ring = Math.floor(slot / 2);
-    dragon.x = m.x + side * (m.radius + 55 + ring * 36);
-    dragon.y = m.y + 18;
-    dragon.aimAngle = side > 0 ? Math.PI : 0;
-    dragon.vx = 0;
-    dragon.vy = 0;
-    const head = dragon.spine?.[0];
-    if (head) {
-      head.x = dragon.x;
-      head.y = dragon.y;
-      head.tx = Math.cos(dragon.aimAngle);
-      head.ty = Math.sin(dragon.aimAngle);
-      head.nx = -head.ty;
-      head.ny = head.tx;
-    }
-    this.capturedDragons.push(dragon);
+    const targetX = m.x + side * (m.radius + 35 + ring * 28);
+    const targetY = m.y - 10 + Math.sin(slot) * 8;
+
+    const orb = {
+      id: 'spirit_' + dragon.element,
+      name: 'Linh Ngọc ' + dragon.name,
+      element: dragon.element,
+      color: dragon.colors?.gold || '#f59e0b',
+      glow: dragon.colors?.belly || '#fde68a',
+      x: dragon.x,
+      y: dragon.y,
+      targetX,
+      targetY,
+      speed: 420,
+      arrived: false,
+      seed: slot * 2
+    };
+    this.spiritOrbs.push(orb);
+
     const A = window.GameEntities.AliothSystem;
     if (A) A.dragons = A.dragons.filter(d => d !== dragon);
-    window.GameRenderer?.VfxManager?.addEffect?.('rune', m.x, m.y, { radius: 120, color: '#f6d48a', life: 2 });
-    window.GameUI?.CombatTicker?.log(`🔒 ${dragon.name} bị nhốt trong động Thủy Liêm, Hoa Quả Sơn.`);
+
+    window.GameUI?.CombatTicker?.log(`✨ Tôn Ngộ Không đánh bay nguyên hồn ${dragon.name}! Thân rồng hóa thành Linh Ngọc bay về Hoa Quả Sơn an nghỉ!`);
+
+    // 3. Đại Thánh không kéo lê xác rồng nữa, lập tức tiếp tục xuất kích hoặc trợ chiến
+    const G = window.GameManager;
+    const alivePawns = (G?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
+    const oneBotLeft = (G?.battleRoyaleResolved && !G?.resultOpen) || (alivePawns.length === 1 && !G?.resultOpen);
+    const remainingDragons = (A?.dragons || []).filter(d => d.isAlive && !d.captured);
+
+    if (remainingDragons.length > 0) {
+      w.target = remainingDragons[0];
+      w.state = 'fly';
+      w.timer = 14;
+      window.GameUI?.CombatTicker?.log(`☁️ Tôn Ngộ Không tiếp tục xuất kích dẹp ${remainingDragons[0].name}!`);
+    } else if (oneBotLeft || w.isMini) {
+      w.target = null;
+      w.state = 'assist';
+      w.assistClock = 0;
+      w.assistStrikeTimer = 0.5;
+    } else {
+      w.state = 'return';
+      w.timer = 8;
+    }
   },
 
   render(ctx) {
@@ -768,10 +807,51 @@ window.GameEntities.HuaguoSystem = {
     this.drawMountain(ctx, m);
     this.drawMonkeys(ctx);
     this.drawClouds(ctx);
-    if (this.wukong?.captive) this.drawChain(ctx, this.wukong.captive, this.wukong.x, this.wukong.y);
-    this.drawCaptives(ctx, m);
+    this.drawSpiritOrbs(ctx, m);
     if (this.wukong) this.drawWukong(ctx, this.wukong);
     this.drawRitual(ctx, m);
+  },
+
+  drawSpiritOrbs(ctx, m) {
+    for (const orb of (this.spiritOrbs || [])) {
+      ctx.save();
+      const hover = orb.arrived ? Math.sin(this.clock * 3 + (orb.seed || 0)) * 5 : 0;
+      ctx.translate(orb.x, orb.y + hover);
+
+      // Hào quang tỏa sáng của Linh Ngọc
+      const pulse = Math.sin((orb.pulse || 0)) * 0.25 + 0.75;
+      const glowGrad = ctx.createRadialGradient(0, 0, 3, 0, 0, 24 * pulse);
+      glowGrad.addColorStop(0, '#ffffff');
+      glowGrad.addColorStop(0.4, orb.color);
+      glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, 24 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Thân viên Linh Ngọc
+      ctx.fillStyle = orb.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      // Điểm sáng phản chiếu
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-2.5, -2.5, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bảng tên Linh Ngọc
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = orb.glow || '#fef08a';
+      ctx.fillText(orb.name, 0, -15);
+
+      ctx.restore();
+    }
   },
 
   drawMountain(ctx, m) {

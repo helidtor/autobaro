@@ -2390,13 +2390,54 @@ test('Lang Ha hermit quest: grants mini dragon, 3 dragon pearls with earth drago
  assert.ok(fireDragon.duelResolve < 100, 'Wukong strike should reduce dragon duelResolve');
  assert.equal(fireDragon.captured, false, 'Dragon should not be captured while resolve > 0');
 
- // Khi Long Uy cạn kiệt: Ngộ Không khóa chặt và bắt rồng
+ // Khi Long Uy cạn kiệt: Ngộ Không đánh bay nguyên hồn, rồng hóa Linh Ngọc bay về Hoa Quả Sơn (không xích kéo)
  fireDragon.duelResolve = 10;
  H.wukong.beat = 3;
  H.duelBeat(H.wukong, fireDragon);
  assert.equal(fireDragon.duelResolve, 0);
  H.captureDragon(fireDragon);
  assert.equal(fireDragon.captured, true);
+ assert.ok(H.spiritOrbs.length > 0, 'Dragon should turn into spirit orb');
+ assert.ok(!H.wukong.captive);
+
+ // 14. Fix: Nếu Thổ Long chết trước nhiệm vụ, Địa Phách Châu tự động mở phong ấn, bot không bị đứng yên
+ LH.quest.status = 'active';
+ LH.quest.owner = botB;
+ LH.quest.stage = 3;
+ LH.pearls[2].active = true;
+ LH.pearls[2].collected = false;
+ LH.pearls[2].unlocked = false;
+ const deadEarthDragon = Alioth.dragons.find(d => d.element === 'earth');
+ if (deadEarthDragon) deadEarthDragon.isAlive = false;
+
+ // Bot đứng tại Địa Phách Châu
+ botB.x = LH.pearls[2].x; botB.y = LH.pearls[2].y;
+ LH.update(0.1);
+ assert.equal(LH.pearls[2].unlocked, true, 'Earth pearl should automatically unlock if earth dragon is dead');
+ assert.equal(LH.pearls[2].collected, true, 'Bot should pick up earth pearl and not get stuck');
+
+ // 15. Fix: Tiểu Ngộ Không trong 2p không tự ý đánh quái nếu chủ nhân chưa target trước, bay mượt mà không teleport
+ H.summonWukong();
+ H.wukong.isMini = true;
+ H.wukong.owner = botB;
+ H.wukong.state = 'assist';
+ botB.targetEnemy = null;
+ botB.action = null;
+
+ const nearbyMonster = G.monsters[1];
+ nearbyMonster.isAlive = true;
+ nearbyMonster.x = botB.x + 100; nearbyMonster.y = botB.y;
+ const oldHp = nearbyMonster.currentHp;
+
+ H.updateWukong(0.1);
+ assert.equal(nearbyMonster.currentHp, oldHp, 'Wukong must NOT attack monster when owner has not targeted it');
+
+ // Khi chủ nhân target: Ngộ Không bay từ từ đến (không teleport)
+ botB.targetEnemy = nearbyMonster;
+ const prevX = H.wukong.x;
+ H.updateWukong(0.1);
+ const stepDist = Math.hypot(H.wukong.x - prevX, 0);
+ assert.ok(stepDist < 100, 'Wukong should fly smoothly with speed limit, not teleport snap');
 });
 
 test('mythic skills are offered at levels 10 and 15 and change the fight',()=>{

@@ -504,18 +504,25 @@ window.GameEntities.LangHaSystem = {
     // 3. Cơ chế Viên 3: Dụ Đám Mây bằng Thổ Long
     const pEarth = this.pearls[2];
     if (pEarth.active && !pEarth.collected) {
-      // Nếu chưa dụ mây: kiểm tra bot đến gần Thổ Long để cộng hưởng địa chấn
-      if (!pEarth.unlocked) {
-        const A = window.GameEntities.AliothSystem;
-        const earthDragon = (A?.dragons || []).find(d => d.element === 'earth' && d.isAlive);
-        const head = earthDragon?.spine?.[0];
+      const A = window.GameEntities.AliothSystem;
+      const earthDragon = (A?.dragons || []).find(d => d.element === 'earth' && d.isAlive && !d.captured);
+
+      // Nếu Thổ Long đã chết/bị dẹp hoặc không tồn tại -> Tự động mở phong ấn Địa Phách Châu
+      if (!earthDragon || !earthDragon.isAlive) {
+        pEarth.unlocked = true;
+      } else if (!pEarth.unlocked) {
+        // Thổ Long còn sống: kiểm tra bot đến gần Thổ Long để cộng hưởng địa chấn
+        const head = earthDragon?.spine?.[0] || earthDragon;
         if (head && Math.hypot(owner.x - head.x, owner.y - head.y) <= 280) {
           this.triggerEarthDragonSeismicLure(head);
           pEarth.unlocked = true;
         }
-      } else {
-        // Đã mở đường -> nhặt Địa Phách Châu
-        if (Math.hypot(owner.x - pEarth.x, owner.y - pEarth.y) <= 50) {
+      }
+
+      // Đã mở đường hoặc bot đã đứng sát Địa Phách Châu -> nhặt ngọc
+      const distToEarthPearl = Math.hypot(owner.x - pEarth.x, owner.y - pEarth.y);
+      if (pEarth.unlocked || !earthDragon || distToEarthPearl <= 55) {
+        if (distToEarthPearl <= 55) {
           pEarth.collected = true;
           this.quest.pearlsCount = 3;
           this.quest.stage = 4;

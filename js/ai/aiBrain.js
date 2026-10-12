@@ -59,9 +59,9 @@ window.GameAI.AiBrain = {
         questTarget = LH.pearls[1];
         questReason = 'Đi đoạt [Lôi Long Châu]';
       } else if(q.stage === 3){
-        if(!LH.pearls[2].unlocked){
-          const earthDragon = window.GameEntities.AliothSystem?.dragons?.find(d => d.element === 'earth' && d.isAlive);
-          questTarget = earthDragon?.spine?.[0] || earthDragon || LH.pearls[2];
+        const earthDragon = window.GameEntities.AliothSystem?.dragons?.find(d => d.element === 'earth' && d.isAlive && !d.captured);
+        if(!LH.pearls[2].unlocked && earthDragon?.isAlive){
+          questTarget = earthDragon?.spine?.[0] || earthDragon;
           questReason = 'Đến gặp Thổ Long Alioth để kích hoạt Đại Thạch Trụ dụ Đám Mây';
         } else {
           questTarget = LH.pearls[2];
