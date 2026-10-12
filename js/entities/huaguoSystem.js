@@ -434,13 +434,17 @@ window.GameEntities.HuaguoSystem = {
       w.x += (idealX - w.x) * Math.min(1, 9 * dt);
       w.y += (idealY - w.y) * Math.min(1, 9 * dt);
 
-      const beats = [1.1, 1.1, 1.1, 1.1, 1.1];
+      // Rồng nguyên tố phản kháng kịch liệt với Ngộ Không
+      t.duelResolve = (t.duelResolve ?? 100);
+      const beatInterval = 1.05;
       w.beatT = (w.beatT || 0) + dt;
-      if (w.beatT >= beats[w.beat]) {
+      if (w.beatT >= beatInterval) {
         this.duelBeat(w, t);
         w.beatT = 0;
-        w.beat++;
-        if (w.beat >= beats.length) this.captureDragon(t);
+        w.beat = ((w.beat || 0) + 1);
+        if (t.duelResolve <= 0) {
+          this.captureDragon(t);
+        }
       }
     } else if (w.state === 'drag') {
       const m = this.mountain;
@@ -653,41 +657,70 @@ window.GameEntities.HuaguoSystem = {
     w.swing = (w.beat % 5) / 5;
     const dx = dragon.x - w.x, dy = dragon.y - w.y;
     const dist = Math.hypot(dx, dy) || 1;
+    dragon.duelResolve = (dragon.duelResolve ?? 100);
 
-    if (w.beat === 0) {
-      dragon.biteLunge = 0.55;
-      V?.addBurstParticles?.(w.x + Math.cos(w.angle) * 45, w.y + Math.sin(w.angle) * 45, '#fde047', 22);
-      window.GameEngine?.Audio?.play?.('impact', w, 'steel');
-      window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không xoay gậy thần tốc, chặn đứng đợt tấn công của ${dragon.name}!`);
-    } else if (w.beat === 1) {
-      dragon.x += dx / dist * 35;
-      dragon.y += dy / dist * 35;
-      V?.addEffect?.('impact', dragon.x, dragon.y, { radius: 95, color: '#f6d48a', life: 0.5 });
-      V?.addBurstParticles?.(dragon.x, dragon.y, dragon.colors?.gold || '#f97316', 22);
-      window.GameEngine?.Audio?.play?.('impact', w, 'steel');
-      window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không vung gậy liên hoàn chém rách mây trời!`);
-    } else if (w.beat === 2) {
-      w.x -= dx / dist * 45;
-      w.y -= dy / dist * 45;
-      dragon.x += dx / dist * 65;
-      dragon.y += dy / dist * 65;
-      V?.addEffect?.('impact', dragon.x, dragon.y, { radius: 125, color: '#f59e0b', life: 0.8 });
-      V?.addBurstParticles?.(dragon.x, dragon.y, '#f59e0b', 30);
-      window.GameEngine?.Audio?.play?.('impact', w, 'heavy');
-      window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không nhảy lộn vòng, giáng đòn sấm sét vào ${dragon.name}!`);
-    } else if (w.beat === 3) {
-      dragon.biteLunge = 0.45;
-      V?.addBurstParticles?.(dragon.x, dragon.y, '#fde047', 25);
-      window.GameEngine?.Audio?.play?.('impact', w, 'steel');
-      window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không xoay gậy vạn biến rồi quét ngang ngàn cân!`);
+    const isDragonTurn = (w.beat % 2 === 0);
+
+    if (isDragonTurn) {
+      // 1. RỒNG NGUYÊN TỐ PHẢN KHÁNG KỊCH LIỆT THEO NGUYÊN TỐ
+      dragon.biteLunge = 0.6;
+      if (dragon.element === 'fire') {
+        dragon.isBreathingFire = true;
+        w.x -= dx / dist * 55;
+        w.y -= dy / dist * 55;
+        V?.addEffect?.('impact', w.x, w.y, { radius: 110, color: '#ef4444', life: 0.6 });
+        V?.addBurstParticles?.(w.x, w.y, '#f97316', 25);
+        V?.addBurstParticles?.(w.x, w.y, '#c4342d', 20);
+        window.GameEngine?.Audio?.play?.('impact', w, 'fire');
+        window.GameUI?.CombatTicker?.log(`🔥 ${dragon.name} gầm thét phun bão lửa thiêu đốt Cân Đẩu Vân, hất văng Tôn Ngộ Không!`);
+      } else if (dragon.element === 'lightning') {
+        window.GameEntities.AliothSystem?.lightningBolts?.push?.({
+          points: [{ x: dragon.x, y: dragon.y }, { x: w.x, y: w.y }],
+          targetX: w.x, targetY: w.y, life: 0.35, color: '#38bdf8'
+        });
+        w.x -= dx / dist * 40;
+        w.y -= dy / dist * 40;
+        V?.addEffect?.('impact', w.x, w.y, { radius: 100, color: '#38bdf8', life: 0.5 });
+        V?.addBurstParticles?.(w.x, w.y, '#38bdf8', 25);
+        window.GameEngine?.Audio?.play?.('impact', w, 'lightning');
+        window.GameUI?.CombatTicker?.log(`⚡ ${dragon.name} phóng cuồng lôi rạch nát trời đêm, đánh bật Tôn Ngộ Không!`);
+      } else {
+        window.GameEntities.AliothSystem?.spawnEarthSpire?.(dragon);
+        w.x -= dx / dist * 45;
+        w.y -= dy / dist * 45;
+        V?.addEffect?.('impact', w.x, w.y, { radius: 105, color: '#d97706', life: 0.6 });
+        V?.addBurstParticles?.(w.x, w.y, '#78350f', 25);
+        window.GameEngine?.Audio?.play?.('impact', w, 'heavy');
+        window.GameUI?.CombatTicker?.log(`🌍 ${dragon.name} quật đuôi chấn động địa mạch, đất đá trồi lên cản phá Tôn Ngộ Không!`);
+      }
     } else {
-      window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không phóng gậy dài, khóa chặt cổ ${dragon.name}!`);
+      // 2. TÔN NGỘ KHÔNG VUNG GẬY NHƯ Ý PHẢN ĐÒN
+      dragon.isBreathingFire = false;
+      const dmg = Math.round(20 + Math.random() * 8);
+      dragon.duelResolve = Math.max(0, dragon.duelResolve - dmg);
+
+      dragon.x += dx / dist * 45;
+      dragon.y += dy / dist * 45;
+
+      V?.addEffect?.('impact', dragon.x, dragon.y, { radius: 130, color: '#f59e0b', life: 0.7 });
+      V?.addBurstParticles?.(dragon.x, dragon.y, '#fde047', 28);
+      V?.addBurstParticles?.(dragon.x, dragon.y, '#f59e0b', 22);
+      V?.addDamageNumber?.(dragon.x, dragon.y - 30, `ĐẠI THÁNH: -${dmg}% UY LỰC`, 'crit');
+      window.GameEngine?.Audio?.play?.('impact', w, 'steel');
+
+      if (dragon.duelResolve > 0) {
+        window.GameUI?.CombatTicker?.log(`🐵 Tôn Ngộ Không lộn vòng giáng gậy Như Ý phá vỡ thế trận của ${dragon.name} (Long Uy còn ${Math.round(dragon.duelResolve)}%)!`);
+      } else {
+        window.GameUI?.CombatTicker?.log(`💥 Đại Thánh đánh tan Long Uy của ${dragon.name}! Gậy Như Ý khóa chặt cổ rồng!`);
+      }
     }
   },
 
   captureDragon(dragon) {
     const w = this.wukong;
     if (!w || !dragon?.isAlive) return;
+    dragon.duelResolve = 100;
+    dragon.isBreathingFire = false;
     dragon.captured = true;
     dragon.invincible = true;
     w.captive = dragon;

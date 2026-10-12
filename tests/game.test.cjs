@@ -2348,12 +2348,55 @@ test('Lang Ha hermit quest: grants mini dragon, 3 dragon pearls with earth drago
  assert.equal(LH.quest.owner, botB, 'Quest owner should transfer to killer BotB');
  assert.equal(LH.miniDragon.owner, botB, 'Mini dragon owner should transfer to killer BotB');
 
- // 11. Render kiểm tra cả zoom 1.0 và zoom out 0.3
+ // 11. Render kiểm tra cả zoom 1.0 và zoom out 0.3 kèm tia beam
  const Cam = w.GameEngine.Camera;
  Cam.zoom = 1.0;
+ LH.miniDragon.swingTimer = 0.4;
+ LH.miniDragon.targetX = 1100;
+ LH.miniDragon.targetY = 1100;
  assert.doesNotThrow(() => LH.render(G.ctx));
  Cam.zoom = 0.3;
  assert.doesNotThrow(() => LH.render(G.ctx));
+
+ // 12. Nội tại Thiên Mệnh Chi Tử: bot mang tính cách tham lam, xảo quyệt hoặc trung thành chủ động lập team phò tá chủ nhân Kim Long
+ const botC = G.pawns[10];
+ botC.isAlive = true;
+ botC.isCharmedByVoid = false;
+ botC.personality = { greed: 70, caution: 20, loyalty: 30 };
+ w.GameAI.AiBrain.handleAllianceAndBetrayal(botC, [], [botB]);
+ assert.equal(botC.allyPawn, botB, 'Greedy bot should ally with dragon owner');
+ assert.equal(botC.isDragonFollower, true);
+
+ // 13. Cơ chế đối kháng 2 chiều giữa Ngộ Không và Rồng nguyên tố
+ const H = w.GameEntities.HuaguoSystem;
+ H.summonWukong();
+ const fireDragon = Alioth.dragons.find(d => d.element === 'fire');
+ assert.ok(fireDragon);
+ fireDragon.isAlive = true;
+ fireDragon.captured = false;
+ H.wukong.target = fireDragon;
+ H.wukong.state = 'duel';
+ H.wukong.beat = 0;
+ fireDragon.duelResolve = 100;
+
+ // Hiệp của rồng: rồng phun lửa phản kích và đẩy lùi Ngộ Không
+ const oldWukongX = H.wukong.x;
+ H.duelBeat(H.wukong, fireDragon);
+ assert.equal(fireDragon.isBreathingFire, true, 'Fire dragon should breathe fire in duel');
+
+ // Hiệp của Ngộ Không: Ngộ Không phản đòn phá vỡ Long Uy
+ H.wukong.beat = 1;
+ H.duelBeat(H.wukong, fireDragon);
+ assert.ok(fireDragon.duelResolve < 100, 'Wukong strike should reduce dragon duelResolve');
+ assert.equal(fireDragon.captured, false, 'Dragon should not be captured while resolve > 0');
+
+ // Khi Long Uy cạn kiệt: Ngộ Không khóa chặt và bắt rồng
+ fireDragon.duelResolve = 10;
+ H.wukong.beat = 3;
+ H.duelBeat(H.wukong, fireDragon);
+ assert.equal(fireDragon.duelResolve, 0);
+ H.captureDragon(fireDragon);
+ assert.equal(fireDragon.captured, true);
 });
 
 test('mythic skills are offered at levels 10 and 15 and change the fight',()=>{

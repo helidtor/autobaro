@@ -111,6 +111,11 @@ window.GameEntities.LangHaSystem = {
           id: 'dragon_shield',
           name: 'Chân Long Hộ Vệ',
           desc: 'Bảo hộ chủ nhân tuyệt đối trước đòn Thôn Phệ (Devour) của Đám Mây Hư Không.'
+        },
+        {
+          id: 'dragon_sovereign_aura',
+          name: 'Thiên Mệnh Chi Tử (Đồng Minh Quy Phục)',
+          desc: 'Các bot mang tính cách tham lam (hưởng lợi lộc), xảo quyệt (tìm kiếm chỗ dựa) hoặc trung thành (kính phục Chân Long) sẽ chủ động liên minh, che chắn và trợ chiến cùng chủ nhân.'
         }
       ],
       objective: 'Bay lượn hộ mệnh chủ nhân',
@@ -259,6 +264,28 @@ window.GameEntities.LangHaSystem = {
     return this.miniDragon?.active && this.miniDragon?.isAlive && this.miniDragon?.owner === pawn;
   },
 
+  /**
+   * Nội tại Thiên Mệnh Chi Tử: Các bot mang tính cách tham lam, xảo quyệt hoặc trung thành
+   * sẽ chủ động phò tá và liên minh cùng chủ nhân Kim Long
+   */
+  shouldPawnAllyWithDragonOwner(pawn) {
+    if (!this.miniDragon?.active || !this.miniDragon?.isAlive) return false;
+    const owner = this.quest?.owner;
+    if (!owner?.isAlive || owner === pawn) return false;
+    const P = pawn.personality || window.GameData.PersonalityProfiles[pawn.trait] || {};
+    const isGreedy = (P.greed >= 40) || pawn.trait === 'greedy';
+    const isCunning = (P.caution >= 35 || P.cowardice >= 35) || pawn.trait === 'cautious' || pawn.trait === 'coward';
+    const isLoyal = (P.loyalty >= 45) || pawn.trait === 'loyal' || pawn.trait === 'brave';
+    return isGreedy || isCunning || isLoyal;
+  },
+
+  getAllyReason(pawn) {
+    const P = pawn.personality || window.GameData.PersonalityProfiles[pawn.trait] || {};
+    if ((P.greed >= 40) || pawn.trait === 'greedy') return 'tham lam muốn hưởng hào quang bảo hộ và chiến lợi phẩm';
+    if ((P.caution >= 35 || P.cowardice >= 35) || pawn.trait === 'cautious' || pawn.trait === 'coward') return 'xảo quyệt tìm kiếm chỗ dựa sinh tồn';
+    return 'trung thành kính phục Chân Long Thiên Tử';
+  },
+
   handleVictimDeath(victim, killer) {
     if (this.quest?.owner === victim) {
       if (killer?.isAlive && killer.isPawn && !killer.isDemonKing) {
@@ -375,12 +402,26 @@ window.GameEntities.LangHaSystem = {
   executeAwakenedAttack(target) {
     const d = this.miniDragon;
     const V = window.GameRenderer?.VfxManager;
-    const dmg = Math.round(75 + Math.random() * 35);
+    const dmg = Math.round(85 + Math.random() * 35);
+
+    d.targetX = target.x;
+    d.targetY = target.y;
+    d.swingTimer = 0.55;
 
     target.currentHp = Math.max(0, target.currentHp - dmg);
-    V?.addEffect?.('impact', target.x, target.y, { radius: 55, color: '#fde047', life: 0.4 });
-    V?.addBurstParticles?.(target.x, target.y, '#f59e0b', 16);
-    V?.addDamageNumber?.(target.x, target.y - 28, 'KIM LONG: -' + dmg, 'crit');
+
+    // Hiệu ứng nổ kim quang & sóng xung kích tại mục tiêu
+    V?.addEffect?.('impact', target.x, target.y, { radius: 75, color: '#fde047', life: 0.5 });
+    V?.addEffect?.('shockwave', target.x, target.y, { radius: 110, color: '#f59e0b', life: 0.6 });
+    V?.addBurstParticles?.(target.x, target.y, '#fde047', 26);
+    V?.addBurstParticles?.(target.x, target.y, '#f59e0b', 20);
+    V?.addBurstParticles?.(target.x, target.y, '#ef4444', 16);
+    V?.addDamageNumber?.(target.x, target.y - 28, 'KIM LONG THẦN QUANG: -' + dmg, 'crit');
+
+    // Hiệu ứng sóng năng lượng phát xạ từ Kim Long
+    V?.addEffect?.('shockwave', d.x, d.y, { radius: 90, color: '#fef08a', life: 0.45 });
+    V?.addBurstParticles?.(d.x, d.y, '#fde047', 18);
+
     window.GameEngine?.Audio?.play?.('impact', target, 'lightning');
 
     if (target.currentHp <= 0 && target.isAlive) {
@@ -871,15 +912,63 @@ window.GameEntities.LangHaSystem = {
     ctx.arc(6, -2, 6, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hiệu ứng tia Kim Long Thần Quang khi tấn công
+    // Hiệu ứng tia Kim Long Thần Quang (Dragon Beam) khi tấn công
     if (d.swingTimer > 0) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(254, 240, 138, 0.9)';
-      ctx.lineWidth = 6;
+      const beamT = Math.sin((d.swingTimer / 0.55) * Math.PI);
+      const angle = (d.targetX !== undefined && d.targetY !== undefined)
+        ? Math.atan2(d.targetY - d.y, d.targetX - d.x)
+        : 0;
+
+      // Quả cầu năng lượng tụ khí tại miệng rồng
+      const flare = ctx.createRadialGradient(26, 0, 2, 26, 0, 22 * beamT);
+      flare.addColorStop(0, '#ffffff');
+      flare.addColorStop(0.4, '#fde047');
+      flare.addColorStop(1, 'rgba(245, 158, 11, 0)');
+      ctx.fillStyle = flare;
       ctx.beginPath();
-      ctx.moveTo(35, 0);
-      ctx.lineTo(85, 0);
+      ctx.arc(26, 0, 22 * beamT, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Chiều dài luồng beam
+      const beamDist = (d.targetX !== undefined && d.targetY !== undefined)
+        ? Math.hypot(d.targetX - d.x, d.targetY - d.y) / scale
+        : 180;
+
+      // 1. Quầng hào quang viền ngoài
+      ctx.strokeStyle = `rgba(245, 158, 11, ${0.45 * beamT})`;
+      ctx.lineWidth = 24;
+      ctx.beginPath();
+      ctx.moveTo(26, 0);
+      ctx.lineTo(beamDist, 0);
       ctx.stroke();
+
+      // 2. Luồng năng lượng hoàng kim chính
+      ctx.strokeStyle = `rgba(253, 224, 71, ${0.85 * beamT})`;
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      ctx.moveTo(26, 0);
+      ctx.lineTo(beamDist, 0);
+      ctx.stroke();
+
+      // 3. Lõi trắng cực sáng
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.95 * beamT})`;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(26, 0);
+      ctx.lineTo(beamDist, 0);
+      ctx.stroke();
+
+      // 4. Các vòng sóng xung kích dọc theo thân beam
+      for (let i = 1; i <= 3; i++) {
+        const ringDist = 26 + (beamDist - 26) * (i / 4);
+        ctx.strokeStyle = `rgba(254, 240, 138, ${0.75 * beamT})`;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.ellipse(ringDist, 0, 5, 12 * beamT, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
       ctx.restore();
     }
 

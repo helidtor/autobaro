@@ -706,6 +706,31 @@ window.GameAI.AiBrain = {
   // Cơ chế Liên Minh Tạm Thời (Pact of Two) & Thuật toán Phản Bội
   handleAllianceAndBetrayal: function(pawn, monsters, enemyPawns) {
     if(pawn.pactTarget)return;
+
+    // NỘI TẠI THIÊN MỆNH CHI TỬ: Lập team phò tá chủ nhân Kim Long
+    const LH = window.GameEntities.LangHaSystem;
+    const dragonOwner = LH?.quest?.owner;
+    if (dragonOwner?.isAlive && pawn !== dragonOwner && !pawn.isCharmedByVoid) {
+      if (pawn.allyPawn === dragonOwner) {
+        if (dragonOwner.targetEnemy?.isAlive && !pawn.targetEnemy) {
+          pawn.targetEnemy = dragonOwner.targetEnemy;
+          pawn.objective = `Hộ vệ ${dragonOwner.name}: Tấn công ` + dragonOwner.targetEnemy.name;
+        }
+        return;
+      }
+      if (!pawn.allyPawn && LH.shouldPawnAllyWithDragonOwner(pawn)) {
+        pawn.allyPawn = dragonOwner;
+        pawn.isAllied = true;
+        pawn.isDragonFollower = true;
+        const reason = LH.getAllyReason(pawn);
+        window.GameRenderer?.VfxManager?.addEmotionMote?.(pawn, '🐉', '#fde047');
+        if (window.GameUI?.CombatTicker) {
+          window.GameUI.CombatTicker.log(`🤝 ${pawn.name} (${reason}) quy phục, thề nguyện lập team phò tá ${dragonOwner.name} & Kim Long!`);
+        }
+        return;
+      }
+    }
+
     const boss = monsters.find(m => m.tier === 4 && pawn.level>=8 && this.calculateWinRate(pawn,m)>.3);
 
     // Kích hoạt Liên Minh nếu cả 2 đang đối mặt Yêu Vương/Yêu Thần
@@ -731,6 +756,7 @@ window.GameAI.AiBrain = {
     // Khi Boss chết, tính toán phản bội
     if (pawn.allyPawn && (!pawn.allyPawn.isAlive || (pawn.allianceBoss && !pawn.allianceBoss.isAlive))) {
       const ally = pawn.allyPawn;
+      if (pawn.isDragonFollower && LH.hasMiniDragon(ally)) return; // Trung thành phò tá chủ nhân Kim Long, không phản bội
       // Keep both pacts intact during the four-person exception; betray once that encounter ends.
       if(!window.GameEntities.CombatSystem.canDissolveAlliance(pawn))return;
       const greedWeight = pawn.trait === 'greedy' ? 2.5 : (pawn.trait === 'cunning' ? 2.0 : 1.0);
