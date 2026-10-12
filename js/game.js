@@ -72,6 +72,7 @@ window.GameManager = {
     window.GameEntities.CloudSystem.init(this.width, this.height);
     window.GameEntities.HuaguoSystem.init(this.width, this.height);
     window.GameEntities.TrucLamSystem.init(this.width, this.height);
+    window.GameEntities.LangHaSystem.init(this.width, this.height);
 
     // Gán listener sự kiện bàn phím & chuột
     this.bindInputs();
@@ -169,6 +170,7 @@ window.GameManager = {
     window.GameEntities.CloudSystem.reset(this.width, this.height);
     window.GameEntities.HuaguoSystem.reset(this.width, this.height);
     window.GameEntities.TrucLamSystem.reset(this.width, this.height);
+    window.GameEntities.LangHaSystem.reset(this.width, this.height);
     window.GameUI.DirectorControls.syncSpeed();
     document.getElementById('btn-toggle-mode').innerText='👁️ Chế độ: Đạo Diễn (Spectator)';
     document.getElementById('btn-toggle-mode').classList.remove('btn-player-mode');
@@ -348,6 +350,25 @@ window.GameManager = {
       const dCloud = Math.hypot(Cloud.cloud.x - wx, Cloud.cloud.y - wy);
       if (dCloud < (Cloud.cloud.radius || 175)) candidates.push({ entity: Cloud.cloud, dist: dCloud });
     }
+    const LH = window.GameEntities.LangHaSystem;
+    if (LH?.hermit) {
+      const d = Math.hypot(LH.hermit.x - wx, LH.hermit.y - wy);
+      if (d < 45) candidates.push({ entity: LH.hermit, dist: d });
+    }
+    if (LH?.miniDragon?.active && LH.miniDragon.isAlive) {
+      const d = Math.hypot(LH.miniDragon.x - wx, LH.miniDragon.y - wy);
+      if (d < 40) candidates.push({ entity: LH.miniDragon, dist: d });
+    }
+    if (LH?.seismicPillar?.isAlive) {
+      const d = Math.hypot(LH.seismicPillar.x - wx, LH.seismicPillar.y - wy);
+      if (d < 50) candidates.push({ entity: LH.seismicPillar, dist: d });
+    }
+    for (const p of (LH?.pearls || [])) {
+      if (p.active && !p.collected) {
+        const d = Math.hypot(p.x - wx, p.y - wy);
+        if (d < 30) candidates.push({ entity: p, dist: d });
+      }
+    }
 
     if (candidates.length > 0) {
       candidates.sort((a, b) => a.dist - b.dist);
@@ -494,6 +515,7 @@ window.GameManager = {
     window.GameEntities.CloudSystem.update(dt);
     window.GameEntities.HuaguoSystem.update(dt);
     window.GameEntities.TrucLamSystem.update(dt);
+    window.GameEntities.LangHaSystem.update(dt);
     window.GameEntities.AncientSystem.tick(dt);
     window.GameEntities.CombatSystem.tickEffects(dt);
     window.GameEngine.Audio?.update(dt);
@@ -708,6 +730,7 @@ window.GameManager = {
     window.GameEntities.CloudSystem.render(ctx);
     window.GameEntities.HuaguoSystem.render(ctx);
     window.GameEntities.TrucLamSystem.render(ctx);
+    window.GameEntities.LangHaSystem.render(ctx);
     if (this.selectedEntity && !this.selectedEntity.isPawn && !this.monsters.includes(this.selectedEntity)) {
       this.renderSelectedSpecial(ctx, this.selectedEntity, time);
     }

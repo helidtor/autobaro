@@ -202,6 +202,7 @@ window.GameEntities.AliothSystem = {
     if (!entity?.isAlive || entity.isAlioth || entity.isCloud || entity.isSplit) return true;
     if (entity.captured) return true;
     if (entity.isAncient || entity.isAncientClone || entity.isDemonKing) return true;
+    if (window.GameEntities.LangHaSystem?.hasMiniDragon(entity)) return true;
     if (entity.isPawn && (window.GameManager?.battleRoyaleResolved || window.GameManager?.finalShowdown || entity.finalDuel || (window.GameManager?.pawns?.filter(p => p.isAlive).length || 0) <= 2)) return true;
     if (window.GameManager?.battleRoyaleResolved && entity.isFinalHunt) return true;
     return entity === window.GameEntities.EntityManager?.worldBoss;
@@ -225,6 +226,7 @@ window.GameEntities.AliothSystem = {
   avoid(pawn, dt) {
     if (!pawn?.isAlive || !this.dragons.length) return false;
     if (window.GameManager?.battleRoyaleResolved) return false;
+    if (window.GameEntities.LangHaSystem?.hasMiniDragon(pawn)) return false;
     const hit = this.nearest(pawn.x, pawn.y);
     const M = window.GameEngine.MapTerrain;
 
@@ -653,6 +655,7 @@ window.GameEntities.AliothSystem = {
     victim.vy = 0;
 
     window.GameEntities.TrucLamSystem?.handleVictimDevoured?.(victim, oldX, oldY);
+    window.GameEntities.LangHaSystem?.handleVictimDeath?.(victim, null);
 
     if (victim === window.GameEntities.EntityManager?.worldBoss) {
       window.GameEntities.AncientSystem?.awaken?.(victim, dragon || this.alioth);

@@ -2254,6 +2254,98 @@ test('Truc Lam generals, mounted general and soldiers shrink to dots when zoom <
  assert.doesNotThrow(() => TL.render(G.ctx));
 });
 
+test('Lang Ha hermit quest: grants mini dragon, 3 dragon pearls with earth dragon seismic lure, awakened dragon assist, and void cloud charm mode', () => {
+ const w=loadGame(),G=w.GameManager,C=w.GameEntities.CombatSystem,LH=w.GameEntities.LangHaSystem,Cloud=w.GameEntities.CloudSystem,Alioth=w.GameEntities.AliothSystem;
+ const [botA, botB] = G.pawns;
+
+ // 1. Kiểm tra khởi tạo
+ assert.ok(LH);
+ assert.ok(LH.hermit && LH.hermit.isHermit);
+ assert.equal(LH.hermit.x, 3400);
+ assert.equal(LH.hermit.y, 4420);
+ assert.equal(LH.pearls.length, 3);
+ assert.equal(LH.quest.status, 'idle');
+ assert.doesNotThrow(() => LH.render(G.ctx));
+
+ // 2. BotA nhận quest từ Ẩn Sĩ
+ LH.startQuest(botA);
+ assert.equal(LH.quest.status, 'active');
+ assert.equal(LH.quest.owner, botA);
+ assert.equal(LH.miniDragon.active, true);
+ assert.equal(LH.miniDragon.owner, botA);
+ assert.equal(LH.hasMiniDragon(botA), true);
+ assert.equal(LH.pearls[0].active, true);
+
+ // 3. Rồng vàng bảo hộ: miễn nhiễm nuốt chửng và không bỏ chạy khỏi mây/rồng
+ assert.equal(Cloud.protected(botA), true);
+ assert.equal(Alioth.protected(botA), true);
+ assert.equal(Cloud.avoid(botA, 0.1), false);
+ assert.equal(Alioth.avoid(botA, 0.1), false);
+
+ // 4. Nhặt Viên 1 (Hỏa Long Châu)
+ botA.x = LH.pearls[0].x; botA.y = LH.pearls[0].y;
+ LH.update(0.1);
+ assert.equal(LH.pearls[0].collected, true);
+ assert.equal(LH.quest.pearlsCount, 1);
+ assert.equal(LH.pearls[1].active, true);
+
+ // 5. Nhặt Viên 2 (Lôi Long Châu)
+ botA.x = LH.pearls[1].x; botA.y = LH.pearls[1].y;
+ LH.update(0.1);
+ assert.equal(LH.pearls[1].collected, true);
+ assert.equal(LH.quest.pearlsCount, 2);
+ assert.equal(LH.pearls[2].active, true);
+ assert.equal(LH.pearls[2].unlocked, false);
+
+ // 6. Viên 3: Dụ Đám Mây Hư Không bằng Thổ Long
+ const earthDragon = Alioth.dragons.find(d => d.element === 'earth');
+ assert.ok(earthDragon);
+ const earthHead = earthDragon.spine[0];
+ botA.x = earthHead.x; botA.y = earthHead.y;
+ LH.update(0.1);
+ assert.equal(LH.pearls[2].unlocked, true);
+ assert.ok(LH.seismicPillar && LH.seismicPillar.isAlive);
+ assert.equal(Cloud.cloud.targetX, 1800);
+ assert.equal(Cloud.cloud.targetY, 3600);
+ assert.equal(Cloud.cloud.luredTarget, LH.seismicPillar);
+
+ // 7. Nhặt Viên 3 (Địa Phách Châu) -> Thức Tỉnh & Đám Mây Hóa Cuồng Mê Hoặc
+ botA.x = LH.pearls[2].x; botA.y = LH.pearls[2].y;
+ LH.update(0.1);
+ assert.equal(LH.pearls[2].collected, true);
+ assert.equal(LH.quest.pearlsCount, 3);
+ assert.equal(LH.quest.status, 'completed');
+ assert.equal(LH.miniDragon.isAwakened, true);
+ assert.equal(Cloud.cloud.mode, 'void_rage_charm');
+
+ // 8. Kim Thần Long phụ tấn công mục tiêu botA đang đánh
+ const monster = G.monsters[0];
+ monster.x = botA.x + 40; monster.y = botA.y; monster.currentHp = 500; monster.maxHp = 500; monster.isAlive = true;
+ botA.targetEnemy = monster;
+ LH.miniDragon.attackCooldown = 0;
+ LH.update(0.1);
+ assert.ok(monster.currentHp < 500, 'Awakened dragon should assist damage on target');
+
+ // 9. Đám mây Hư Không chế độ Mê Hoặc: gieo rắc bùa mê lên bot khác
+ botB.x = Cloud.cloud.x; botB.y = Cloud.cloud.y; botB.isAlive = true;
+ Cloud.devour();
+ assert.equal(botB.isAlive, true, 'Cloud in charm mode must NOT devour bots');
+ assert.equal(botB.isCharmedByVoid, true, 'BotB should be charmed by Void Cloud');
+ assert.equal(botB.targetEnemy, botA, 'Charmed BotB should target quest owner botA');
+
+ // 10. Chuyển giao quyền sở hữu Rồng Vàng khi BotA bị BotB hạ gục
+ C.handleDeath(botB, botA);
+ assert.equal(LH.quest.owner, botB, 'Quest owner should transfer to killer BotB');
+ assert.equal(LH.miniDragon.owner, botB, 'Mini dragon owner should transfer to killer BotB');
+
+ // 11. Render kiểm tra cả zoom 1.0 và zoom out 0.3
+ const Cam = w.GameEngine.Camera;
+ Cam.zoom = 1.0;
+ assert.doesNotThrow(() => LH.render(G.ctx));
+ Cam.zoom = 0.3;
+ assert.doesNotThrow(() => LH.render(G.ctx));
+});
+
 test('mythic skills are offered at levels 10 and 15 and change the fight',()=>{
  const w=loadGame(7),G=w.GameManager,C=w.GameEntities.CombatSystem,M=w.GameEntities.MythicSystem,D=w.GameData.LevelTable,A=w.GameAI.AIBrain;
  assert.equal(w.GameData.MythicSkills.length,30);

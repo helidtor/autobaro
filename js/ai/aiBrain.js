@@ -38,6 +38,43 @@ window.GameAI.AiBrain = {
       else{pawn.vx=pawn.vy=0;pawn.targetEnemy=null;}
       return;
     }
+    const LH = window.GameEntities.LangHaSystem;
+    const questOwner = LH?.quest?.owner;
+    if(pawn.isCharmedByVoid && questOwner?.isAlive && questOwner !== pawn){
+      pawn.targetEnemy = questOwner;
+      pawn.plan = { kind: 'duel', target: questOwner, until: (pawn.decisionTime||0) + 10 };
+      pawn.objective = `🔮 MÊ HOẶC: Bao vây tiêu diệt ${questOwner.name}!`;
+      pawn.thought = 'Khí tức Hư Không chi phối tâm trí, toàn lực tấn công chủ nhân Long Thần!';
+      this.engageCombat(pawn, questOwner, dt);
+      return;
+    }
+    if(LH?.quest?.status === 'active' && questOwner === pawn){
+      const q = LH.quest;
+      let questTarget = null;
+      let questReason = '';
+      if(q.stage === 1){
+        questTarget = LH.pearls[0];
+        questReason = 'Đi đoạt [Hỏa Long Châu]';
+      } else if(q.stage === 2){
+        questTarget = LH.pearls[1];
+        questReason = 'Đi đoạt [Lôi Long Châu]';
+      } else if(q.stage === 3){
+        if(!LH.pearls[2].unlocked){
+          const earthDragon = window.GameEntities.AliothSystem?.dragons?.find(d => d.element === 'earth' && d.isAlive);
+          questTarget = earthDragon?.spine?.[0] || earthDragon || LH.pearls[2];
+          questReason = 'Đến gặp Thổ Long Alioth để kích hoạt Đại Thạch Trụ dụ Đám Mây';
+        } else {
+          questTarget = LH.pearls[2];
+          questReason = 'Thời cơ đã đến! Lao vào đoạt [Địa Phách Châu]';
+        }
+      }
+      if(questTarget && (!pawn.targetEnemy || Math.hypot(questTarget.x - pawn.x, questTarget.y - pawn.y) < 220)){
+        pawn.objective = '📜 ' + questReason;
+        pawn.thought = 'Tiểu Kim Long đang hộ mệnh! Mau chóng hoàn thành thử thách Long Châu!';
+        this.moveToTarget(pawn, questTarget.x, questTarget.y, dt);
+        return;
+      }
+    }
     // Tầm nhìn và đường thẳng tới từng mục tiêu rất đắt; làm mới mỗi 0.1s mô phỏng.
     // Bước dt >= 0.1 vẫn quét lại ngay, nên một lần update(.1) không đổi quyết định.
     let nearby,threats;
@@ -91,7 +128,7 @@ window.GameAI.AiBrain = {
       }
       const farm=G.monsters.filter(m=>m.isAlive&&m.isFinalHunt).sort((a,b)=>a.huntOrder-b.huntOrder);
       let target=farm.find(m=>this.canHunt(pawn,m));
-      if(!target && farm.length > 0 && (pawn.currentHp > pawn.maxHp * 0.4 || window.GameEntities.TrucLamSystem?.survivorEscortActive || window.GameEntities.HuaguoSystem?.wukong?.state==='assist')){
+      if(!target && farm.length > 0 && (pawn.currentHp > pawn.maxHp * 0.4 || window.GameEntities.TrucLamSystem?.survivorEscortActive || window.GameEntities.HuaguoSystem?.wukong?.state==='assist' || window.GameEntities.LangHaSystem?.hasMiniDragon(pawn))){
         target = farm[0];
       }
       if(target){
@@ -193,6 +230,8 @@ window.GameAI.AiBrain = {
       if(pilgrimage>0)choices.push({kind:'pilgrimage',score:pilgrimage,target:window.GameEntities.HuaguoSystem.mountain});
       const trucLam=!farmingFirst && !enemies.length && window.GameEntities.TrucLamSystem?.challengeScore?.(pawn);
       if(trucLam>0)choices.push({kind:'truc_lam',score:trucLam});
+      const langHa=!farmingFirst && !enemies.length && window.GameEntities.LangHaSystem?.questScore?.(pawn);
+      if(langHa>0)choices.push({kind:'lang_ha',score:langHa});
       for(const m of G.monsters){if(!this.canHunt(pawn,m))continue;
         const dist=Math.hypot(m.x-pawn.x,m.y-pawn.y),chance=this.calculateWinRate(pawn,m);if(dist<450&&!C.canApproach(pawn,m))continue;
         choices.push({kind:'farm',target:m,score:(farmingFirst?140:60)+chance*55+P.caution*.25+(pawn.style==='farmer'?40:0)+(pawn.style==='looter'?0:0)+Math.min(35,m.expReward/8)+P.greed*m.tier*2-dist/(15+P.curiosity*.2)});}
@@ -214,14 +253,28 @@ window.GameAI.AiBrain = {
       if(choices[1]&&choices[0].score-choices[1].score<8){const tie=[choices[0],choices[1]].sort((a,b)=>String(a.target?.id||'').localeCompare(String(b.target?.id||'')));choices[0]=tie[0];}
       const current=pawn.plan&&choices.find(c=>c.kind===pawn.plan.kind&&c.target===pawn.plan.target);
       const chosen=current&&current.score+30>=(choices[0]?.score||0)?current:choices[0];
-      pawn.decisionReason=chosen?(chosen.kind==='duel'?'Chiến ý và lợi thế trước đối thủ':chosen.kind==='pilgrimage'?'Bái kiến Hoa Quả Sơn: tìm kiếm cơ duyên':farmingFirst?(G.matchTime<60?'Phút đầu: farm, chưa chủ động đánh bot':'Cấp dưới mặt bằng: farm trước khi tìm bot'):'Mục tiêu phù hợp sức mạnh và tính cách'):'Chưa có mục tiêu: khám phá';
-      const planDur = chosen?.kind==='ambush'?12:chosen?.kind==='pilgrimage'?25:chosen?.kind==='truc_lam'?20:Math.max(2,(pawn.decisionInterval||1)*(1+P.patience/50));
+      pawn.decisionReason=chosen?(chosen.kind==='duel'?'Chiến ý và lợi thế trước đối thủ':chosen.kind==='pilgrimage'?'Bái kiến Hoa Quả Sơn: tìm kiếm cơ duyên':chosen.kind==='lang_ha'?'Bái kiến Ẩn Sĩ Làng Hạ: tìm kiếm Long Châu':farmingFirst?(G.matchTime<60?'Phút đầu: farm, chưa chủ động đánh bot':'Cấp dưới mặt bằng: farm trước khi tìm bot'):'Mục tiêu phù hợp sức mạnh và tính cách'):'Chưa có mục tiêu: khám phá';
+      const planDur = chosen?.kind==='ambush'?12:chosen?.kind==='pilgrimage'?25:chosen?.kind==='truc_lam'?20:chosen?.kind==='lang_ha'?20:Math.max(2,(pawn.decisionInterval||1)*(1+P.patience/50));
       pawn.plan=chosen?{...chosen,until:pawn.decisionTime+planDur}:null;
     }
     if(pawn.plan){const {kind,target}=pawn.plan;
       if(kind==='loot'){this.seekLoot(pawn,target,dt);return;}
       if(kind==='pilgrimage'){window.GameEntities.HuaguoSystem.seekPilgrimage(pawn,dt);return;}
       if(kind==='truc_lam'){window.GameEntities.TrucLamSystem.seekTrucLam(pawn,dt);return;}
+      if(kind==='lang_ha'){
+        const hermit = window.GameEntities.LangHaSystem?.hermit;
+        if(hermit){
+          pawn.objective = 'Bái kiến Ẩn Sĩ Làng Hạ';
+          pawn.thought = 'Nghe đồn Làng Hạ có tiên nhân ẩn cư nắm giữ huyền cơ Long Châu!';
+          if(Math.hypot(pawn.x - hermit.x, pawn.y - hermit.y) <= 55){
+            window.GameEntities.LangHaSystem.startQuest(pawn);
+            pawn.plan = null;
+          } else {
+            this.moveToTarget(pawn, hermit.x, hermit.y, dt);
+          }
+        }
+        return;
+      }
       if(kind==='ambush'){this.ambush(pawn,target,enemies,dt);return;}
       pawn.isHiding=false;
       pawn.thought=kind==='farm'?'Ước tính có thể thắng '+Math.round(this.calculateWinRate(pawn,target)*100)+'%; chọn con mồi để thăng tiến.':P.patience>70?'Chờ sơ hở, chọn người đã yếu máu để ra tay.':'Chủ động áp lực đối thủ khi có lợi thế.';
@@ -466,6 +519,7 @@ window.GameAI.AiBrain = {
   planValid(p,plan){
     if(plan.kind==='pilgrimage')return (window.GameEntities.HuaguoSystem?.pilgrimageScore?.(p)>0);
     if(plan.kind==='truc_lam')return (window.GameEntities.TrucLamSystem?.challengeScore?.(p)>0);
+    if(plan.kind==='lang_ha')return (window.GameEntities.LangHaSystem?.questScore?.(p)>0);
     if(plan.kind==='loot')return this.lootValue(p,plan.target)>0&&window.GameEngine.MapTerrain.canTravel(p,plan.target.x,plan.target.y);
     if(plan.kind==='ambush')return !plan.target.bush.isBurned&&plan.target.battle?.isAlive&&!(p.combatLease>0);
     if(!plan.target.isAlive||!this.keepChasing(p,plan.target))return false;
@@ -953,6 +1007,11 @@ window.GameAI.AiBrain = {
     if(withAlly&&pawn.allyPawn?.isAlive){const ally=strength(pawn.allyPawn);a.dps+=ally.dps*.8;a.hp+=ally.hp*.6;}
     if(window.GameEntities.TrucLamSystem?.survivorEscortActive){a.dps+=85;a.hp+=1200;}
     if(window.GameEntities.HuaguoSystem?.wukong?.state==='assist'){a.dps+=110;a.hp+=1500;}
+    if(window.GameEntities.LangHaSystem?.hasMiniDragon(pawn)){
+      const mini = window.GameEntities.LangHaSystem.miniDragon;
+      if(mini?.isAwakened){a.dps+=95;a.hp+=1400;}
+      else {a.dps+=35;a.hp+=500;}
+    }
     const ours=a.dps*100/(100+b.defense),theirs=b.dps*100/(100+a.defense);
     const timeToKill=b.hp/Math.max(1,ours),timeToDie=a.hp/Math.max(1,theirs);
     return timeToDie/(timeToDie+timeToKill);

@@ -1073,6 +1073,7 @@ window.GameEntities.CombatSystem = {
     this.rememberBotKill(killer,victim);
     this.dropLootOnDeath(victim);
     window.GameEntities.TrucLamSystem?.handleVictimDeath?.(victim, killer);
+    window.GameEntities.LangHaSystem?.handleVictimDeath?.(victim, killer);
     if(victim.isAncient)window.GameEntities.AncientSystem.finish(killer,victim);
     else if(victim===window.GameEntities.EntityManager.worldBoss)window.GameEntities.AncientSystem.awaken(victim,killer);
     window.GameUI.CombatTicker.log('💀 ' + victim.name + ' bị hạ bởi ' + (killer?.name || 'Thiên tai') + '.');

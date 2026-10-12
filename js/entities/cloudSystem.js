@@ -105,7 +105,33 @@ window.GameEntities.CloudSystem = {
     const mapH = G?.height || 5200;
 
     c.retarget -= dt;
-    if (c.retarget <= 0 || !c.prey?.isAlive) {
+    if (c.luredTarget && c.luredTarget.life > 0) {
+      c.targetX = c.luredTarget.x;
+      c.targetY = c.luredTarget.y;
+      c.objective = 'Bị chấn động địa mạch thu hút, trôi đến thôn phệ Đại Thạch Trụ!';
+      c.thought = 'Địa mạch rung chuyển dữ dội! Thực thể đá này chứa đầy linh khí!';
+      if (Math.hypot(c.x - c.targetX, c.y - c.targetY) < 70) {
+        window.GameRenderer?.VfxManager?.addBurstParticles?.(c.luredTarget.x, c.luredTarget.y, '#78350f', 40);
+        window.GameUI?.CombatTicker?.log('⚡ Đám mây Hư Không nuốt chửng Đại Thạch Trụ!');
+        c.luredTarget.life = 0;
+        c.luredTarget = null;
+      }
+    } else if (c.mode === 'void_rage_charm') {
+      if (c.retarget <= 0 || !c.prey?.isAlive) {
+        c.retarget = 2.0;
+        const dragonOwner = window.GameEntities.LangHaSystem?.quest?.owner;
+        const candidates = [...(G?.pawns || []), ...(G?.monsters || [])].filter(e => e.isAlive && e !== dragonOwner && !e.isCharmedByVoid);
+        candidates.sort((a, b) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(b.x - c.x, b.y - c.y));
+        c.prey = candidates[0] || dragonOwner;
+        if (c.prey) {
+          c.targetX = c.prey.x;
+          c.targetY = c.prey.y;
+        }
+      } else {
+        c.targetX = c.prey.x;
+        c.targetY = c.prey.y;
+      }
+    } else if (c.retarget <= 0 || !c.prey?.isAlive) {
       c.retarget = 2.5 + Math.random() * 1.5;
       let closest = null, closestDist = Infinity;
       for (const p of (G?.pawns || []).filter(e => e.isAlive)) {
@@ -166,6 +192,7 @@ window.GameEntities.CloudSystem = {
   protected(entity) {
     if (!entity?.isAlive || entity.isAlioth || entity.isCloud || entity.isSplit) return true;
     if (entity.isAncient || entity.isAncientClone || entity.isDemonKing) return true;
+    if (window.GameEntities.LangHaSystem?.hasMiniDragon(entity)) return true;
     if (window.GameManager?.battleRoyaleResolved && (entity.isPawn || entity.isFinalHunt)) return true;
     return entity === window.GameEntities.EntityManager?.worldBoss;
   },
@@ -173,9 +200,34 @@ window.GameEntities.CloudSystem = {
   devour() {
     const c = this.cloud, G = window.GameManager;
     if (!c || !G) return;
+    if (c.mode === 'void_rage_charm') {
+      this.applyCharmAura();
+      return;
+    }
     for (const victim of [...(G.pawns || []), ...(G.monsters || [])]) {
       if (this.protected(victim)) continue;
       if (Math.hypot(victim.x - c.x, victim.y - c.y) <= c.radius) this.executeDevour(victim);
+    }
+  },
+
+  applyCharmAura() {
+    const c = this.cloud, G = window.GameManager;
+    const questOwner = window.GameEntities.LangHaSystem?.quest?.owner;
+    if (!c || !questOwner?.isAlive) return;
+
+    for (const victim of [...(G?.pawns || []), ...(G?.monsters || [])]) {
+      if (!victim?.isAlive || victim === questOwner || victim.isAlioth || victim.isCloud || victim.isDemonKing) continue;
+      const dist = Math.hypot(victim.x - c.x, victim.y - c.y);
+      if (dist <= c.radius + 60 && !victim.isCharmedByVoid) {
+        victim.isCharmedByVoid = true;
+        victim.targetEnemy = questOwner;
+        victim.plan = { kind: 'duel', target: questOwner, until: (victim.decisionTime || 0) + 999 };
+        victim.objective = `🔮 MÊ HOẶC: Bao vây tiêu diệt ${questOwner.name}!`;
+        victim.thought = 'Khí tức Hư Không thao túng tâm trí, toàn lực tấn công chủ nhân Long Thần!';
+        window.GameRenderer?.VfxManager?.addEffect?.('rune', victim.x, victim.y, { radius: 65, color: '#9333ea', life: 1.0 });
+        window.GameRenderer?.VfxManager?.addDamageNumber?.(victim.x, victim.y - 25, 'MÊ HOẶC', 'crit');
+        window.GameUI?.CombatTicker?.log(`🔮 ${victim.name} bị Đám Mây Hư Không MÊ HOẶC! Quay sang vây công ${questOwner.name}!`);
+      }
     }
   },
 
@@ -205,6 +257,7 @@ window.GameEntities.CloudSystem = {
     victim.vx = 0;
     victim.vy = 0;
     window.GameEntities.TrucLamSystem?.handleVictimDevoured?.(victim, oldX, oldY);
+    window.GameEntities.LangHaSystem?.handleVictimDeath?.(victim, null);
     G?.updateHUD?.();
     G?.checkVictoryCondition?.();
   },
@@ -231,6 +284,8 @@ window.GameEntities.CloudSystem = {
     const c = this.cloud;
     if (!c?.isAlive || !pawn?.isAlive) return false;
     if (window.GameManager?.battleRoyaleResolved) return false;
+    if (window.GameEntities.LangHaSystem?.hasMiniDragon(pawn)) return false;
+    if (c.mode === 'void_rage_charm') return false;
     const dist = Math.hypot(pawn.x - c.x, pawn.y - c.y);
     if (dist > (c.radius || 175) + 30) return false;
     const M = window.GameEngine.MapTerrain;
@@ -253,10 +308,17 @@ window.GameEntities.CloudSystem = {
     if (!c?.isAlive) return;
     ctx.save();
 
+    const isEnraged = c.mode === 'void_rage_charm';
     const bg = ctx.createRadialGradient(c.x, c.y, 20, c.x, c.y, c.visualRadius * 1.3);
-    bg.addColorStop(0, 'rgba(44, 11, 77, 0.65)');
-    bg.addColorStop(0.5, 'rgba(24, 6, 45, 0.45)');
-    bg.addColorStop(1, 'rgba(10, 2, 20, 0)');
+    if (isEnraged) {
+      bg.addColorStop(0, 'rgba(127, 29, 29, 0.78)');
+      bg.addColorStop(0.5, 'rgba(88, 28, 135, 0.58)');
+      bg.addColorStop(1, 'rgba(30, 10, 50, 0)');
+    } else {
+      bg.addColorStop(0, 'rgba(44, 11, 77, 0.65)');
+      bg.addColorStop(0.5, 'rgba(24, 6, 45, 0.45)');
+      bg.addColorStop(1, 'rgba(10, 2, 20, 0)');
+    }
     ctx.fillStyle = bg;
     ctx.beginPath();
     ctx.arc(c.x, c.y, c.visualRadius * 1.3, 0, Math.PI * 2);
