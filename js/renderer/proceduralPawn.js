@@ -65,9 +65,19 @@ window.GameRenderer.ProceduralPawn = {
   render: function(ctx, pawn, appearance, isSelected) {
     if (!pawn || !pawn.isAlive) return;
     const time = performance.now() / 1000;
+    const zoom = window.GameEngine.Camera?.zoom || 1;
+    // Nhìn toàn bản đồ thì mỗi pawn chỉ còn vài pixel; bỏ aura bóng đổ và da procedural.
+    if (zoom < 0.45 && !isSelected) {
+      ctx.save();
+      ctx.fillStyle = pawn.level >= 15 ? '#9d78ff' : pawn.level >= 10 ? '#ffc832' : (appearance?.clothColor || '#d7c4a3');
+      ctx.beginPath(); ctx.arc(pawn.x, pawn.y - 8, pawn.isDemonKing ? 16 : 7, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      return;
+    }
     const isMoving = Math.hypot(pawn.vx || 0, pawn.vy || 0) > 1.5;
 
     if(pawn.level>=10)this.renderAura(ctx,pawn,time);
+    this.renderMythic(ctx,pawn,time);
     // Vòng chọn mục tiêu nếu được click
     if (isSelected) {
       ctx.save();
@@ -104,6 +114,21 @@ window.GameRenderer.ProceduralPawn = {
     ctx.restore();
   },
 
+  renderMythic(ctx,pawn,time){
+    const ids=pawn.mythics;if(!ids?.length)return;
+    const def=(window.GameData.MythicSkills||[]).find(s=>s.id===ids[0]);
+    const s=pawn.mythicState||{};
+    ctx.save();
+    ctx.strokeStyle=def?.color||'#e6c15a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(pawn.x,pawn.y-16,26,0,Math.PI*2);ctx.stroke();
+    if(s.stone==='stone'){ctx.fillStyle='rgba(160,168,156,.45)';ctx.beginPath();ctx.arc(pawn.x,pawn.y-16,18,0,Math.PI*2);ctx.fill();}
+    const zone=s.array;if(zone&&zone.until>(window.GameManager?.matchTime||0)){ctx.strokeStyle='#d4b48a';ctx.beginPath();ctx.arc(zone.x,zone.y,100,0,Math.PI*2);ctx.stroke();}
+    const chained=[...(window.GameManager?.pawns||[]),...(window.GameManager?.monsters||[])].find(e=>e.isAlive&&e.id===s.chainId);
+    if(chained){ctx.strokeStyle='#c9b6a1';ctx.beginPath();ctx.moveTo(pawn.x,pawn.y-16);ctx.lineTo(chained.x,chained.y-16);ctx.stroke();}
+    const pts=s.trailPts||[];
+    if(pts.length>1){ctx.strokeStyle='#ffe56a';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(const p of pts)ctx.lineTo(p.x,p.y);ctx.stroke();}
+    if(pawn.action?.kind==='attack'&&pawn.action.wrath){ctx.strokeStyle='#fff1a8';ctx.lineWidth=3;ctx.beginPath();ctx.arc(pawn.x,pawn.y-16,32,0,Math.PI*1.4);ctx.stroke();}
+    ctx.restore();
+  },
   renderAura(ctx,p,time){
     const ultimate=p.level>=15,color=ultimate?'#9d78ff':'#ffc832',edge=ultimate?'#30c9ff':'#ffe96a';
     const pulse=1+Math.sin(time*4)*.045;

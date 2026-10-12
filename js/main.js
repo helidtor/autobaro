@@ -1,6 +1,7 @@
 import './data/traitsData.js';
 import './data/monstersData.js';
 import './data/skillsData.js';
+import './data/mythicSkillsData.js';
 import './data/equipmentsData.js';
 import './data/ancientBossesData.js';
 import './data/ancientRelicsData.js';
@@ -25,6 +26,7 @@ import './ai/emotionEngine.js';
 import './ai/aiBrain.js';
 import './ai/bossBrain.js';
 import './entities/combatSystem.js';
+import './entities/mythicSystem.js';
 import './entities/entityManager.js';
 import './entities/ancientSystem.js';
 import './entities/relicSystem.js';

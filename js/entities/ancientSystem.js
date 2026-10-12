@@ -1,6 +1,6 @@
 window.GameEntities=window.GameEntities||{};
 window.GameEntities.AncientSystem={
- boss:null,awakened:false,fields:[],walls:[],clock:0,lightningAt:0,queue:[],defeated:0,total:5,usedRelics:[],nextAt:null,arena:null,god:null,original:null,victoryPending:false,pendingGod:null,wakeRemaining:null,demonKingFight:false,demonResolved:false,successionLoot:null,
+ boss:null,awakened:false,fields:[],walls:[],clock:0,lightningAt:0,queue:[],defeated:0,total:1,usedRelics:[],nextAt:null,arena:null,god:null,original:null,victoryPending:false,pendingGod:null,wakeRemaining:null,demonKingFight:false,demonResolved:false,successionLoot:null,
  reset(){if(window.GameEntities.CombatSystem){window.GameEntities.CombatSystem.fields=[];window.GameEntities.CombatSystem.fieldClock=0;}this.boss=null;this.awakened=false;this.fields=[];this.walls=[];this.clock=0;this.lightningAt=0;this.queue=[];this.defeated=0;this.usedRelics=[];this.nextAt=null;this.arena=null;this.god=null;this.original=null;this.victoryPending=false;this.pendingGod=null;this.wakeRemaining=null;this.demonKingFight=false;this.demonResolved=false;this.successionLoot=null;if(window.GameEngine.MapTerrain)window.GameEngine.MapTerrain.ancientArena=null;},
  successionReady(p){
   const loot=this.successionLoot;if(!window.GameManager.demonKing)return true;if(!loot||!p)return false;
@@ -17,7 +17,7 @@ window.GameEntities.AncientSystem={
   const original=G.winnerPawn?.isAlive?G.winnerPawn:killer?.isPawn?killer:G.pawns.find(p=>p.isAlive);
   this.god=god;this.original=original;
   if(G.demonKing){this.queue=[];this.openArena(original,god);return this.spawnDemonKing();}
-  const first=D[Math.floor(Math.random()*D.length)];this.queue=[first,...D.filter(d=>d!==first)];
+  const first=D[Math.floor(Math.random()*D.length)];this.queue=[first];
   this.openArena(original,god);
   return this.spawnNext();
  },
@@ -59,7 +59,7 @@ window.GameEntities.AncientSystem={
    m.copiedSkills=(original.skills||[]).map(s=>({...s,cooldownTimer:0}));const first=m.copiedSkills[0],different=m.copiedSkills.find(s=>s.def.role!==first?.def.role);if(different)m.copiedSkills=[first,different,...m.copiedSkills.filter(s=>s!==first&&s!==different)];m.copiedPassives=(original.passives||[]).map(p=>({...p,cooldownTimer:0}));m.passiveMultiplier=1;m.recordedCombo=(original.attackHistory||[]).filter(a=>a.targetId===god.id).slice(-4);
   }
   this.boss=m;G.monsters=E.monsters;G.cataclysm=true;window.GameEngine.Audio?.awaken(m);
-  window.GameUI.CombatTicker.log('🌋 THƯỢNG CỔ THỨC TỈNH: '+m.name+' • Lượt '+m.gauntletRound+'/'+this.total+' • Đấu trường 1500×1500!');
+  window.GameUI.CombatTicker.log('🌋 THƯỢNG CỔ THỨC TỈNH: '+m.name+' • Hai thanh máu • Đấu trường 1500×1500!');
   window.GameRenderer.VfxManager.addEffect('rune',m.x,m.y,{radius:320,color:def.color,life:3});
   return m;
  },
@@ -90,14 +90,14 @@ window.GameEntities.AncientSystem={
   if(killer?.isAlive){killer.action=null;killer.attackState=null;killer.targetEnemy=null;killer.combatGroup=null;killer.combatLease=0;killer.navTimer=0;killer.navPath=[];}
   window.GameEntities.CombatSystem.pendingEffects=[];window.GameRenderer.VfxManager.projectiles=[];
   if(this.defeated<this.total){this.nextAt=this.clock+10;window.GameUI.CombatTicker.log('🏺 Hạ Thượng Cổ '+this.defeated+'/'+this.total+'. Nhặt Thượng Bảo; boss tiếp theo thức tỉnh sau 10 giây.');return;}
-  this.victoryPending=true;this.finalAt=this.clock;return;
+  this.nextAt=null;this.victoryPending=true;this.finalAt=this.clock;return;
  },
  showVictory(){
   if(this.demonKingFight)return this.showDemonVictory();
   const killer=this.original,m=this.boss;this.victoryPending=false;
   window.GameManager.ancientDefeated=true;window.GameEngine.Audio?.play('victory');
   window.GameUI.DirectorControls.showEnding('🏆 CHINH PHỤC THƯỢNG CỔ',killer?.name||'Người chiến thắng',[
-    'Đã hạ '+(m?.name||'boss cuối')+' và chinh phục đủ 5 boss qua 10 thanh máu. Trận đấu hoàn tất.',
+    'Đã hạ '+(m?.name||'Thượng Cổ')+' qua cả hai thanh máu. Trận đấu hoàn tất.',
     'Ván mới xóa ngôi Quỷ Vương. Tiếm ngôi giữ nguyên build của người thắng và mở trận 100 bot mới.'
   ],[{label:'Ván mới',call:'window.GameManager.startNewMatch()'},{label:'Tiếm ngôi quỷ vương',call:'window.GameManager.usurpDemonKing()'}]);
  },
@@ -375,7 +375,10 @@ window.GameEntities.AncientSystem={
   const item=A.findBestItemToLoot(p,G.dropItems.filter(d=>!d.isCollected));
   if(item){A.seekLoot(p,item,dt);return true;}
   if(p.currentHp<p.maxHp*.85&&C.usePotion(p))return true;
-  p.vx=p.vy=0;p.targetEnemy=null;p.objective=this.victoryPending?'Hoàn tất chuỗi '+this.total+' Thượng Cổ':'Chuẩn bị boss '+(this.defeated+1)+'/'+this.total+' • '+Math.max(0,(this.nextAt||0)-this.clock).toFixed(1)+'s';p.thought='Giữ thể lực, mana và hồi chiêu trong khoảng nghỉ 10 giây.';return true;
+  p.vx=p.vy=0;p.targetEnemy=null;
+  if(this.victoryPending){p.objective='Hoàn tất Thượng Cổ';p.thought='Đã hạ Thượng Cổ qua hai thanh máu. Giữ sức đến khi trận kết thúc.';}
+  else{p.objective='Chuẩn bị boss '+(this.defeated+1)+'/'+this.total+' • '+Math.max(0,(this.nextAt||0)-this.clock).toFixed(1)+'s';p.thought='Giữ thể lực, mana và hồi chiêu trong khoảng nghỉ.';}
+  return true;
  },
  render(ctx){
   if(!this.awakened)return;
@@ -398,5 +401,5 @@ window.GameEntities.AncientSystem={
  },
  renderSky(ctx,w,h){if(!this.awakened)return;ctx.save();ctx.strokeStyle='#ffc7b8';ctx.lineWidth=2;ctx.globalAlpha=.5;
   for(let i=0;i<4;i++){const x=(i+.2)*w/4;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+20,35);ctx.lineTo(x-10,62);ctx.lineTo(x+45,95);ctx.stroke();}
-  ctx.fillStyle='#ffe1cb';ctx.font='bold 16px Arial';ctx.textAlign='center';ctx.fillText(this.boss?.isDemonKing?'QUỶ VƯƠNG • '+this.boss.name+' • ĐẤU TRƯỜNG 1500×1500':this.nextAt!==null?'BOSS TIẾP THEO • '+Math.max(0,this.nextAt-this.clock).toFixed(1)+'s':'THƯỢNG CỔ '+(this.boss?.gauntletRound||1)+'/'+this.total+' • ĐẤU TRƯỜNG 1500×1500',w/2,125);ctx.restore();}
+  ctx.fillStyle='#ffe1cb';ctx.font='bold 16px Arial';ctx.textAlign='center';ctx.fillText(this.boss?.isDemonKing?'QUỶ VƯƠNG • '+this.boss.name+' • ĐẤU TRƯỜNG 1500×1500':this.nextAt!==null?'BOSS TIẾP THEO • '+Math.max(0,this.nextAt-this.clock).toFixed(1)+'s':'THƯỢNG CỔ • '+(this.boss?.name||'Đấu trường')+' • ĐẤU TRƯỜNG 1500×1500',w/2,125);ctx.restore();}
 };

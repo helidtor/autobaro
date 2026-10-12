@@ -11,6 +11,14 @@ window.GameRenderer = window.GameRenderer || {};
 window.GameRenderer.MonsterRenderer = {
   render: function(ctx, monster, isSelected) {
     if (!monster || !monster.isAlive || monster.isSplit) return;
+    const zoom = window.GameEngine.Camera?.zoom || 1;
+    if (zoom < 0.45 && !isSelected) {
+      ctx.save();
+      ctx.fillStyle = monster.tier >= 4 ? '#e07a5f' : '#8d9a6a';
+      ctx.beginPath(); ctx.arc(monster.x, monster.y, 6 + (monster.tier || 1) * 2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      return;
+    }
     const time = performance.now() / 1000;
 
     if (isSelected) {

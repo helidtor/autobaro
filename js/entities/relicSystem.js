@@ -88,6 +88,9 @@ window.GameEntities.RelicSystem={
   window.GameRenderer.VfxManager.addEffect('dash',e.x,e.y,{tx:e.x+e.action.dodgeX,ty:e.y+e.action.dodgeY,color:'#ff8758',life:.3});
  },
  control(e,kind,duration,source){
+  const Mythic=window.GameEntities.MythicSystem;
+  if(Mythic?.immuneHardCC(e)&&/stun|freeze|petrify|root/.test(kind||''))return 0;
+  duration=Mythic?.ccDuration(e,duration)??duration;
   if(!this.has(e,'crown')||!source?.isMonster)return duration;
   const s=this.state(e,'crown');if(s.cooldown>0)return duration;s.cooldown=25;
   for(const m of window.GameManager.monsters)if(m.isAlive&&!m.isAncient&&!m.isAncientClone&&Math.hypot(m.x-e.x,m.y-e.y)<65){const a=Math.atan2(m.y-e.y,m.x-e.x);window.GameEngine.MapTerrain.moveEntity(m,Math.cos(a)*35,Math.sin(a)*35);}

@@ -110,7 +110,7 @@ window.GameUI.DirectorControls = {
   showEnding: function(title, winner, paragraphs, actions) {
     const G = window.GameManager, cardEl = document.getElementById('story-card-modal');
     if (!cardEl) return;
-    G.isGameOver = true; G.isPaused = true; G.resultOpen = true; this.syncSpeed();
+    G.isGameOver = true; G.isPaused = true; G.resultOpen = true; G.conquerOffer = false; this.syncSpeed();
     const buttons = actions.map((action, index) => '<button type="button" class="' + (index ? 'btn-ctrl' : 'btn-restart') + '" onclick="' + action.call + '">' + action.label + '</button>').join('');
     cardEl.innerHTML = '<div class="story-card-box"><h1>' + title + '</h1><div class="story-card-winner">' + (winner || 'Người chiến thắng') + '</div>' + paragraphs.map(text => '<p>' + text + '</p>').join('') + '<div class="story-actions">' + buttons + '</div><p>Phím 1: Ván mới. Phím 2: lựa chọn còn lại.</p></div>';
     cardEl.classList.remove('hidden');
@@ -121,10 +121,20 @@ window.GameUI.DirectorControls = {
     const cardEl = document.getElementById('story-card-modal');
     if (!cardEl) return;
     if (!winner) {
+      const G = window.GameManager, ancient = window.GameEntities.AncientSystem;
+      const godAlive = !!window.GameEntities.EntityManager.worldBoss?.isAlive;
+      if (G.demonKing && godAlive && !ancient?.awakened && !ancient?.demonKingFight) {
+        G.conquerOffer = true;
+        cardEl.innerHTML = '<div class="story-card-box"><h1>Không hạ được Yêu Thần</h1><p>Đã có Quỷ Vương ' + G.demonKing.name + ', nhưng ván này mọi bot gục trước khi thắng Yêu Thần.</p><p>Chinh phạt quỷ vương tạo 100 bot mới và giữ ngôi. Người sống sót hạ Yêu Thần sẽ đấu với Quỷ Vương cũ.</p><div class="story-actions"><button type="button" class="btn-restart" onclick="window.GameManager.startNewMatch()">Ván mới</button><button type="button" class="btn-ctrl" onclick="window.GameManager.conquerDemonKing()">Chinh phạt quỷ vương</button></div><p>Phím 1: Ván mới. Phím 2: Chinh phạt quỷ vương.</p></div>';
+        cardEl.classList.remove('hidden');
+        return;
+      }
+      G.conquerOffer = false;
       cardEl.innerHTML = '<div class="story-card-box"><h1>Không có người sống sót</h1><button class="btn-restart" onclick="window.GameManager.startNewMatch()">🔄 BẮT ĐẦU TRẬN ĐẤU MỚI</button></div>';
       cardEl.classList.remove('hidden');
       return;
     }
+    window.GameManager.conquerOffer = false;
 
     // Tìm các danh hiệu
     const allPawns = window.GameManager.pawns;

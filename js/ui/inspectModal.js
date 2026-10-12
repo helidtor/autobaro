@@ -172,9 +172,10 @@ window.GameUI.InspectModal = {
     const remaining=Math.max(0,s.cooldownTimer||0);
     const duration=Math.max(c.cooldown||0,remaining),progress=duration?Math.max(0,Math.min(100,(1-remaining/duration)*100)):100;
     const cooldown=c.cooldown?c.cooldown.toFixed(1).replace('.0','')+' giây':'Liên tục';
+    const tier=typeof s.tier==='number'?' <span class="skill-tier">Bậc '+s.tier+'</span>':'';
     const scaling = this.scalingDescription(e,s,passive);
     return '<div class="inspect-skill-item '+(remaining?'skill-cooling':'skill-ready')+'" style="--skill-progress:'+progress+'%">'+
-      '<span class="skill-name">'+(s.def?.name||s.name)+(passive?' · Nội tại':'')+'</span><div class="skill-desc">'+this.skillDescription(e,s,passive)+'</div>'+(scaling?'<div class="skill-desc">'+scaling+'</div>':'')+
+      '<span class="skill-name">'+(s.def?.name||s.name)+tier+(passive?' · Nội tại':'')+'</span><div class="skill-desc">'+this.skillDescription(e,s,passive)+'</div>'+(scaling?'<div class="skill-desc">'+scaling+'</div>':'')+
       '<div class="skill-cooldown">'+(c.cooldown?'Hồi chiêu: ':'')+cooldown+(remaining?' · Còn '+remaining.toFixed(1)+' giây':'')+'</div>'+
       '<div class="skill-progress" role="progressbar" aria-label="Hồi chiêu '+(s.def?.name||s.name)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(progress)+'"></div></div>';
   },
@@ -211,6 +212,12 @@ window.GameUI.InspectModal = {
 
     const actives=this.activeSkills(p),passives=window.GameEntities.CombatSystem.passiveList(p);
     const skillsHtml=actives.map(s=>this.skillCard(p,s)).join('')||'<div class="text-muted">Chưa học kỹ năng chủ động</div>';
+    const myths=(p.mythics||[]).map(id=>(window.GameData.MythicSkills||[]).find(s=>s.id===id)).filter(Boolean);
+    const logs=Array.isArray(p.mythicLog)?p.mythicLog:[];
+    const mythHtml=myths.map(s=>{
+      const rejected=logs.filter(entry=>entry.picked===s.id).flatMap(entry=>(entry.options||[]).filter(id=>id!==s.id).map(id=>(window.GameData.MythicSkills||[]).find(x=>x.id===id)?.name).filter(Boolean));
+      return '<div class="inspect-skill-item skill-ready"><span class="skill-name" style="color:'+(s.color||'#e6c15a')+'">'+s.name+'</span><div class="skill-desc">'+s.law+'</div><div class="skill-desc">'+s.price+'</div><div class="skill-desc">'+s.boss+'</div>'+(rejected.length?'<div class="skill-cooldown">Đã bỏ: '+rejected.join(', ')+'</div>':'')+'</div>';
+    }).join('');
 
     this.setContent(`
       <div class="inspect-header">
@@ -277,6 +284,8 @@ window.GameUI.InspectModal = {
         <div class="section-title">Kỹ năng (${actives.length+passives.length})</div><div class="skill-summary">${actives.length} chủ động • ${passives.length} nội tại</div>
         ${skillsHtml}
         ${passives.map(s=>this.skillCard(p,s,true)).join('')}
+        <div class="section-title">Thần thoại (${myths.length})</div>
+        ${mythHtml||'<div class="text-muted">Chưa nhận kỹ năng thần thoại</div>'}
       </div>
     `);
   },
@@ -305,10 +314,10 @@ window.GameUI.InspectModal = {
         <div>Phòng ngự: <b>${m.defense}</b></div>
         <div>Tốc độ chạy: <b>${m.speed}</b></div><div>Tầm đánh: <b>${window.GameEntities.CombatSystem.combatStats(m).range}</b> • Tầm nhìn: <b>${window.GameEntities.CombatSystem.visionRange(m)}</b></div>
         <div>Sinh cảnh: <b>${m.territory?.name||window.GameData.HabitatNames[m.habitat]||'—'}</b></div>
-        <div>EXP khi hạ: <b>${m.expReward}</b></div>
+        <div>EXP khi hạ: <b>${m.expRewardPerLevel?m.expRewardPerLevel+' × cấp của bot kết liễu':m.expReward}</b></div>
         <div>Nhịp phép chung: <b>${m.globalSkillCooldown>0?m.globalSkillCooldown.toFixed(1)+'s':'Sẵn sàng'}</b> • Tối đa 1 phép / ${m.tier>=6?1:m.tier===5?2:3}s</div>
         <div class="monster-objective">Mục tiêu: <b>${m.objective||"Canh giữ sinh cảnh"}</b></div>
-        ${m.tier>=6?'<div>Lượt '+(m.gauntletRound||1)+'/'+window.GameEntities.AncientSystem.total+' • Hai phase • Rơi 1 Thượng Cổ và 1 bình hồi đầy máu; boss tiếp theo sau 10s.</div>':`<div>Phẩm chất rơi đồ: <b>${m.dropTier}</b></div>
+        ${m.tier>=6?'<div>Một Thượng Cổ ngẫu nhiên • Hai phase • Rơi 1 Thượng Bảo và 1 bình hồi đầy máu.</div>':`<div>Phẩm chất rơi đồ: <b>${m.dropTier}</b></div>
         <div>Tỷ lệ rơi: <b>${[0,20,30,40,100,100][m.tier]}%</b> • ${m.tier===5?"1 bình máu + vũ khí, giáp, mũ Thần Khí":m.tier===4?"1 bình máu + 1 trang bị/vũ khí":"1 bình máu hoặc 1 trang bị/vũ khí"}</div>`}
       </div>
       ${m.weapon?'<div class="inspect-section pane-equipment">'+this.weaponDetails(m.weapon)+'</div>':'<div class="inspect-section pane-equipment empty-slot">Đối tượng chiến đấu bằng sức mạnh tự thân, không mang trang bị.</div>'}

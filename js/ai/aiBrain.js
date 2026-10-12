@@ -15,6 +15,7 @@ window.GameAI.AiBrain = {
     for(const key of ['survivalTarget','finalDuel','defiantTarget','targetEnemy'])if(pawn[key]===pawn.allyPawn&&pawn[key])pawn[key]=pawn.pactTarget&&C.isEnemy(pawn,pawn.pactTarget)?pawn.pactTarget:null;
     for(const key of ['survivalTarget','finalDuel','defiantTarget','targetEnemy'])if(pawn[key]?.isSplit){const owner=pawn[key];pawn[key]=owner.clones?.filter(q=>q.isAlive&&C.canSee(pawn,q)).sort((a,b)=>Math.hypot(a.x-pawn.x,a.y-pawn.y)-Math.hypot(b.x-pawn.x,b.y-pawn.y))[0]||null;}
     pawn.decisionTime=(pawn.decisionTime||0)+dt;
+    pawn.senseTimer=(pawn.senseTimer||0)-dt;
     this.handleLevelingAndSkills(pawn);
     const drops=window.GameManager.dropItems||[];
     const foot=this.findBestItemToLoot(pawn,drops.filter(i=>Math.hypot(i.x-pawn.x,i.y-pawn.y)<28));
@@ -37,8 +38,18 @@ window.GameAI.AiBrain = {
       else{pawn.vx=pawn.vy=0;pawn.targetEnemy=null;}
       return;
     }
-    const nearby=spatialGrid.queryCircle(pawn.x,pawn.y,C.visionRange(pawn));
-    const threats=nearby.filter(e=>C.isEnemy(pawn,e)&&C.canSee(pawn,e));
+    // Tầm nhìn và đường thẳng tới từng mục tiêu rất đắt; làm mới mỗi 0.1s mô phỏng.
+    // Bước dt >= 0.1 vẫn quét lại ngay, nên một lần update(.1) không đổi quyết định.
+    let nearby,threats;
+    if(pawn.senseTimer<=0||!pawn.sensedNearby){
+      pawn.senseTimer=0.1;
+      nearby=spatialGrid.queryCircle(pawn.x,pawn.y,C.visionRange(pawn));
+      threats=nearby.filter(e=>e.isAlive&&C.isEnemy(pawn,e)&&C.canSee(pawn,e));
+      pawn.sensedNearby=nearby;pawn.sensedThreats=threats;
+    }else{
+      nearby=pawn.sensedNearby.filter(e=>e.isAlive&&!e.isCollected);
+      threats=pawn.sensedThreats.filter(e=>e.isAlive);
+    }
     this.observeThreats(pawn,threats);
     window.GameAI.EmotionEngine.observe(pawn,threats);
     const upgrade=this.findBestItemToLoot(pawn,nearby.filter(i=>i.slot==='weapon'&&Math.hypot(i.x-pawn.x,i.y-pawn.y)<=220));
@@ -561,6 +572,7 @@ window.GameAI.AiBrain = {
 
   lootValue(p,item){
     if(!item||item.isCollected)return 0;
+    if(item.slot==='weapon'&&window.GameEntities.MythicSystem?.blocksWeaponLoot(p))return 0;
     if(item.slot==='potion'&&item.data?.fullHeal)return 200;
     if(item.slot==='potion'&&item.successionPrep)return 180;
     if(item.slot==='potion')return (p.healthPotions||0)<5?(p.currentHp<p.maxHp*.65?110:35)-(p.healthPotions||0)*5:0;
@@ -614,6 +626,7 @@ window.GameAI.AiBrain = {
   // Nhặt và trang bị đồ
   lootItem: function(pawn, item) {
     if(!item||item.isCollected)return false;
+    if(window.GameEntities.MythicSystem?.beginLoot(pawn,item))return false;
     if(this.lootValue(pawn,item)>0)for(const other of window.GameManager.pawns||[])if(other!==pawn&&other.isAlive&&(other.plan?.target===item||other.combatLoot?.item===item))this.noteGrudge(other,pawn,'loot');
     if(this.lootValue(pawn,item)<=0){if(item.tier!=='ancient')return false;pawn.keptRelics=pawn.keptRelics||[];pawn.keptRelics.push(item.data);item.isCollected=true;return true;}
     if (item.slot === 'potion') { window.GameEngine.Audio?.play('loot',pawn,'potion');if(item.data?.fullHeal)pawn.fullHealthPotions=(pawn.fullHealthPotions||0)+1;else pawn.healthPotions = (pawn.healthPotions || 0) + 1; item.isCollected = true; return true; }
@@ -633,6 +646,7 @@ window.GameAI.AiBrain = {
     } else if (item.slot === 'body') {
       pawn.armor = eqData;
     } else if(item.slot==='feet'){pawn.boots=eqData;}
+    window.GameEntities.MythicSystem?.onEquipment(pawn);
 
     const hpChange = (eqData.hp || 0) - (oldEquipment?.hp || 0);
     pawn.maxHp += hpChange;
@@ -761,12 +775,15 @@ window.GameAI.AiBrain = {
   },
   engageCombat: function(pawn, target, dt) {
     if (!target || !target.isAlive || pawn.allyPawn === target) return;
+    const boss=pawn.targetEnemy;
+    if(boss?.isAlive&&boss.isMonster&&(boss.tier||0)>=4&&target!==boss&&['myth_lone','myth_chain','myth_array','myth_gravity'].some(id=>window.GameEntities.MythicSystem?.has(pawn,id)))target=boss;
     const M=window.GameEngine.MapTerrain,C=window.GameEntities.CombatSystem,G=window.GameManager,P=pawn.personality,now=G.matchTime||0;
     const focus=pawn.combatFocus,held=focus?.target;
     const seenAt=e=>pawn.strikeSeen?.[e?.id]||0;
     const incoming=e=>!!e&&(e.targetEnemy===pawn||e.action?.target===pawn&&!e.action.released||pawn.lastAttacker===e&&now-(pawn.lastDamageTakenAt||0)<2.5);
     const urgent=target===pawn.survivalTarget||incoming(target)&&(!incoming(held)||seenAt(target)>seenAt(held)||seenAt(target)===seenAt(held)&&pawn.lastAttacker===target&&pawn.lastAttacker!==held);
     if(held!==target&&focus?.until>now&&!urgent&&C.isEnemy(pawn,held)&&C.canSee(pawn,held)&&C.canApproach(pawn,held)&&!M.isInWater(held.x,held.y)&&this.keepChasing(pawn,held))target=held;
+    if(target?.tier===5&&target===window.GameEntities.EntityManager?.worldBoss&&!target.isAncient)M.godFightLocked=true;
     const finalDuel=(G.finalShowdown&&target.isPawn)||pawn.survivalTarget===target||G.battleRoyaleResolved&&(target.isAncient||target.isAncientClone)||pawn.isDemonKing||target.isDemonKing;
     if(finalDuel&&!C.canSee(pawn,target)&&C.canApproach(pawn,target)){
       pawn.targetEnemy=target;pawn.objective='Săn đối thủ cuối trận: '+target.name;pawn.thought='Lần theo đối thủ để quyết đấu; không bỏ cuộc giữa trận.';
@@ -795,6 +812,33 @@ window.GameAI.AiBrain = {
     pawn.isHiding=false;pawn.targetEnemy=target;
     const dx=target.x-pawn.x,dy=target.y-pawn.y,dist=Math.hypot(dx,dy),range=C.combatStats(pawn).range;
     pawn.aimAngle=Math.atan2(dy,dx);
+    const den=C.bossDen(target);
+    if(den&&!C.insideDen(pawn,den)){
+      let approach=pawn.denApproach;
+      const gap=Math.hypot(pawn.x-den.x,pawn.y-den.y);
+      if(!approach||approach.target!==target)approach=pawn.denApproach={target,gap,still:0,spin:0};
+      else if(gap<approach.gap-12){approach.gap=gap;approach.still=0;}
+      else approach.still+=dt;
+      if(approach.still>=1.2){
+        const allowed=M.canTravel(pawn,den.x,den.y);
+        const must=finalDuel||!!target.isFinalHunt||(G.battleRoyaleResolved&&(target.tier||0)>=5&&allowed);
+        if(!allowed||(!must&&(approach.spin||0)>=4)){
+          this.releaseStuckTarget(pawn,target,dt,'Sào huyệt không vào được. Bỏ mục tiêu này.');
+          return;
+        }
+        approach.spin=(approach.spin||0)+1;approach.still=0;approach.x=pawn.x;approach.y=pawn.y;
+        const ang=Math.atan2(pawn.y-den.y,pawn.x-den.x)+approach.spin*1.05;
+        pawn.navTimer=0;pawn.navPath=[];
+        pawn.objective='Đổi cửa vào sào huyệt: '+target.name;
+        pawn.thought='Cửa này kẹt. Đổi góc rồi bước vào sào huyệt.';
+        this.moveToTarget(pawn,den.x+Math.cos(ang)*den.radius*.55,den.y+Math.sin(ang)*den.radius*.55,dt);
+        return;
+      }
+      const hunt=G.battleRoyaleResolved&&(target.tier||0)<5?'Farm Yêu Vương, cấp '+pawn.level+'/15 • ':'';
+      pawn.objective=hunt+'Vào sào huyệt: '+target.name;
+      pawn.thought='Đứng ngoài sào huyệt thì đòn không trúng. Phải bước vào mới giao tranh.';
+      this.moveToTarget(pawn,target.x,target.y,dt);return;
+    }
     const chance=this.calculateWinRate(pawn,target,!!pawn.allyPawn?.isAlive&&Math.hypot(pawn.x-pawn.allyPawn.x,pawn.y-pawn.allyPawn.y)<240);
     const opening=target.stunTimer>0||target.currentStamina<18||target.action?.released&&target.action.duration-target.action.elapsed>.15||pawn.counterTarget===target&&pawn.counterUntil>now;
     if(!pawn.tactic||pawn.tactic.target!==target){pawn.tactic={target,mode:'probe',until:now+2.5,started:now};}
@@ -839,11 +883,33 @@ window.GameAI.AiBrain = {
       const lead=target.isPawn?Math.min(.6,dist/Math.max(1,M.getMoveSpeed(pawn))):0;
       const flank=pawn.allyPawn?.isAlive?(pawn.id<pawn.allyPawn.id?1:-1)*Math.min(22,range*.3):0;
       this.moveToTarget(pawn,target.x+(target.vx||0)*lead-Math.sin(pawn.aimAngle)*flank,target.y+(target.vy||0)*lead+Math.cos(pawn.aimAngle)*flank,dt);
-    }else pawn.vx=pawn.vy=0;
+    }else if(pawn.attackCooldown>0)pawn.vx=pawn.vy=0;
+    else{
+      const side=pawn.flankSide||1;pawn.flankSide=-side;
+      let x=pawn.x+Math.cos(pawn.aimAngle+side*1.15)*56,y=pawn.y+Math.sin(pawn.aimAngle+side*1.15)*56;
+      const hold=C.bossDen(target);
+      if(hold&&C.insideDen(pawn,hold)&&!C.insideDen({x,y},hold)){
+        const ang=Math.atan2(y-hold.y,x-hold.x);
+        x=hold.x+Math.cos(ang)*hold.radius*.7;y=hold.y+Math.sin(ang)*hold.radius*.7;
+      }
+      this.moveToTarget(pawn,x,y,dt);
+    }
   },
   performAttack: function(pawn,target){
     const C=window.GameEntities.CombatSystem;
     if(C.canAttack(pawn)&&!this.chooseCombatSkill(pawn,target,'pressure'))C.executeAttack(pawn,target);
+  },
+
+  releaseStuckTarget(pawn,target,dt,reason){
+    const now=window.GameManager.matchTime||pawn.decisionTime||0;
+    pawn.ignoredTargets=pawn.ignoredTargets||{};
+    pawn.ignoredTargets[target.id]=now+8;
+    if(pawn.plan?.target===target)pawn.plan=null;
+    if(pawn.targetEnemy===target)pawn.targetEnemy=null;
+    if(pawn.combatFocus?.target===target)pawn.combatFocus=null;
+    pawn.tactic=null;pawn.denApproach=null;pawn.chase=null;pawn.retreatGoal=null;
+    pawn.thought=reason||'Sào huyệt không vào được. Đổi mục tiêu.';
+    this.wanderAround(pawn,dt);
   },
 
   // Di chuyển tới vị trí
@@ -897,13 +963,21 @@ window.GameAI.AiBrain = {
     if(cached?.enemy===enemy&&cached.tactical===tactical&&cached.until>now&&Math.hypot(pawn.x-cached.x,pawn.y-cached.y)>15&&M.canStand(cached.x,cached.y)&&M.segmentClear(pawn.x,pawn.y,cached.x,cached.y,false,9,pawn)){
       pawn.currentStamina=Math.max(0,pawn.currentStamina-(tactical?8:20)*dt);this.moveToTarget(pawn,cached.x,cached.y,dt);pawn.aimAngle=Math.atan2(enemy.y-pawn.y,enemy.x-pawn.x);return;
     }
-    const angle=Math.atan2(pawn.y-enemy.y,pawn.x-enemy.x),distance=tactical?75:130;
+    const angle=Math.atan2(pawn.y-enemy.y,pawn.x-enemy.x),distance=tactical?75:130,den=window.GameEntities.CombatSystem.bossDen(enemy);
     const choices=[0,-.7,.7,-1.3,1.3].map(offset=>({x:pawn.x+Math.cos(angle+offset)*distance,y:pawn.y+Math.sin(angle+offset)*distance}));
     if(tactical)for(const b of M.bushes){const x=b.x*M.scale,y=b.y*M.scale;
       if(!b.isBurned&&Math.hypot(x-pawn.x,y-pawn.y)<180&&Math.hypot(x-enemy.x,y-enemy.y)>Math.hypot(pawn.x-enemy.x,pawn.y-enemy.y)+20)choices.push({x,y});}
-    const goal=choices.filter(p=>M.canStand(p.x,p.y)&&M.canTravel(pawn,p.x,p.y)&&!M.isInWater(p.x,p.y)&&M.segmentClear(pawn.x,pawn.y,p.x,p.y,false,9,pawn))
+    const goal=choices.filter(p=>M.canStand(p.x,p.y)&&M.canTravel(pawn,p.x,p.y)&&!M.isInWater(p.x,p.y)&&(!den||window.GameEntities.CombatSystem.insideDen(p,den))&&M.segmentClear(pawn.x,pawn.y,p.x,p.y,false,9,pawn))
       .sort((a,b)=>Math.hypot(b.x-enemy.x,b.y-enemy.y)+(M.isInBush(b.x,b.y)?60:0)-Math.hypot(a.x-enemy.x,a.y-enemy.y)-(M.isInBush(a.x,a.y)?60:0))[0];
-    if(!goal){pawn.vx=pawn.vy=0;return;}
+    if(!goal){
+      if(den&&window.GameEntities.CombatSystem.insideDen(pawn,den)){
+        const side=pawn.flankSide||1,ang=Math.atan2(pawn.y-den.y,pawn.x-den.x)+side*.9;
+        const radius=Math.max(24,Math.min(den.radius*.55,Math.hypot(pawn.x-den.x,pawn.y-den.y)||den.radius*.4));
+        const x=den.x+Math.cos(ang)*radius,y=den.y+Math.sin(ang)*radius;
+        if(M.canTravel(pawn,x,y)&&M.canStand(x,y)){this.moveToTarget(pawn,x,y,dt);pawn.aimAngle=Math.atan2(enemy.y-pawn.y,enemy.x-pawn.x);return;}
+      }
+      pawn.vx=pawn.vy=0;return;
+    }
     pawn.retreatGoal={...goal,enemy,tactical,until:now+1.2};
     pawn.currentStamina=Math.max(0,pawn.currentStamina-(tactical?8:20)*dt);
     this.moveToTarget(pawn,goal.x,goal.y,dt);pawn.aimAngle=Math.atan2(enemy.y-pawn.y,enemy.x-pawn.x);
