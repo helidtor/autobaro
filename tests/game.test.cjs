@@ -2267,6 +2267,11 @@ test('Lang Ha hermit quest: grants mini dragon, 3 dragon pearls with earth drago
  assert.equal(LH.quest.status, 'idle');
  assert.doesNotThrow(() => LH.render(G.ctx));
 
+ // Kiểm tra thu hút bot khắp map (tọa độ xa x:100, y:100) với điểm ưu tiên vượt trội
+ botA.x = 100; botA.y = 100;
+ assert.ok(LH.questScore(botA) >= 160, 'Should attract bots from across the map');
+ assert.ok(LH.questScore(botA) > (w.GameEntities.HuaguoSystem?.pilgrimageScore(botA) || 0), 'Priority quest score should exceed pilgrimage');
+
  // 2. BotA nhận quest từ Ẩn Sĩ
  LH.startQuest(botA);
  assert.equal(LH.quest.status, 'active');
@@ -2275,6 +2280,9 @@ test('Lang Ha hermit quest: grants mini dragon, 3 dragon pearls with earth drago
  assert.equal(LH.miniDragon.owner, botA);
  assert.equal(LH.hasMiniDragon(botA), true);
  assert.equal(LH.pearls[0].active, true);
+
+ G.updateHUD();
+ assert.match(w.document.getElementById('hud-quest-status').innerText, /Hỏa Long Châu/);
 
  // 3. Rồng vàng bảo hộ: miễn nhiễm nuốt chửng và không bỏ chạy khỏi mây/rồng
  assert.equal(Cloud.protected(botA), true);
@@ -2317,6 +2325,8 @@ test('Lang Ha hermit quest: grants mini dragon, 3 dragon pearls with earth drago
  assert.equal(LH.quest.status, 'completed');
  assert.equal(LH.miniDragon.isAwakened, true);
  assert.equal(Cloud.cloud.mode, 'void_rage_charm');
+ G.updateHUD();
+ assert.match(w.document.getElementById('hud-quest-status').innerText, /Kim Thần Long/);
 
  // 8. Kim Thần Long phụ tấn công mục tiêu botA đang đánh
  const monster = G.monsters[0];

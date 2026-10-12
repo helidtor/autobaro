@@ -226,12 +226,13 @@ window.GameAI.AiBrain = {
       const farmingFirst=this.limitsPawnFights(pawn);
       const closeEnemy = enemies.find(e => Math.hypot(e.x - pawn.x, e.y - pawn.y) < 180 && this.duelEligible(pawn, e));
       const closeMonster = threats.find(e => e.isMonster && Math.hypot(e.x - pawn.x, e.y - pawn.y) < 140);
+      // NHIỆM VỤ ƯU TIÊN: Làng Hạ (thu hút bot khắp bản đồ như nhiệm vụ Ngộ Không, nhưng ưu tiên cao nhất)
+      const langHa = (!closeEnemy && !(pawn.combatLease > 0)) ? window.GameEntities.LangHaSystem?.questScore?.(pawn) : 0;
+      if(langHa>0)choices.push({kind:'lang_ha',score:langHa,target:window.GameEntities.LangHaSystem.hermit});
       const pilgrimage = (!closeEnemy && !(farmingFirst && closeMonster)) ? window.GameEntities.HuaguoSystem?.pilgrimageScore?.(pawn) : 0;
       if(pilgrimage>0)choices.push({kind:'pilgrimage',score:pilgrimage,target:window.GameEntities.HuaguoSystem.mountain});
       const trucLam=!farmingFirst && !enemies.length && window.GameEntities.TrucLamSystem?.challengeScore?.(pawn);
       if(trucLam>0)choices.push({kind:'truc_lam',score:trucLam});
-      const langHa=!farmingFirst && !enemies.length && window.GameEntities.LangHaSystem?.questScore?.(pawn);
-      if(langHa>0)choices.push({kind:'lang_ha',score:langHa});
       for(const m of G.monsters){if(!this.canHunt(pawn,m))continue;
         const dist=Math.hypot(m.x-pawn.x,m.y-pawn.y),chance=this.calculateWinRate(pawn,m);if(dist<450&&!C.canApproach(pawn,m))continue;
         choices.push({kind:'farm',target:m,score:(farmingFirst?140:60)+chance*55+P.caution*.25+(pawn.style==='farmer'?40:0)+(pawn.style==='looter'?0:0)+Math.min(35,m.expReward/8)+P.greed*m.tier*2-dist/(15+P.curiosity*.2)});}
@@ -253,28 +254,15 @@ window.GameAI.AiBrain = {
       if(choices[1]&&choices[0].score-choices[1].score<8){const tie=[choices[0],choices[1]].sort((a,b)=>String(a.target?.id||'').localeCompare(String(b.target?.id||'')));choices[0]=tie[0];}
       const current=pawn.plan&&choices.find(c=>c.kind===pawn.plan.kind&&c.target===pawn.plan.target);
       const chosen=current&&current.score+30>=(choices[0]?.score||0)?current:choices[0];
-      pawn.decisionReason=chosen?(chosen.kind==='duel'?'Chiến ý và lợi thế trước đối thủ':chosen.kind==='pilgrimage'?'Bái kiến Hoa Quả Sơn: tìm kiếm cơ duyên':chosen.kind==='lang_ha'?'Bái kiến Ẩn Sĩ Làng Hạ: tìm kiếm Long Châu':farmingFirst?(G.matchTime<60?'Phút đầu: farm, chưa chủ động đánh bot':'Cấp dưới mặt bằng: farm trước khi tìm bot'):'Mục tiêu phù hợp sức mạnh và tính cách'):'Chưa có mục tiêu: khám phá';
-      const planDur = chosen?.kind==='ambush'?12:chosen?.kind==='pilgrimage'?25:chosen?.kind==='truc_lam'?20:chosen?.kind==='lang_ha'?20:Math.max(2,(pawn.decisionInterval||1)*(1+P.patience/50));
+      pawn.decisionReason=chosen?(chosen.kind==='duel'?'Chiến ý và lợi thế trước đối thủ':chosen.kind==='pilgrimage'?'Bái kiến Hoa Quả Sơn: tìm kiếm cơ duyên':chosen.kind==='lang_ha'?'🌟 Nhiệm vụ ưu tiên: Bái kiến Ẩn Sĩ Làng Hạ nhận Long Thần':farmingFirst?(G.matchTime<60?'Phút đầu: farm, chưa chủ động đánh bot':'Cấp dưới mặt bằng: farm trước khi tìm bot'):'Mục tiêu phù hợp sức mạnh và tính cách'):'Chưa có mục tiêu: khám phá';
+      const planDur = chosen?.kind==='ambush'?12:chosen?.kind==='pilgrimage'?25:chosen?.kind==='truc_lam'?20:chosen?.kind==='lang_ha'?25:Math.max(2,(pawn.decisionInterval||1)*(1+P.patience/50));
       pawn.plan=chosen?{...chosen,until:pawn.decisionTime+planDur}:null;
     }
     if(pawn.plan){const {kind,target}=pawn.plan;
       if(kind==='loot'){this.seekLoot(pawn,target,dt);return;}
       if(kind==='pilgrimage'){window.GameEntities.HuaguoSystem.seekPilgrimage(pawn,dt);return;}
       if(kind==='truc_lam'){window.GameEntities.TrucLamSystem.seekTrucLam(pawn,dt);return;}
-      if(kind==='lang_ha'){
-        const hermit = window.GameEntities.LangHaSystem?.hermit;
-        if(hermit){
-          pawn.objective = 'Bái kiến Ẩn Sĩ Làng Hạ';
-          pawn.thought = 'Nghe đồn Làng Hạ có tiên nhân ẩn cư nắm giữ huyền cơ Long Châu!';
-          if(Math.hypot(pawn.x - hermit.x, pawn.y - hermit.y) <= 55){
-            window.GameEntities.LangHaSystem.startQuest(pawn);
-            pawn.plan = null;
-          } else {
-            this.moveToTarget(pawn, hermit.x, hermit.y, dt);
-          }
-        }
-        return;
-      }
+      if(kind==='lang_ha'){window.GameEntities.LangHaSystem.seekLangHa(pawn,dt);return;}
       if(kind==='ambush'){this.ambush(pawn,target,enemies,dt);return;}
       pawn.isHiding=false;
       pawn.thought=kind==='farm'?'Ước tính có thể thắng '+Math.round(this.calculateWinRate(pawn,target)*100)+'%; chọn con mồi để thăng tiến.':P.patience>70?'Chờ sơ hở, chọn người đã yếu máu để ra tay.':'Chủ động áp lực đối thủ khi có lợi thế.';

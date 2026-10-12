@@ -181,15 +181,41 @@ window.GameEntities.LangHaSystem = {
   },
 
   /**
-   * Điểm ưu tiên để bot ghé Làng Hạ bái kiến Ẩn Sĩ
+   * Điểm ưu tiên cao để bot ở khắp bản đồ đổ về Làng Hạ bái kiến Ẩn Sĩ
+   * Là Nhiệm Vụ Ưu Tiên, vượt trên cả bái kiến Hoa Quả Sơn hay Trúc Lâm.
    */
   questScore(pawn) {
     if (!pawn?.isAlive || this.quest.status !== 'idle') return 0;
     if (window.GameManager?.battleRoyaleResolved) return 0;
+    const alivePawns = (window.GameManager?.pawns || []).filter(p => p.isAlive && !p.isDemonKing);
+    if (alivePawns.length <= 1) return 0;
+    if (pawn.currentHp < pawn.maxHp * 0.3) return 0;
     const dist = Math.hypot(pawn.x - this.hermit.x, pawn.y - this.hermit.y);
-    if (dist > 1800) return 0;
-    // Điểm cao khi ở gần Làng Hạ
-    return Math.max(0, 160 - dist / 12);
+    const M = window.GameEngine.MapTerrain;
+    if (M && !M.canTravel(pawn, this.hermit.x, this.hermit.y)) return 0;
+    // Điểm cơ bản 380 (vượt Hoa Quả Sơn 280 và Trúc Lâm 330), thu hút toàn map (tối thiểu 160)
+    return Math.max(160, Math.round(380 - dist / 30));
+  },
+
+  seekLangHa(pawn, dt) {
+    const h = this.hermit;
+    if (!h) return;
+    if (this.quest.status !== 'idle' || window.GameManager?.battleRoyaleResolved) {
+      pawn.plan = null;
+      pawn.evaluateAt = 0;
+      return;
+    }
+    const dist = Math.hypot(pawn.x - h.x, pawn.y - h.y);
+    pawn.isHiding = false;
+    pawn.targetEnemy = null;
+    pawn.objective = '🌟 NHIỆM VỤ ƯU TIÊN: Bái kiến Ẩn Sĩ Làng Hạ';
+    pawn.thought = 'Nhiệm vụ ưu tiên đại cục! Đến Làng Hạ bái kiến Ẩn Sĩ nhận chân truyền Long Thần!';
+    if (dist > 50) {
+      window.GameAI.AiBrain.moveToTarget(pawn, h.x, h.y, dt);
+    } else {
+      this.startQuest(pawn);
+      pawn.plan = null;
+    }
   },
 
   /**

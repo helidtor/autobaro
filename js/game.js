@@ -797,6 +797,27 @@ window.GameManager = {
       if(templeStatus.textContent!==text) templeStatus.textContent=templeStatus.innerText=text;
     }
 
+    const questStatus=document.getElementById('hud-quest-status');
+    if(questStatus){
+      const LH = window.GameEntities.LangHaSystem;
+      let text = 'Ưu tiên • Bái kiến Ẩn Sĩ';
+      if (LH?.quest) {
+        if (LH.quest.status === 'idle') {
+          text = 'Ưu tiên • Bái kiến Ẩn Sĩ';
+        } else if (LH.quest.status === 'active') {
+          const ownerName = LH.quest.owner?.name || '';
+          if (LH.quest.stage === 1) text = `Hỏa Long Châu (0/3) • ${ownerName}`;
+          else if (LH.quest.stage === 2) text = `Lôi Long Châu (1/3) • ${ownerName}`;
+          else if (LH.quest.stage === 3) {
+            text = LH.pearls[2]?.unlocked ? `Địa Phách Châu (2/3) • ${ownerName}` : `Dụ Mây Hư Không • ${ownerName}`;
+          }
+        } else if (LH.quest.status === 'completed') {
+          text = 'Kim Thần Long • Mây Hóa Cuồng!';
+        }
+      }
+      if (questStatus.textContent !== text) questStatus.textContent = questStatus.innerText = text;
+    }
+
     // Cập nhật thanh HUD Player nếu ở chế độ người chơi
     const playerHud = document.getElementById('player-hud');
     if (playerHud) {
